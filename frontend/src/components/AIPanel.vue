@@ -39,22 +39,33 @@ const emit = defineEmits(["refresh", "update:prompt", "change-provider"]);
 function onPromptInput(event) {
   emit("update:prompt", event.target.value);
 }
+
+function toSignalLabel(signal) {
+  const parsed = String(signal || "").toLowerCase();
+  if (parsed === "bullish") {
+    return "看多";
+  }
+  if (parsed === "bearish") {
+    return "看空";
+  }
+  return "中立";
+}
 </script>
 
 <template>
-  <h2 class="section-title">AI Analysis</h2>
-  <p class="hint">Send current symbol to AI Gateway and review consensus output.</p>
+  <h2 class="section-title">AI 分析</h2>
+  <p class="hint">送出目前股票代號到 AI Gateway，查看共識結果。</p>
 
   <div class="query-row">
     <input :value="symbol" class="input" type="text" disabled />
     <button type="button" class="btn" :disabled="aiLoading" @click="emit('refresh')">
-      {{ aiLoading ? "Analyzing..." : "Run AI Analyze" }}
+      {{ aiLoading ? "分析中..." : "執行 AI 分析" }}
     </button>
-    <span v-if="aiCheckedAt" class="checked-at">Last check: {{ aiCheckedAt }}</span>
+    <span v-if="aiCheckedAt" class="checked-at">上次分析：{{ aiCheckedAt }}</span>
   </div>
 
   <div class="period-row">
-    <span class="period-label">Provider:</span>
+    <span class="period-label">模型來源：</span>
     <button
       v-for="provider in providerOptions"
       :key="provider"
@@ -72,7 +83,7 @@ function onPromptInput(event) {
     :value="userPrompt"
     class="textarea"
     rows="3"
-    placeholder="Type your analysis focus..."
+    placeholder="請輸入這次想聚焦的分析方向..."
     :disabled="aiLoading"
     @input="onPromptInput"
   ></textarea>
@@ -81,19 +92,19 @@ function onPromptInput(event) {
 
   <div v-else-if="aiResult" class="grid quote-grid">
     <article class="card full-span">
-      <p class="label">Consensus</p>
-      <p class="value">{{ aiResult.consensus.signal }} ({{ aiResult.consensus.confidence }})</p>
+      <p class="label">AI 共識</p>
+      <p class="value">{{ toSignalLabel(aiResult.consensus.signal) }}（{{ aiResult.consensus.confidence }}）</p>
       <p class="sub">{{ aiResult.consensus.summary }}</p>
-      <p class="sub">source: {{ aiResult.consensus.source_provider || "n/a" }}</p>
-      <p class="sub">fallback used: {{ aiResult.fallback_used ? "yes" : "no" }}</p>
+      <p class="sub">來源模型：{{ aiResult.consensus.source_provider || "無" }}</p>
+      <p class="sub">是否啟用備援：{{ aiResult.fallback_used ? "是" : "否" }}</p>
     </article>
 
     <article v-for="item in aiResult.results" :key="item.provider" class="card">
       <p class="label">{{ item.provider }}</p>
-      <p class="value" :class="item.ok ? 'ok' : 'warn'">{{ item.ok ? "ok" : "error" }}</p>
+      <p class="value" :class="item.ok ? 'ok' : 'warn'">{{ item.ok ? "成功" : "失敗" }}</p>
       <p class="sub" v-if="item.ok">{{ item.data.summary }}</p>
       <p class="sub" v-else>{{ item.error }}</p>
-      <p class="sub" v-if="item.ok">signal: {{ item.data.signal }}, confidence: {{ item.data.confidence }}</p>
+      <p class="sub" v-if="item.ok">方向：{{ toSignalLabel(item.data.signal) }}，信心：{{ item.data.confidence }}</p>
     </article>
   </div>
 </template>

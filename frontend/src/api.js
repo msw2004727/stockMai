@@ -28,13 +28,13 @@ async function requestAccessToken(signal) {
   });
 
   if (!response.ok) {
-    throw new Error(`Token request failed: HTTP ${response.status}`);
+    throw new Error(`Token 取得失敗（HTTP ${response.status}）`);
   }
 
   const payload = await response.json();
   const ttlMinutes = Number(payload?.expires_minutes ?? tokenExpiresMinutes);
   if (!payload?.access_token) {
-    throw new Error("Token response missing access_token");
+    throw new Error("Token 回應缺少 access_token");
   }
 
   accessToken = payload.access_token;
@@ -90,21 +90,21 @@ async function fetchProtected(
 
 function throwApiError(feature, status, symbol = "") {
   if (status === 404 && symbol) {
-    throw new Error(`${feature} not found: ${symbol}`);
+    throw new Error(`${feature} 查無資料：${symbol}`);
   }
   if (status === 429) {
-    throw new Error("Daily API quota exceeded. Please try again tomorrow.");
+    throw new Error("今日 API 額度已用完，請明天再試。");
   }
   if (status === 401) {
-    throw new Error("Authentication failed. Please refresh and try again.");
+    throw new Error("驗證失敗，請重新整理後再試。");
   }
-  throw new Error(`${feature} failed: HTTP ${status}`);
+  throw new Error(`${feature} 失敗（HTTP ${status}）`);
 }
 
 export async function getHealth(signal) {
   const response = await fetch(`${apiBase}/health`, { signal });
   if (!response.ok) {
-    throw new Error(`Health check failed: HTTP ${response.status}`);
+    throw new Error(`健康檢查失敗（HTTP ${response.status}）`);
   }
   return response.json();
 }
@@ -114,7 +114,7 @@ export async function getStockQuote(symbol, signal) {
   const response = await fetchProtected(`/stocks/quote?symbol=${encodeURIComponent(quoteSymbol)}`, { signal });
 
   if (!response.ok) {
-    throwApiError("Stock quote", response.status, quoteSymbol);
+    throwApiError("股票報價", response.status, quoteSymbol);
   }
 
   return response.json();
@@ -128,7 +128,7 @@ export async function getStockHistory(symbol, days = 5, signal) {
   );
 
   if (!response.ok) {
-    throwApiError("Stock history", response.status, quoteSymbol);
+    throwApiError("股價走勢", response.status, quoteSymbol);
   }
 
   return response.json();
@@ -152,7 +152,7 @@ export async function analyzeStock(symbol, userPrompt = "", providers = ["claude
   });
 
   if (!analyzedResponse.ok) {
-    throwApiError("AI analyze", analyzedResponse.status, quoteSymbol);
+    throwApiError("AI 分析", analyzedResponse.status, quoteSymbol);
   }
   return analyzedResponse.json();
 }

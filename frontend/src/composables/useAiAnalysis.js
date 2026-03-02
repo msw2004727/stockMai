@@ -9,7 +9,7 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
   const aiError = ref("");
   const aiCheckedAt = ref("");
 
-  const userPrompt = ref("Focus on short-term trend and risk.");
+  const userPrompt = ref("請聚焦短線趨勢、風險與可執行建議。");
   const selectedProvider = ref(initialProvider);
   const providerOptions = ["claude", "gpt5", "grok", "gemini"];
 
@@ -35,7 +35,7 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     } catch (error) {
       if (error.name !== "AbortError") {
         aiResult.value = null;
-        aiError.value = error.message || "AI analyze failed.";
+        aiError.value = error.message || "AI 分析失敗";
       }
     } finally {
       aiLoading.value = false;
@@ -62,4 +62,3 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     setProvider,
   };
 }
-

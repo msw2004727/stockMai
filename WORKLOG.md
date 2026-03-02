@@ -255,3 +255,8 @@
 - Status: In Progress
 - Verification: backend unittest 58/58 pass, frontend vite build pass, smoke-check.ps1 pass.
 - Next: stage all modified/new files, create one commit, push to origin/main.
+## [2026-03-02 14:33] AI 分析介面中文化
+- 完成內容：將 AI 分析頁（AIPanel）文案改為中文，包含標題、按鈕、提示、來源/備援欄位、成功失敗狀態；新增訊號顯示轉換（bullish/bearish/neutral -> 看多/看空/中立）。
+- 狀態：Done
+- 相關調整：`useAiAnalysis` 預設提示與錯誤文案中文化；`frontend/src/api.js` API 錯誤訊息中文化（含 AI 分析）。
+- 驗收：`npm run build` 通過。

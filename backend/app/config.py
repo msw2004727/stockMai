@@ -29,7 +29,7 @@ class Settings(BaseSettings):
     quote_short_cache_ttl_seconds: int = 5
     quote_fetch_rate_limit: int = 20
     quote_fetch_rate_window_seconds: int = 10
-    cors_allow_origins: str = "*"
+    cors_allow_origins: str = "https://stockmai-frontend.onrender.com,http://localhost:5173,http://127.0.0.1:5173"
 
     model_config = SettingsConfigDict(
         env_file=".env",

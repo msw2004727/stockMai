@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.app.main import app
-from backend.app.stocks.service import DataUnavailableError, QuoteRateLimitedError
+from backend.app.stocks.service import DataUnavailableError, QuoteRateLimitedError, SymbolNotFoundError
 
 
 class _FakeRedis:
@@ -116,6 +116,29 @@ class ApiIntegrationTest(unittest.TestCase):
         status, payload = self._request_json("GET", "/stocks/quote", query="symbol=2330")
         self.assertEqual(status, 401)
         self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_stocks_quote_invalid_symbol_returns_422_with_error_code(self):
+        fake_redis = _FakeRedis()
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                token_status, token_payload = self._request_json(
+                    "POST",
+                    "/auth/token",
+                    payload={"user_id": "invalid-symbol-user", "expires_minutes": 30},
+                )
+                self.assertEqual(token_status, 200)
+                token = token_payload["access_token"]
+
+                status, payload = self._request_json(
+                    "GET",
+                    "/stocks/quote",
+                    query="symbol=ABC",
+                    headers={"authorization": f"Bearer {token}"},
+                )
+                self.assertEqual(status, 422)
+                self.assertEqual(payload["error_code"], "validation_error")
+                self.assertEqual(payload["message"], "Invalid request parameters")
 
     def test_issue_token_and_access_quote_success(self):
         fake_redis = _FakeRedis()
@@ -198,6 +221,7 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertEqual(first_status, 200)
                     self.assertEqual(second_status, 429)
                     self.assertEqual(second_payload["detail"], "Daily quota exceeded")
+                    self.assertEqual(second_payload["error_code"], "daily_quota_exceeded")
 
     def test_quote_supports_five_digit_symbol(self):
         fake_redis = _FakeRedis()
@@ -265,6 +289,7 @@ class ApiIntegrationTest(unittest.TestCase):
                     )
                     self.assertEqual(status, 503)
                     self.assertEqual(payload["detail"], "Market data providers are temporarily unavailable.")
+                    self.assertEqual(payload["error_code"], "service_unavailable")
 
     def test_quote_returns_429_when_quote_rate_guard_triggers(self):
         fake_redis = _FakeRedis()
@@ -290,11 +315,38 @@ class ApiIntegrationTest(unittest.TestCase):
                     )
                     self.assertEqual(status, 429)
                     self.assertIn("Quote rate limit exceeded", payload["detail"])
+                    self.assertEqual(payload["error_code"], "rate_limited")
+
+    def test_quote_returns_404_with_standard_error_code(self):
+        fake_redis = _FakeRedis()
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch(
+                    "backend.app.stocks.routes.get_quote",
+                    side_effect=SymbolNotFoundError("Symbol not found: 9999"),
+                ):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "not-found-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/quote",
+                        query="symbol=9999",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 404)
+                    self.assertEqual(payload["error_code"], "not_found")
 
     def test_stocks_indicators_requires_token(self):
         status, payload = self._request_json("GET", "/stocks/indicators", query="symbol=2330&days=60")
         self.assertEqual(status, 401)
         self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
 
     def test_stocks_indicators_success_with_token(self):
         fake_redis = _FakeRedis()
@@ -345,6 +397,7 @@ class ApiIntegrationTest(unittest.TestCase):
         )
         self.assertEqual(status, 401)
         self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
 
     def test_ai_analyze_success_with_token(self):
         fake_redis = _FakeRedis()
@@ -401,6 +454,7 @@ class ApiIntegrationTest(unittest.TestCase):
                 self.assertEqual(first_status, 200)
                 self.assertEqual(second_status, 429)
                 self.assertEqual(second_payload["detail"], "Daily quota exceeded")
+                self.assertEqual(second_payload["error_code"], "daily_quota_exceeded")
 
 
 if __name__ == "__main__":

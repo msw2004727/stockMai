@@ -152,7 +152,7 @@ Steps:
 
 Notes:
 - Backend service URL is injected into frontend `VITE_API_BASE` automatically.
-- Backend currently uses `CORS_ALLOW_ORIGINS=*` for easy deployment. You can tighten it later.
+- Backend CORS is now whitelist-based. Set `CORS_ALLOW_ORIGINS` to comma-separated origins (Render default: `https://stockmai-frontend.onrender.com`).
 
 ## 1-minute cloud validation (no Docker)
 Run from any device with PowerShell:
@@ -239,3 +239,28 @@ Runs on every push / PR to `main`:
 - backend unit tests
 - frontend production build
 - UTF-8 validation for `WORKLOG.md` (avoids Pages Jekyll encoding failures)
+
+## API error response format
+Standard error payload now includes `error_code` for easier frontend handling and monitoring:
+
+```json
+{
+  "error_code": "daily_quota_exceeded",
+  "message": "Daily quota exceeded",
+  "detail": "Daily quota exceeded",
+  "status_code": 429,
+  "path": "/stocks/quote"
+}
+```
+
+Common codes:
+- `auth_missing_bearer_token` (401)
+- `not_found` (404)
+- `daily_quota_exceeded` / `rate_limited` (429)
+- `service_unavailable` (503)
+
+## Production launch checklist (Batch 5)
+- CORS restricted to trusted frontend origins only (`CORS_ALLOW_ORIGINS`, no `*` in production).
+- API secrets stored in Render Secret env vars only (no hard-coded keys in repo).
+- Cloud smoke run passed (`scripts/cloud-smoke.ps1` or GitHub `Cloud Smoke` workflow).
+- Backend unit tests and frontend build are green in CI.

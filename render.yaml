@@ -58,7 +58,7 @@ services:
       - key: GEMINI_MODEL
         value: "gemini-3.1-pro-preview"
       - key: CORS_ALLOW_ORIGINS
-        value: "*"
+        value: "https://stockmai-frontend.onrender.com"
       - key: ANTHROPIC_API_KEY
         sync: false
       - key: OPENAI_API_KEY

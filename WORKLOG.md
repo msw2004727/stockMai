@@ -121,3 +121,9 @@
   3) 安全與成本檢查：確認 API key 僅用 Render Secret；AI 與行情速率限制生效。
   4) 上線驗收清單：功能、效能、回歸測試結果整理進 README + WORKLOG。
 - 備註（可選）：完成標準：可連續穩定查詢、錯誤可觀測、部署可重現。
+
+## [2026-03-02 17:59] 第 5 批完成（正式上線收尾）
+- 完成事項：新增全域錯誤處理（`error_code/message/detail/status_code/path`），涵蓋 `401/404/422/429/503`；保留 `detail` 相容既有前端。CORS 改為白名單策略，更新 `backend/app/config.py`、`.env.example`、`render.yaml`（Render 預設僅前端正式網域）。
+- 目前進度：Done
+- 下一步：在 Render/GitHub Actions 執行一次 Cloud Smoke，確認雲端環境錯誤碼與 CORS 設定符合預期，再進入規格書下一階段（策略與回測）。
+- 備註（可選）：驗收通過：backend unittest `93/93`、frontend build pass。

@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch
 
+from backend.app.stocks.quote_provider import QuoteProviderUnavailableError
 from backend.app.stocks.service import DataUnavailableError, SymbolNotFoundError, get_history, get_indicators, get_quote
 
 
@@ -18,13 +19,13 @@ class StockServiceTest(unittest.TestCase):
         self._patch_load_history.stop()
         self._patch_persist.stop()
 
-    @patch("backend.app.stocks.service._fetch_quote_from_twse")
-    @patch("backend.app.stocks.service._fetch_quote_from_finmind")
-    def test_get_quote_prefers_finmind(self, mock_finmind, mock_twse):
-        mock_finmind.return_value = {
+    @patch("backend.app.stocks.service._fetch_quote_from_provider_chain")
+    def test_get_quote_uses_provider_chain(self, mock_provider_chain):
+        mock_provider_chain.return_value = {
             "symbol": "2330",
             "name": "2330",
             "as_of_date": "2026-03-02",
+            "quote_time": "2026-03-02 14:00:00",
             "open": 1000.0,
             "high": 1010.0,
             "low": 995.0,
@@ -32,48 +33,61 @@ class StockServiceTest(unittest.TestCase):
             "change": 8.0,
             "volume": 12345678,
             "source": "finmind",
+            "source_priority": "daily_fallback",
+            "market_state": "daily_close",
+            "is_realtime": False,
+            "delay_seconds": None,
             "is_fallback": False,
             "note": "",
         }
 
         result = get_quote("2330")
         self.assertEqual(result["source"], "finmind")
+        self.assertEqual(result["source_priority"], "daily_fallback")
+        self.assertEqual(result["is_realtime"], False)
         self.assertIn("freshness", result)
         self.assertIn("is_fresh", result["freshness"])
-        mock_twse.assert_not_called()
+        mock_provider_chain.assert_called_once()
 
-    @patch("backend.app.stocks.service._fetch_quote_from_twse")
-    @patch("backend.app.stocks.service._fetch_quote_from_finmind", return_value=None)
-    def test_get_quote_fallback_twse_after_finmind_miss(self, _mock_finmind, mock_twse):
-        mock_twse.return_value = {
+    @patch("backend.app.stocks.service._fetch_quote_from_provider_chain")
+    def test_get_quote_handles_realtime_source(self, mock_provider_chain):
+        mock_provider_chain.return_value = {
             "symbol": "2330",
             "name": "TSMC",
             "as_of_date": "2026-03-02",
+            "quote_time": "2026-03-02 13:25:01",
             "open": 1001.0,
             "high": 1012.0,
             "low": 998.0,
             "close": 1009.0,
             "change": 8.0,
             "volume": 1234,
-            "source": "twse",
+            "source": "twse_realtime",
+            "source_priority": "realtime_primary",
+            "market_state": "trading",
+            "is_realtime": True,
+            "delay_seconds": 0,
             "is_fallback": False,
             "note": "",
         }
 
         result = get_quote("2330")
-        self.assertEqual(result["source"], "twse")
+        self.assertEqual(result["source"], "twse_realtime")
+        self.assertEqual(result["source_priority"], "realtime_primary")
+        self.assertEqual(result["is_realtime"], True)
         self.assertIn("freshness", result)
         self.assertIn("is_fresh", result["freshness"])
 
-    @patch("backend.app.stocks.service._fetch_quote_from_twse", side_effect=RuntimeError("twse error"))
-    @patch("backend.app.stocks.service._fetch_quote_from_finmind", side_effect=RuntimeError("finmind error"))
-    def test_get_quote_raises_data_unavailable_when_all_sources_fail(self, _mock_finmind, _mock_twse):
+    @patch(
+        "backend.app.stocks.service._fetch_quote_from_provider_chain",
+        side_effect=QuoteProviderUnavailableError("All quote providers failed."),
+    )
+    def test_get_quote_raises_data_unavailable_when_all_sources_fail(self, _mock_provider_chain):
         with self.assertRaises(DataUnavailableError):
             get_quote("2330")
 
-    @patch("backend.app.stocks.service._fetch_quote_from_twse", return_value=None)
-    @patch("backend.app.stocks.service._fetch_quote_from_finmind", return_value=None)
-    def test_get_quote_symbol_not_found(self, _mock_finmind, _mock_twse):
+    @patch("backend.app.stocks.service._fetch_quote_from_provider_chain", return_value=None)
+    def test_get_quote_symbol_not_found(self, _mock_provider_chain):
         with self.assertRaises(SymbolNotFoundError):
             get_quote("9999")
 

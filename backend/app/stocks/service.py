@@ -4,7 +4,6 @@ from datetime import date
 
 from backend.modules.data_pipeline import (
     fetch_finmind_history,
-    fetch_finmind_quote,
     load_latest_quote,
     load_recent_history,
     upsert_price_series,
@@ -18,6 +17,7 @@ from backend.modules.feature_engineering import (
 from ..config import get_settings
 from .parsers import parse_daily_row, to_ohlc_series
 from .provider import fetch_twse_month, month_candidates
+from .quote_provider import QuoteProviderUnavailableError, fetch_quote_from_provider_chain
 
 
 class SymbolNotFoundError(Exception):
@@ -57,51 +57,18 @@ def _persist_series_to_postgres(symbol: str, series: list[dict], source: str) ->
     )
 
 
-def _fetch_quote_from_finmind(symbol: str) -> dict | None:
-    token = get_settings().finmind_token
-    return fetch_finmind_quote(symbol, token=token)
-
-
 def _fetch_history_from_finmind(symbol: str, days: int) -> dict | None:
     token = get_settings().finmind_token
     return fetch_finmind_history(symbol, days=days, token=token)
 
 
-def _fetch_quote_from_twse(symbol: str) -> dict | None:
-    has_fetch_error = False
-    for month in month_candidates(date.today(), count=2):
-        try:
-            name, rows = fetch_twse_month(symbol, month)
-        except Exception as exc:
-            has_fetch_error = True
-            continue
-
-        if not rows:
-            continue
-
-        parsed_rows = [parsed for raw in rows if (parsed := parse_daily_row(raw))]
-        if not parsed_rows:
-            continue
-
-        latest = parsed_rows[-1]
-        return {
-            "symbol": symbol,
-            "name": name,
-            "as_of_date": latest["date"],
-            "open": latest["open"],
-            "high": latest["high"],
-            "low": latest["low"],
-            "close": latest["close"],
-            "change": latest["change"],
-            "volume": latest["volume"],
-            "source": "twse",
-            "is_fallback": False,
-            "note": "",
-        }
-
-    if has_fetch_error:
-        raise RuntimeError(f"Failed to fetch TWSE quote for {symbol}")
-    return None
+def _fetch_quote_from_provider_chain(symbol: str) -> dict | None:
+    token = get_settings().finmind_token
+    return fetch_quote_from_provider_chain(
+        symbol=symbol,
+        finmind_token=token,
+        timeout_seconds=8,
+    )
 
 
 def _fetch_history_from_twse(symbol: str, days: int) -> dict | None:
@@ -177,69 +144,48 @@ def _with_freshness(payload: dict, max_age_days: int) -> dict:
     return out
 
 
-def get_quote(symbol: str) -> dict:
-    finmind_failed = False
-    twse_failed = False
-    twse_no_data = False
+def _with_quote_runtime_meta(payload: dict, default_priority: str) -> dict:
+    out = dict(payload)
+    as_of_date = str(out.get("as_of_date", ""))
+    out["quote_time"] = out.get("quote_time") or (f"{as_of_date} 14:00:00" if as_of_date else "")
+    out["market_state"] = str(out.get("market_state") or "unknown")
+    out["is_realtime"] = bool(out.get("is_realtime", False))
+    out["delay_seconds"] = out.get("delay_seconds")
+    out["source_priority"] = str(out.get("source_priority") or default_priority)
+    return out
 
+
+def get_quote(symbol: str) -> dict:
     try:
         cached = _load_quote_from_postgres(symbol)
         if cached:
-            return _with_freshness(cached, max_age_days=5)
+            with_meta = _with_quote_runtime_meta(cached, default_priority="cache")
+            return _with_freshness(with_meta, max_age_days=5)
     except Exception:
         pass
 
     try:
-        finmind_quote = _fetch_quote_from_finmind(symbol)
-        if finmind_quote:
+        quote = _fetch_quote_from_provider_chain(symbol)
+        if quote:
+            with_meta = _with_quote_runtime_meta(quote, default_priority="daily_fallback")
             _persist_series_to_postgres(
                 symbol=symbol,
                 series=[
                     {
-                        "date": finmind_quote["as_of_date"],
-                        "open": finmind_quote["open"],
-                        "high": finmind_quote["high"],
-                        "low": finmind_quote["low"],
-                        "close": finmind_quote["close"],
-                        "change": finmind_quote["change"],
-                        "volume": finmind_quote["volume"],
+                        "date": with_meta["as_of_date"],
+                        "open": with_meta["open"],
+                        "high": with_meta["high"],
+                        "low": with_meta["low"],
+                        "close": with_meta["close"],
+                        "change": with_meta["change"],
+                        "volume": with_meta["volume"],
                     }
                 ],
-                source="finmind",
+                source=with_meta.get("source", "unknown"),
             )
-            return _with_freshness(finmind_quote, max_age_days=5)
-    except Exception:
-        finmind_failed = True
-
-    try:
-        twse_quote = _fetch_quote_from_twse(symbol)
-        if twse_quote is None:
-            twse_no_data = True
-        else:
-            _persist_series_to_postgres(
-                symbol=symbol,
-                series=[
-                    {
-                        "date": twse_quote["as_of_date"],
-                        "open": twse_quote["open"],
-                        "high": twse_quote["high"],
-                        "low": twse_quote["low"],
-                        "close": twse_quote["close"],
-                        "change": twse_quote["change"],
-                        "volume": twse_quote["volume"],
-                    }
-                ],
-                source="twse",
-            )
-            return _with_freshness(twse_quote, max_age_days=5)
-    except Exception:
-        twse_failed = True
-
-    if finmind_failed and twse_failed:
+            return _with_freshness(with_meta, max_age_days=5)
+    except QuoteProviderUnavailableError:
         raise DataUnavailableError("Market data providers are temporarily unavailable.")
-
-    if twse_no_data:
-        raise SymbolNotFoundError(f"No quote data found for symbol={symbol}")
 
     raise SymbolNotFoundError(f"No quote data found for symbol={symbol}")
 

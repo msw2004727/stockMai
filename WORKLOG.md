@@ -81,3 +81,21 @@
 - 目前進度：Done
 - 下一步：接續正式化第 2 批（盤中即時來源接入與回傳欄位標準化，例如 quote_time / market_state）。
 - 備註（可選）：驗收已通過：backend unittest `82/82`、frontend build pass。
+
+## [2026-03-02 17:38] 正式化第 2 批（進行中）：即時報價 provider 鏈
+- 完成事項：新增 `quote_provider`（TWSE 即時 -> FinMind 日線 -> TWSE 日線）鏈式架構；`get_quote` 改為走 provider 鏈並保留 `quote_time/market_state/is_realtime/source_priority` 等欄位；新增 `test_quote_provider` 並調整 `test_stock_service`。
+- 目前進度：Done
+- 下一步：把新欄位接到前端行情卡（顯示盤中/收盤狀態與報價時間），再做 Render 雲端 smoke 驗收。
+- 備註（可選）：驗收已通過：backend unittest `86/86`、frontend build pass。
+
+## [2026-03-02 17:39] 正式化第 2 批（續）：前端顯示即時狀態
+- 完成事項：`QuotePanel` 顯示 `quote_time`、`market_state`、`is_realtime`；前端 build 驗收通過。
+- 目前進度：Done
+- 下一步：將這批 provider + UI 變更 commit/push，並在 Render 端做實際 API smoke。
+- 備註（可選）：本機環境嘗試直接連線 Render API 時遇到網路連線限制，需在你端或 CI/Render shell 驗證最終 smoke。
+
+## [2026-03-02 17:40] 即時報價第 2 批提交與下一步規劃
+- 完成事項：整理即時 provider 鏈、service、測試、前端顯示與 README 文件，準備 commit/push。
+- 目前進度：Done
+- 下一步：進入第 3 批（Redis 短快取 + rate guard + 雲端 smoke 自動化）。
+- 備註（可選）：此批本地驗收維持 backend `86/86` 通過、frontend build 通過。

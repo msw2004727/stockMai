@@ -115,6 +115,13 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/stocks/quote?symbol=23
   -Headers @{ Authorization = "Bearer $token" } | Select-Object -ExpandProperty Content
 ```
 
+`/stocks/quote` response now includes quote mode metadata:
+- `quote_time`
+- `market_state` (`trading` / `daily_close` / `unknown`)
+- `is_realtime`
+- `source_priority` (`realtime_primary` / `daily_fallback` / `cache`)
+- `freshness` (`as_of_date`, `age_days`, `is_fresh`, `max_age_days`)
+
 ## Frontend auth behavior
 Frontend now auto-requests JWT from `/auth/token` and attaches `Authorization: Bearer <token>` for `/stocks/*` calls.
 

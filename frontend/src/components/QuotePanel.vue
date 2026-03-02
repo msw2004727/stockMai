@@ -61,6 +61,17 @@ function fmt(value) {
   }
   return Number(value).toFixed(4);
 }
+
+function marketStateLabel(raw) {
+  const value = String(raw || "").toLowerCase();
+  if (value === "trading") {
+    return "盤中";
+  }
+  if (value === "daily_close" || value === "post_close") {
+    return "收盤";
+  }
+  return "未知";
+}
 </script>
 
 <template>
@@ -105,6 +116,9 @@ function fmt(value) {
       <p class="label">股票</p>
       <p class="value">{{ quote.symbol }} {{ quote.name }}</p>
       <p class="sub">日期：{{ quote.as_of_date }}</p>
+      <p class="sub">報價時間：{{ quote.quote_time || "N/A" }}</p>
+      <p class="sub">市場狀態：{{ marketStateLabel(quote.market_state) }}</p>
+      <p class="sub">資料型態：{{ quote.is_realtime ? "即時" : "日線" }}</p>
     </article>
 
     <article class="card">

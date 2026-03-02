@@ -9,7 +9,7 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
   const aiError = ref("");
   const aiCheckedAt = ref("");
 
-  const userPrompt = ref("請聚焦短線趨勢、風險與可執行建議。");
+  const userPrompt = ref("請著重短線趨勢、風險與可能的進出場節奏。");
   const selectedProvider = ref(initialProvider);
   const providerOptions = ["claude", "gpt5", "grok", "gemini"];
 
@@ -62,3 +62,4 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     setProvider,
   };
 }
+

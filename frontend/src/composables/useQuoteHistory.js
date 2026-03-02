@@ -42,7 +42,7 @@ export function useQuoteHistory(initialSymbol = "2330") {
       } catch (error) {
         if (error.name !== "AbortError") {
           history.value = null;
-          historyError.value = error.message || "無法查詢股價走勢";
+          historyError.value = error.message || "歷史走勢讀取失敗";
         }
       }
 
@@ -52,14 +52,14 @@ export function useQuoteHistory(initialSymbol = "2330") {
       } catch (error) {
         if (error.name !== "AbortError") {
           indicators.value = null;
-          indicatorsError.value = error.message || "無法查詢技術指標";
+          indicatorsError.value = error.message || "技術指標讀取失敗";
         }
       }
 
       quoteCheckedAt.value = formatTimeLabel(new Date());
     } catch (error) {
       if (error.name !== "AbortError") {
-        quoteError.value = error.message || "無法查詢股票報價";
+        quoteError.value = error.message || "股票報價查詢失敗";
         history.value = null;
         indicators.value = null;
       }
@@ -96,3 +96,4 @@ export function useQuoteHistory(initialSymbol = "2330") {
     setDayRange,
   };
 }
+

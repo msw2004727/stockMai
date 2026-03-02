@@ -399,6 +399,26 @@ h2 {
   cursor: wait;
 }
 
+.provider-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(120px, 140px));
+  justify-content: center;
+  justify-items: center;
+  align-items: center;
+  gap: 10px 12px;
+  overflow: visible;
+}
+
+.provider-grid .period-label {
+  grid-column: 1 / -1;
+  text-align: center;
+}
+
+.provider-grid .period-btn {
+  width: 100%;
+  justify-content: center;
+}
+
 .input {
   height: 40px;
   border: 1px solid var(--border);

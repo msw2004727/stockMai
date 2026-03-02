@@ -54,16 +54,16 @@ function toSignalLabel(signal) {
 function providerLabel(provider) {
   const parsed = String(provider || "").toLowerCase();
   if (parsed === "claude") {
-    return "Claude（語意推理）";
+    return "Claude";
   }
   if (parsed === "gpt5") {
-    return "GPT-5（技術分析）";
+    return "GPT-5";
   }
   if (parsed === "grok") {
-    return "Grok（事件偵測）";
+    return "Grok";
   }
   if (parsed === "gemini") {
-    return "Gemini（資料交叉檢查）";
+    return "Gemini";
   }
   return provider;
 }
@@ -99,7 +99,7 @@ function fmt(value, digits = 6) {
     <span v-if="aiCheckedAt" class="checked-at no-wrap">更新時間：{{ aiCheckedAt }}</span>
   </div>
 
-  <div class="period-row">
+  <div class="period-row provider-grid">
     <span class="period-label">模型選擇：</span>
     <button
       v-for="provider in providerOptions"
@@ -172,4 +172,3 @@ function fmt(value, digits = 6) {
     </article>
   </div>
 </template>
-

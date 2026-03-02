@@ -46,6 +46,44 @@ class OpenAICompatClientsTest(unittest.TestCase):
         text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
         self.assertIn("bullish", text)
 
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_openai_client_supports_output_text_shape(self, mock_post_json):
+        mock_post_json.return_value = (
+            200,
+            {
+                "id": "resp_123",
+                "output_text": '{"summary":"ok from output_text","signal":"neutral","confidence":0.6}',
+            },
+            "",
+        )
+        client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("output_text", text)
+
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_openai_client_supports_output_content_shape(self, mock_post_json):
+        mock_post_json.return_value = (
+            200,
+            {
+                "id": "resp_456",
+                "output": [
+                    {
+                        "type": "message",
+                        "content": [
+                            {
+                                "type": "output_text",
+                                "text": '{"summary":"ok from output content","signal":"neutral","confidence":0.6}',
+                            }
+                        ],
+                    }
+                ],
+            },
+            "",
+        )
+        client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("output content", text)
+
     def test_openai_client_rejects_missing_key(self):
         client = OpenAIClient(api_key="", model="gpt-5.2")
         with self.assertRaises(ProviderCallError) as ctx:

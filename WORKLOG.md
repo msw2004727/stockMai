@@ -314,3 +314,15 @@
 - 目前進度：Done
 - 下一步：等待雲端部署完成後，在前端 GPT-5 再測一次 AI 分析是否成功。
 - 備註（可選）：本回合包含 commit + push。
+
+## [2026-03-02 21:48] GPT-5 回應解析補強（修正 missing message content）
+- 完成事項：修正 `backend/modules/ai_gateway/openai_client.py` 的 GPT-5 內容擷取邏輯，新增支援 `choices.message.content`、`output_text`、`output[].content` 等格式；並補上 `backend/tests/test_openai_compat_clients.py` 對新格式的測試案例。
+- 目前進度：In Progress
+- 下一步：部署後端最新版本後，前端切到 GPT-5 重新執行一次 AI 分析，確認不再出現 `response missing message content`。
+- 備註（可選）：本機執行 unittest 受缺少 `redis` 套件限制未能完整跑通，已以 `py_compile` 檢查變更檔語法。
+
+## [2026-03-02 21:50] GPT-5 解析補強提交與推送
+- 完成事項：提交 GPT-5 回應解析相容性修正（含 `output_text` / `output[].content` 支援）與對應測試補強，並推送到 `origin/main`。
+- 目前進度：Done
+- 下一步：等待 Render 部署完成後，在前端用 GPT-5 再做一次 AI 分析驗收。
+- 備註（可選）：本機 unittest 因缺少 `redis` 套件未完整執行，已以 `py_compile` 驗證語法。

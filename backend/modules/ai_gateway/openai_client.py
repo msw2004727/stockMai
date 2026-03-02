@@ -72,20 +72,105 @@ class OpenAIClient(OpenAICompatClient):
 
 def _extract_openai_text(payload: dict[str, Any]) -> str:
     choices = payload.get("choices")
-    if not isinstance(choices, list) or not choices:
+    if isinstance(choices, list) and choices:
+        first_choice = choices[0]
+        if isinstance(first_choice, dict):
+            message = first_choice.get("message")
+            if isinstance(message, dict):
+                text = _extract_content_text(message.get("content"))
+                if text:
+                    return text
+                refusal = message.get("refusal")
+                if isinstance(refusal, str) and refusal.strip():
+                    return refusal.strip()
+
+            choice_text = first_choice.get("text")
+            if isinstance(choice_text, str) and choice_text.strip():
+                return choice_text.strip()
+
+    output_text = payload.get("output_text")
+    if isinstance(output_text, str) and output_text.strip():
+        return output_text.strip()
+
+    response = payload.get("response")
+    if isinstance(response, dict):
+        nested_output_text = response.get("output_text")
+        if isinstance(nested_output_text, str) and nested_output_text.strip():
+            return nested_output_text.strip()
+        text = _extract_output_text(response.get("output"))
+        if text:
+            return text
+
+    text = _extract_output_text(payload.get("output"))
+    if text:
+        return text
+
+    return ""
+
+
+def _extract_output_text(output: Any) -> str:
+    if not isinstance(output, list):
         return ""
 
-    message = choices[0].get("message")
-    if not isinstance(message, dict):
-        return ""
+    parts: list[str] = []
+    for item in output:
+        if not isinstance(item, dict):
+            continue
 
-    content = message.get("content")
+        text = _extract_content_text(item.get("content"))
+        if text:
+            parts.append(text)
+
+        direct_text = item.get("text")
+        if isinstance(direct_text, str) and direct_text.strip():
+            parts.append(direct_text.strip())
+        elif isinstance(direct_text, dict):
+            nested_value = direct_text.get("value")
+            if isinstance(nested_value, str) and nested_value.strip():
+                parts.append(nested_value.strip())
+
+    return "\n".join(part for part in parts if part).strip()
+
+
+def _extract_content_text(content: Any) -> str:
     if isinstance(content, str):
         return content.strip()
-    if isinstance(content, list):
-        parts = []
-        for item in content:
-            if isinstance(item, dict) and isinstance(item.get("text"), str):
-                parts.append(item["text"].strip())
-        return "\n".join(part for part in parts if part).strip()
-    return ""
+    if not isinstance(content, list):
+        return ""
+
+    parts: list[str] = []
+    for item in content:
+        if isinstance(item, str):
+            parsed = item.strip()
+            if parsed:
+                parts.append(parsed)
+            continue
+
+        if not isinstance(item, dict):
+            continue
+
+        text = item.get("text")
+        if isinstance(text, str):
+            parsed = text.strip()
+            if parsed:
+                parts.append(parsed)
+            continue
+
+        if isinstance(text, dict):
+            value = text.get("value")
+            if isinstance(value, str) and value.strip():
+                parts.append(value.strip())
+                continue
+
+        nested = item.get("content")
+        if isinstance(nested, str):
+            parsed = nested.strip()
+            if parsed:
+                parts.append(parsed)
+            continue
+        if isinstance(nested, list):
+            nested_text = _extract_content_text(nested)
+            if nested_text:
+                parts.append(nested_text)
+
+    return "\n".join(part for part in parts if part).strip()

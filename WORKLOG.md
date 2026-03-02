@@ -94,6 +94,12 @@
 - 下一步：可再拆分 `KLineChart` 的 template 為 `KlineSvgLayer`、`KlineLegend` 子元件，進一步縮短單檔大小。
 - 備註（可選）：重構後自我驗收通過：`frontend npm run build` 成功、`/stocks/quote?symbol=2330` 200、`/stocks/quote?symbol=9999` 404；無行為回歸。
 
+## [2026-03-02 12:44] 第四與第五波完成 + 提交 commit
+- 完成事項：完成第 4 波（`KLineChart` 再拆分為 `KlineSvgLayer`、`KlineLegend`、`KlineMeta`）；完成第 5 波（新增 backend unittest、`scripts/smoke-check.ps1`、README 模組化與驗收章節）；修正 smoke 腳本以嚴格檢查外部命令 exit code；完成 git commit `ac0b7d7`。
+- 目前進度：Done（五波模組化與驗收閉環完成）
+- 下一步：將 log/docx 類暫存檔加入 `.gitignore` 或移出 repo，保持工作樹乾淨。
+- 備註（可選）：驗收通過：`python -m unittest discover` 8/8、frontend build 成功、API 成功/失敗案例符合預期。
+
 ## [2026-03-02 12:36] 模組化波次確認
 - 完成事項：確認目前已完成第 1~3 波，整理剩餘波次規劃。
 - 目前進度：In Progress（收斂中）

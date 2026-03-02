@@ -1,14 +1,33 @@
 from __future__ import annotations
 
+import math
+
+try:
+    import numpy as np
+    import talib
+
+    _HAS_TALIB = True
+except Exception:
+    np = None
+    talib = None
+    _HAS_TALIB = False
+
+
+def get_indicator_engine() -> str:
+    return "talib" if _HAS_TALIB else "python"
+
 
 def compute_indicator_series(price_series: list[dict]) -> list[dict]:
     closes = [_to_float(item.get("close")) for item in price_series]
     dates = [str(item.get("date", "")) for item in price_series]
 
-    sma5 = _sma(closes, period=5)
-    sma20 = _sma(closes, period=20)
-    rsi14 = _rsi(closes, period=14)
-    macd_line, macd_signal, macd_hist = _macd(closes, fast_period=12, slow_period=26, signal_period=9)
+    if _HAS_TALIB:
+        sma5, sma20, rsi14, macd_line, macd_signal, macd_hist = _compute_with_talib(closes)
+    else:
+        sma5 = _sma(closes, period=5)
+        sma20 = _sma(closes, period=20)
+        rsi14 = _rsi(closes, period=14)
+        macd_line, macd_signal, macd_hist = _macd(closes, fast_period=12, slow_period=26, signal_period=9)
 
     rows: list[dict] = []
     for idx, close in enumerate(closes):
@@ -48,6 +67,40 @@ def compute_latest_indicators(price_series: list[dict]) -> dict:
         "macd_signal": latest["macd_signal"],
         "macd_hist": latest["macd_hist"],
     }
+
+
+def _compute_with_talib(values: list[float]) -> tuple[list[float | None], ...]:
+    assert np is not None
+    assert talib is not None
+
+    if not values:
+        empty: list[float | None] = []
+        return empty, empty, empty, empty, empty, empty
+
+    arr = np.asarray(values, dtype=float)
+    sma5 = _to_optional_list(talib.SMA(arr, timeperiod=5))
+    sma20 = _to_optional_list(talib.SMA(arr, timeperiod=20))
+    rsi14 = _to_optional_list(talib.RSI(arr, timeperiod=14))
+    macd_line, macd_signal, macd_hist = talib.MACD(arr, fastperiod=12, slowperiod=26, signalperiod=9)
+    return (
+        sma5,
+        sma20,
+        rsi14,
+        _to_optional_list(macd_line),
+        _to_optional_list(macd_signal),
+        _to_optional_list(macd_hist),
+    )
+
+
+def _to_optional_list(values) -> list[float | None]:
+    output: list[float | None] = []
+    for raw in values:
+        parsed = _to_float(raw)
+        if math.isnan(parsed):
+            output.append(None)
+        else:
+            output.append(parsed)
+    return output
 
 
 def _sma(values: list[float], period: int) -> list[float | None]:

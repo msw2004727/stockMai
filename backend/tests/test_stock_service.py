@@ -147,6 +147,7 @@ class StockServiceTest(unittest.TestCase):
         self.assertEqual(result["history_source"], "postgres")
         self.assertEqual(result["days"], 30)
         self.assertEqual(len(result["series"]), 30)
+        self.assertIn(result["indicator_engine"], {"talib", "python"})
         self.assertIn("sma5", result["latest"])
         self.assertIn("rsi14", result["latest"])
         self.assertIn("macd", result["latest"])

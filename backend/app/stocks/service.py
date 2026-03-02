@@ -9,7 +9,11 @@ from backend.modules.data_pipeline import (
     load_recent_history,
     upsert_price_series,
 )
-from backend.modules.feature_engineering import compute_indicator_series, compute_latest_indicators
+from backend.modules.feature_engineering import (
+    compute_indicator_series,
+    compute_latest_indicators,
+    get_indicator_engine,
+)
 
 from ..config import get_settings
 from .constants import DEMO_QUOTES
@@ -292,6 +296,7 @@ def get_indicators(symbol: str, days: int) -> dict:
         "days": int(history.get("days", days)),
         "as_of_date": latest_date,
         "history_source": history.get("source", "unknown"),
+        "indicator_engine": get_indicator_engine(),
         "is_fallback": bool(history.get("is_fallback", False)),
         "note": str(history.get("note", "")),
         "latest": latest,

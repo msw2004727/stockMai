@@ -1,6 +1,10 @@
 import unittest
 
-from backend.modules.feature_engineering import compute_indicator_series, compute_latest_indicators
+from backend.modules.feature_engineering import (
+    compute_indicator_series,
+    compute_latest_indicators,
+    get_indicator_engine,
+)
 
 
 def _build_series(start: int, end: int) -> list[dict]:
@@ -16,6 +20,9 @@ def _build_series(start: int, end: int) -> list[dict]:
 
 
 class FeatureEngineeringTest(unittest.TestCase):
+    def test_indicator_engine_name_is_valid(self):
+        self.assertIn(get_indicator_engine(), {"talib", "python"})
+
     def test_compute_indicator_series_empty(self):
         rows = compute_indicator_series([])
         self.assertEqual(rows, [])
@@ -39,7 +46,7 @@ class FeatureEngineeringTest(unittest.TestCase):
         self.assertEqual(indicators[29]["rsi14"], 100.0)
 
     def test_macd_fields_exist_and_are_numeric(self):
-        series = _build_series(1, 30)
+        series = _build_series(1, 80)
         indicators = compute_indicator_series(series)
         latest = indicators[-1]
 

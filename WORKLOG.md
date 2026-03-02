@@ -45,3 +45,9 @@
 - 狀態：Done
 - 驗收：本機 backend tests 73/73 pass；frontend build pass。
 - 補充：README 新增 CI checks 說明。
+
+## [2026-03-02 16:54] Phase 2 收尾：TA-Lib 優先與回傳引擎資訊
+- 完成內容：`feature_engineering` 新增 `get_indicator_engine()` 匯出；`/stocks/indicators` 回傳 `indicator_engine`（`talib` 或 `python`）。
+- 狀態：Done
+- 驗收：補齊 `test_feature_engineering` 與 `test_stock_service` 對 `indicator_engine` 的斷言，並放大 MACD 測試資料長度避免長週期指標空值誤判。
+- 補充：README 的 indicators endpoint 說明已同步新增 `indicator_engine` 欄位。

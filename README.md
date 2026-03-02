@@ -187,3 +187,11 @@ Backfill recent history from FinMind into PostgreSQL:
 ```
 
 After this, `/stocks/quote` and `/stocks/history` will read from PostgreSQL cache first, then fallback to FinMind/TWSE/demo.
+
+## Stock indicators endpoint
+Protected endpoint: `GET /stocks/indicators?symbol=2330&days=60`
+
+Response includes:
+- `latest`: `sma5`, `sma20`, `rsi14`, `macd`, `macd_signal`, `macd_hist`
+- `series`: indicator time series aligned by date
+- `history_source`: where source history was loaded from (`postgres/finmind/twse/demo`)

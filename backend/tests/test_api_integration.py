@@ -198,6 +198,52 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertEqual(second_status, 429)
                     self.assertEqual(second_payload["detail"], "Daily quota exceeded")
 
+    def test_stocks_indicators_requires_token(self):
+        status, payload = self._request_json("GET", "/stocks/indicators", query="symbol=2330&days=60")
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+
+    def test_stocks_indicators_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_indicators = {
+            "symbol": "2330",
+            "days": 60,
+            "as_of_date": "2026-03-02",
+            "history_source": "integration",
+            "is_fallback": False,
+            "note": "",
+            "latest": {
+                "sma5": 1010.1,
+                "sma20": 1002.5,
+                "rsi14": 56.2,
+                "macd": 1.2,
+                "macd_signal": 1.0,
+                "macd_hist": 0.2,
+            },
+            "series": [],
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.get_indicators", return_value=fake_indicators):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "indicators-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/indicators",
+                        query="symbol=2330&days=60",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["symbol"], "2330")
+                    self.assertIn("latest", payload)
+                    self.assertEqual(payload["history_source"], "integration")
+
     def test_ai_analyze_requires_token(self):
         status, payload = self._request_json(
             "POST",

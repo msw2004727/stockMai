@@ -9,6 +9,7 @@ from backend.modules.data_pipeline import (
     load_recent_history,
     upsert_price_series,
 )
+from backend.modules.feature_engineering import compute_indicator_series, compute_latest_indicators
 
 from ..config import get_settings
 from .constants import DEMO_QUOTES
@@ -275,3 +276,24 @@ def get_history(symbol: str, days: int) -> dict:
             "is_fallback": True,
             "note": "TWSE data fetch failed; returned local demo history data.",
         }
+
+
+def get_indicators(symbol: str, days: int) -> dict:
+    history = get_history(symbol, days=days)
+    indicator_series = compute_indicator_series(history.get("series", []))
+    latest = compute_latest_indicators(history.get("series", []))
+
+    latest_date = ""
+    if indicator_series:
+        latest_date = str(indicator_series[-1].get("date", ""))
+
+    return {
+        "symbol": symbol,
+        "days": int(history.get("days", days)),
+        "as_of_date": latest_date,
+        "history_source": history.get("source", "unknown"),
+        "is_fallback": bool(history.get("is_fallback", False)),
+        "note": str(history.get("note", "")),
+        "latest": latest,
+        "series": indicator_series,
+    }

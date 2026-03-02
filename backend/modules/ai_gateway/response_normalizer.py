@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import re
 
 
 def _strip_markdown_json_fence(raw: str) -> str:
@@ -49,7 +50,75 @@ def _parse_json(raw: str) -> tuple[dict | None, str]:
             continue
         if isinstance(parsed, dict):
             return parsed, strategy
+
+    salvaged = _salvage_partial_json(raw)
+    if salvaged:
+        return salvaged, "partial_json"
     return None, "fallback_text"
+
+
+def _salvage_partial_json(raw: str) -> dict | None:
+    summary = _extract_quoted_value(raw, ("summary", "analysis"))
+    signal = _extract_quoted_value(raw, ("signal",))
+    confidence = _extract_number_value(raw, "confidence")
+    key_points = _extract_key_points(raw)
+
+    if not any([summary, signal, confidence is not None, key_points]):
+        return None
+
+    result: dict[str, object] = {}
+    if summary:
+        result["summary"] = summary
+    if signal:
+        result["signal"] = signal
+    if confidence is not None:
+        result["confidence"] = confidence
+    if key_points:
+        result["key_points"] = key_points
+    return result
+
+
+def _extract_quoted_value(raw: str, keys: tuple[str, ...]) -> str:
+    key_pattern = "|".join(re.escape(key) for key in keys)
+    pattern = rf'"(?:{key_pattern})"\s*:\s*"((?:\\.|[^"\\])*)"'
+    match = re.search(pattern, raw, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return ""
+
+    captured = match.group(1)
+    try:
+        return str(json.loads(f'"{captured}"')).strip()
+    except Exception:
+        return captured.replace('\\"', '"').strip()
+
+
+def _extract_number_value(raw: str, key: str) -> float | None:
+    pattern = rf'"{re.escape(key)}"\s*:\s*(-?\d+(?:\.\d+)?)'
+    match = re.search(pattern, raw, flags=re.IGNORECASE)
+    if not match:
+        return None
+    try:
+        return float(match.group(1))
+    except Exception:
+        return None
+
+
+def _extract_key_points(raw: str) -> list[str]:
+    match = re.search(r'"key_points"\s*:\s*\[(.*?)(?:\]|$)', raw, flags=re.IGNORECASE | re.DOTALL)
+    if not match:
+        return []
+
+    segment = match.group(1)
+    items = re.findall(r'"((?:\\.|[^"\\])*)"', segment, flags=re.DOTALL)
+    parsed_items: list[str] = []
+    for item in items:
+        try:
+            parsed = str(json.loads(f'"{item}"')).strip()
+        except Exception:
+            parsed = item.replace('\\"', '"').strip()
+        if parsed:
+            parsed_items.append(parsed)
+    return parsed_items
 
 
 def _to_signal(raw: object) -> str:

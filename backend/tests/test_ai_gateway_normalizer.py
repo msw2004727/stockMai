@@ -31,6 +31,18 @@ class AIGatewayNormalizerTest(unittest.TestCase):
         self.assertEqual(result["confidence"], 0.5)
         self.assertEqual(result["normalized_by"], "fallback_text")
 
+    def test_normalize_partial_json_extracts_summary_fields(self):
+        raw = (
+            '{"summary":"資料不足，先觀望","signal":"neutral","confidence":0.22,'
+            '"key_points":["資料缺口","等待突破"'
+        )
+        result = normalize_ai_response("gpt5", raw)
+        self.assertEqual(result["summary"], "資料不足，先觀望")
+        self.assertEqual(result["signal"], "neutral")
+        self.assertEqual(result["confidence"], 0.22)
+        self.assertEqual(result["key_points"], ["資料缺口", "等待突破"])
+        self.assertEqual(result["normalized_by"], "partial_json")
+
 
 if __name__ == "__main__":
     unittest.main()

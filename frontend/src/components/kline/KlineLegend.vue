@@ -1,8 +1,18 @@
+﻿<script setup>
+defineProps({
+  showCloseTrend: { type: Boolean, default: true },
+  showMa5: { type: Boolean, default: true },
+  showMa20: { type: Boolean, default: true },
+  showVolumeMa5: { type: Boolean, default: true },
+});
+</script>
+
 <template>
   <div class="legend">
-    <span><i class="legend-line ma5"></i> MA5</span>
-    <span><i class="legend-line ma20"></i> MA20</span>
-    <span><i class="legend-line vma5"></i> 成交量 MA5</span>
+    <span v-if="showCloseTrend"><i class="legend-line trend"></i> 收盤走勢</span>
+    <span v-if="showMa5"><i class="legend-line ma5"></i> MA5</span>
+    <span v-if="showMa20"><i class="legend-line ma20"></i> MA20</span>
+    <span v-if="showVolumeMa5"><i class="legend-line vma5"></i> 量 MA5</span>
   </div>
 </template>
 
@@ -29,6 +39,10 @@
   height: 2px;
 }
 
+.legend-line.trend {
+  background: var(--trend-line-color);
+}
+
 .legend-line.ma5 {
   background: var(--ma5-color);
 }
@@ -41,3 +55,4 @@
   background: var(--vma5-color);
 }
 </style>
+

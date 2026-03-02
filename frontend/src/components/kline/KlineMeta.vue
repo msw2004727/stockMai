@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 defineProps({
   first: {
     type: Object,
@@ -20,7 +20,7 @@ defineProps({
     <p>區間：<strong>{{ first?.date }}</strong> ~ <strong>{{ last?.date }}</strong></p>
     <p>
       區間漲跌：
-      <strong :class="Number(pctChange) >= 0 ? 'ok' : 'warn'">{{ pctChange }}%</strong>
+      <strong :class="Number(pctChange) >= 0 ? 'rise' : 'fall'">{{ pctChange }}%</strong>
     </p>
   </div>
 </template>
@@ -45,3 +45,4 @@ defineProps({
   }
 }
 </style>
+

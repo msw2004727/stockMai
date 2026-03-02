@@ -1,9 +1,9 @@
-import { onBeforeUnmount, ref } from "vue";
+﻿import { onBeforeUnmount, ref } from "vue";
 
 import { getStockHistory, getStockIndicators, getStockQuote } from "../api";
 import { formatTimeLabel } from "../utils/formatters";
 
-export function useQuoteHistory(initialSymbol = "2330") {
+export function useQuoteHistory(initialSymbol = "") {
   const symbol = ref(initialSymbol);
   const quote = ref(null);
   const quoteLoading = ref(false);
@@ -27,32 +27,48 @@ export function useQuoteHistory(initialSymbol = "2330") {
     }
     controller = new AbortController();
 
-    quoteLoading.value = true;
+    const parsedSymbol = String(symbol.value || "").trim();
     quoteError.value = "";
     historyError.value = "";
     indicatorsError.value = "";
 
+    if (!parsedSymbol) {
+      quote.value = null;
+      history.value = null;
+      indicators.value = null;
+      quoteCheckedAt.value = "";
+      quoteError.value = "請先輸入股票代號";
+      return;
+    }
+
+    // 新查詢先清掉舊資料，避免畫面保留上一檔股票資訊。
+    quote.value = null;
+    history.value = null;
+    indicators.value = null;
+    quoteCheckedAt.value = "";
+    quoteLoading.value = true;
+
     try {
-      const quoteResult = await getStockQuote(symbol.value, controller.signal);
+      const quoteResult = await getStockQuote(parsedSymbol, controller.signal);
       quote.value = quoteResult;
 
       try {
-        const historyResult = await getStockHistory(symbol.value, selectedDays.value, controller.signal);
+        const historyResult = await getStockHistory(parsedSymbol, selectedDays.value, controller.signal);
         history.value = historyResult;
       } catch (error) {
         if (error.name !== "AbortError") {
           history.value = null;
-          historyError.value = error.message || "歷史走勢讀取失敗";
+          historyError.value = error.message || "股價歷史查詢失敗";
         }
       }
 
       try {
-        const indicatorsResult = await getStockIndicators(symbol.value, 60, controller.signal);
+        const indicatorsResult = await getStockIndicators(parsedSymbol, 60, controller.signal);
         indicators.value = indicatorsResult;
       } catch (error) {
         if (error.name !== "AbortError") {
           indicators.value = null;
-          indicatorsError.value = error.message || "技術指標讀取失敗";
+          indicatorsError.value = error.message || "技術指標查詢失敗";
         }
       }
 
@@ -60,6 +76,7 @@ export function useQuoteHistory(initialSymbol = "2330") {
     } catch (error) {
       if (error.name !== "AbortError") {
         quoteError.value = error.message || "股票報價查詢失敗";
+        quote.value = null;
         history.value = null;
         indicators.value = null;
       }
@@ -73,7 +90,9 @@ export function useQuoteHistory(initialSymbol = "2330") {
       return;
     }
     selectedDays.value = days;
-    refreshQuote();
+    if (quote.value) {
+      refreshQuote();
+    }
   }
 
   onBeforeUnmount(() => {

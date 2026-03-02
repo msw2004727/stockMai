@@ -23,17 +23,18 @@
   --tooltip-text: #f8fafc;
   --tooltip-sub: #e2e8f0;
   --tooltip-dim: #cbd5e1;
-  --trend-fill: #0b4f6c;
-  --trend-bg: linear-gradient(180deg, rgba(215, 238, 247, 0.45), rgba(255, 255, 255, 0.85));
-  --up-color: #0f766e;
-  --up-fill: rgba(15, 118, 110, 0.78);
-  --up-vol: rgba(15, 118, 110, 0.35);
-  --down-color: #b45309;
-  --down-fill: rgba(180, 83, 9, 0.78);
-  --down-vol: rgba(180, 83, 9, 0.35);
-  --ma5-color: #0369a1;
-  --ma20-color: #be185d;
-  --vma5-color: #ea580c;
+  --trend-fill: #4f46e5;
+  --trend-bg: linear-gradient(180deg, rgba(210, 226, 255, 0.5), rgba(255, 255, 255, 0.85));
+  --trend-line-color: #4f46e5;
+  --up-color: #ff1744;
+  --up-fill: rgba(255, 23, 68, 0.82);
+  --up-vol: rgba(255, 23, 68, 0.36);
+  --down-color: #00c853;
+  --down-fill: rgba(0, 200, 83, 0.82);
+  --down-vol: rgba(0, 200, 83, 0.36);
+  --ma5-color: #ffb300;
+  --ma20-color: #2962ff;
+  --vma5-color: #8e24aa;
   --crosshair: rgba(11, 79, 108, 0.5);
 }
 
@@ -62,17 +63,18 @@
   --tooltip-text: #0f172a;
   --tooltip-sub: #334155;
   --tooltip-dim: #475569;
-  --trend-fill: #38bdf8;
-  --trend-bg: linear-gradient(180deg, rgba(12, 74, 110, 0.3), rgba(15, 23, 42, 0.85));
-  --up-color: #2dd4bf;
-  --up-fill: rgba(45, 212, 191, 0.78);
-  --up-vol: rgba(45, 212, 191, 0.35);
-  --down-color: #fbbf24;
-  --down-fill: rgba(251, 191, 36, 0.78);
-  --down-vol: rgba(251, 191, 36, 0.35);
-  --ma5-color: #38bdf8;
-  --ma20-color: #f472b6;
-  --vma5-color: #fb923c;
+  --trend-fill: #818cf8;
+  --trend-bg: linear-gradient(180deg, rgba(44, 54, 87, 0.45), rgba(15, 23, 42, 0.9));
+  --trend-line-color: #818cf8;
+  --up-color: #ff5252;
+  --up-fill: rgba(255, 82, 82, 0.82);
+  --up-vol: rgba(255, 82, 82, 0.36);
+  --down-color: #69f0ae;
+  --down-fill: rgba(105, 240, 174, 0.8);
+  --down-vol: rgba(105, 240, 174, 0.34);
+  --ma5-color: #ffd54f;
+  --ma20-color: #82b1ff;
+  --vma5-color: #ce93d8;
   --crosshair: rgba(56, 189, 248, 0.5);
 }
 
@@ -327,6 +329,14 @@ h2 {
 
 .warn {
   color: var(--warn);
+}
+
+.rise {
+  color: var(--up-color);
+}
+
+.fall {
+  color: var(--down-color);
 }
 
 .warn-text {

@@ -30,7 +30,7 @@ const {
   dayOptions,
   refreshQuote,
   setDayRange,
-} = useQuoteHistory("2330");
+} = useQuoteHistory("");
 const {
   aiResult,
   aiLoading,
@@ -65,8 +65,6 @@ function refreshAiAndStrategy() {
 
 onMounted(() => {
   refreshHealth();
-  refreshQuote();
-  refreshAiAndStrategy();
 });
 </script>
 

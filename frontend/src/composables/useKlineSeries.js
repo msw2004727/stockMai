@@ -168,6 +168,7 @@ export function useKlineSeries(rawOhlcSource) {
   const closeMa20 = computed(() => movingAverage(closeValues.value, 20));
   const volumeMa5 = computed(() => movingAverage(volumeValues.value, 5));
 
+  const closeTrendPoints = computed(() => toPolyline(closeValues.value, toY));
   const ma5Points = computed(() => toPolyline(closeMa5.value, toY));
   const ma20Points = computed(() => toPolyline(closeMa20.value, toY));
   const volumeMa5Points = computed(() => toPolyline(volumeMa5.value, toVolumeY));
@@ -304,6 +305,7 @@ export function useKlineSeries(rawOhlcSource) {
     bars,
     first,
     last,
+    closeTrendPoints,
     ma5Points,
     ma20Points,
     volumeMa5Points,

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 const props = defineProps({
   width: { type: Number, required: true },
   height: { type: Number, required: true },
@@ -11,6 +11,7 @@ const props = defineProps({
   tooltipHeight: { type: Number, required: true },
   bars: { type: Array, default: () => [] },
   candleWidth: { type: Number, required: true },
+  closeTrendPoints: { type: String, default: "" },
   ma5Points: { type: String, default: "" },
   ma20Points: { type: String, default: "" },
   volumeMa5Points: { type: String, default: "" },
@@ -21,6 +22,12 @@ const props = defineProps({
   activeCloseMa20: { type: Number, default: null },
   activeVolumeMa5: { type: Number, default: null },
   tooltip: { type: Object, default: null },
+  showCandles: { type: Boolean, default: true },
+  showVolume: { type: Boolean, default: true },
+  showCloseTrend: { type: Boolean, default: true },
+  showMa5: { type: Boolean, default: true },
+  showMa20: { type: Boolean, default: true },
+  showVolumeMa5: { type: Boolean, default: true },
 });
 
 const emit = defineEmits(["mousemove", "mouseleave", "click"]);
@@ -42,7 +49,7 @@ function fmtVolume(value) {
     :viewBox="`0 0 ${width} ${height}`"
     class="kline-svg"
     role="img"
-    aria-label="股票 K 線圖"
+    aria-label="K 線圖"
     @mousemove="emit('mousemove', $event)"
     @mouseleave="emit('mouseleave')"
     @click="emit('click', $event)"
@@ -80,7 +87,16 @@ function fmtVolume(value) {
     />
 
     <polyline
-      v-if="ma5Points"
+      v-if="showCloseTrend && closeTrendPoints"
+      :points="closeTrendPoints"
+      fill="none"
+      class="close-trend-line"
+      stroke-width="1.8"
+      stroke-linecap="round"
+    />
+
+    <polyline
+      v-if="showMa5 && ma5Points"
       :points="ma5Points"
       fill="none"
       class="ma5-line"
@@ -88,7 +104,7 @@ function fmtVolume(value) {
       stroke-linecap="round"
     />
     <polyline
-      v-if="ma20Points"
+      v-if="showMa20 && ma20Points"
       :points="ma20Points"
       fill="none"
       class="ma20-line"
@@ -97,46 +113,50 @@ function fmtVolume(value) {
       stroke-dasharray="5 4"
     />
 
-    <line
-      v-for="(bar, idx) in bars"
-      :key="`${bar.date}-w-${idx}`"
-      :x1="bar.x"
-      :x2="bar.x"
-      :y1="bar.yHigh"
-      :y2="bar.yLow"
-      :class="bar.isUp ? 'wick-up' : 'wick-down'"
-      stroke-width="1.6"
-    />
-    <rect
-      v-for="(bar, idx) in bars"
-      :key="`${bar.date}-b-${idx}`"
-      :x="bar.x - candleWidth / 2"
-      :y="bar.bodyTop"
-      :width="candleWidth"
-      :height="bar.bodyHeight"
-      :class="bar.isUp ? 'body-up' : 'body-down'"
-      stroke-width="0.8"
-      rx="1.2"
-    />
+    <template v-if="showCandles">
+      <line
+        v-for="(bar, idx) in bars"
+        :key="`${bar.date}-w-${idx}`"
+        :x1="bar.x"
+        :x2="bar.x"
+        :y1="bar.yHigh"
+        :y2="bar.yLow"
+        :class="bar.isUp ? 'wick-up' : 'wick-down'"
+        stroke-width="1.6"
+      />
+      <rect
+        v-for="(bar, idx) in bars"
+        :key="`${bar.date}-b-${idx}`"
+        :x="bar.x - candleWidth / 2"
+        :y="bar.bodyTop"
+        :width="candleWidth"
+        :height="bar.bodyHeight"
+        :class="bar.isUp ? 'body-up' : 'body-down'"
+        stroke-width="0.8"
+        rx="1.2"
+      />
+    </template>
 
-    <rect
-      v-for="(bar, idx) in bars"
-      :key="`${bar.date}-v-${idx}`"
-      :x="bar.x - candleWidth / 2"
-      :y="bar.volumeY"
-      :width="candleWidth"
-      :height="bar.volumeHeight"
-      :class="bar.isUp ? 'vol-up' : 'vol-down'"
-    />
+    <template v-if="showVolume">
+      <rect
+        v-for="(bar, idx) in bars"
+        :key="`${bar.date}-v-${idx}`"
+        :x="bar.x - candleWidth / 2"
+        :y="bar.volumeY"
+        :width="candleWidth"
+        :height="bar.volumeHeight"
+        :class="bar.isUp ? 'vol-up' : 'vol-down'"
+      />
 
-    <polyline
-      v-if="volumeMa5Points"
-      :points="volumeMa5Points"
-      fill="none"
-      class="vma5-line"
-      stroke-width="1.6"
-      stroke-linecap="round"
-    />
+      <polyline
+        v-if="showVolumeMa5 && volumeMa5Points"
+        :points="volumeMa5Points"
+        fill="none"
+        class="vma5-line"
+        stroke-width="1.6"
+        stroke-linecap="round"
+      />
+    </template>
 
     <text
       v-for="tick in dateTicks"
@@ -212,6 +232,10 @@ function fmtVolume(value) {
   stroke: var(--chart-divider);
 }
 
+.close-trend-line {
+  stroke: var(--trend-line-color);
+}
+
 .ma5-line {
   stroke: var(--ma5-color);
 }
@@ -270,3 +294,4 @@ function fmtVolume(value) {
   fill: var(--tooltip-dim);
 }
 </style>
+

@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref } from "vue";
+﻿import { onBeforeUnmount, ref } from "vue";
 
 import { getStrategyDecision } from "../api";
 import { formatTimeLabel } from "../utils/formatters";
@@ -17,6 +17,9 @@ export function useStrategyDecision(symbolRef, promptRef, selectedProviderRef) {
     }
     controller = new AbortController();
 
+    // 與 AI 分析同步清空，避免同頁顯示舊決策。
+    strategyResult.value = null;
+    strategyCheckedAt.value = "";
     strategyLoading.value = true;
     strategyError.value = "";
 

@@ -1,4 +1,4 @@
-import { onBeforeUnmount, ref } from "vue";
+﻿import { onBeforeUnmount, ref } from "vue";
 
 import { analyzeStock } from "../api";
 import { formatTimeLabel } from "../utils/formatters";
@@ -9,7 +9,7 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
   const aiError = ref("");
   const aiCheckedAt = ref("");
 
-  const userPrompt = ref("請著重短線趨勢、風險與可能的進出場節奏。");
+  const userPrompt = ref("請聚焦短中線趨勢，給我重點結論與風險提醒。");
   const selectedProvider = ref(initialProvider);
   const providerOptions = ["claude", "gpt5", "grok", "deepseek"];
 
@@ -21,6 +21,9 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     }
     controller = new AbortController();
 
+    // 使用者點擊後先清空舊畫面，避免誤讀上一筆結果。
+    aiResult.value = null;
+    aiCheckedAt.value = "";
     aiLoading.value = true;
     aiError.value = "";
 
@@ -62,3 +65,4 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     setProvider,
   };
 }
+

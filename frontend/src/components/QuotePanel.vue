@@ -290,30 +290,30 @@ function macdDirectionClass(indicatorPayload) {
       <p class="label">技術指標</p>
       <template v-if="indicators?.latest">
         <div class="indicator-row">
-          <span class="indicator-name">MA5 / MA20</span>
+          <span class="indicator-name">均線 (SMA5 / SMA20)</span>
           <span class="indicator-value">{{ fmt(indicators.latest.sma5) }} / {{ fmt(indicators.latest.sma20) }}</span>
           <span class="indicator-tag" :class="maLabelClass(indicators)">
             {{ maLabel(indicators) }}
           </span>
         </div>
         <div class="indicator-row">
-          <span class="indicator-name">RSI14</span>
+          <span class="indicator-name">相對強弱 (RSI14)</span>
           <span class="indicator-value">{{ fmt(indicators.latest.rsi14, 1) }}</span>
           <span class="indicator-tag" :class="rsiClass(indicators.latest.rsi14)">
             {{ rsiLabel(indicators.latest.rsi14) }}
           </span>
         </div>
         <div class="indicator-row">
-          <span class="indicator-name">MACD / Signal</span>
+          <span class="indicator-name">趨勢動能 (MACD / Signal)</span>
           <span class="indicator-value">{{ fmt(indicators.latest.macd) }} / {{ fmt(indicators.latest.macd_signal) }}</span>
           <span class="indicator-tag" :class="macdDirectionClass(indicators)">
             {{ macdDirection(indicators) }}
           </span>
         </div>
         <div class="indicator-row">
-          <span class="indicator-name">MACD Hist</span>
+          <span class="indicator-name">柱狀差 (MACD Hist)</span>
           <span class="indicator-value">{{ fmt(indicators.latest.macd_hist) }}</span>
-          <span class="indicator-tag tag-muted">來源：{{ indicators.history_source }}</span>
+          <span class="indicator-tag tag-muted">來源 (Source)：{{ indicators.history_source }}</span>
         </div>
       </template>
       <p v-else class="sub">暫無技術指標資料</p>

@@ -875,7 +875,10 @@ h2 {
   gap: 8px;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  font-size: 0.9rem;
+  font-size: 0.86rem;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 .indicator-row:last-child {
@@ -883,20 +886,23 @@ h2 {
 }
 
 .indicator-name {
-  flex: 0 0 110px;
+  flex: 0 0 auto;
   color: var(--muted);
-  font-size: 0.83rem;
+  font-size: 0.78rem;
+  white-space: nowrap;
 }
 
 .indicator-value {
-  flex: 1;
+  flex: 0 0 auto;
   font-weight: 700;
+  font-size: 0.82rem;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }
 
 .indicator-tag {
   flex: 0 0 auto;
-  font-size: 0.78rem;
+  font-size: 0.74rem;
   font-weight: 700;
   padding: 2px 9px;
   border-radius: 999px;

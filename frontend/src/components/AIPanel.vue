@@ -50,11 +50,18 @@ function toSignalLabel(signal) {
   }
   return "中立";
 }
+
+function fmt(value, digits = 6) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) {
+    return "N/A";
+  }
+  return Number(value).toFixed(digits);
+}
 </script>
 
 <template>
   <h2 class="section-title">AI 分析</h2>
-  <p class="hint">送出目前股票代號到 AI Gateway，查看共識結果。</p>
+  <p class="hint">送出目前股票代號到 AI Gateway，查看多模型共識結果。</p>
 
   <div class="query-row">
     <input :value="symbol" class="input" type="text" disabled />
@@ -99,12 +106,33 @@ function toSignalLabel(signal) {
       <p class="sub">是否啟用備援：{{ aiResult.fallback_used ? "是" : "否" }}</p>
     </article>
 
+    <article class="card">
+      <p class="label">指標上下文</p>
+      <p class="sub">來源：{{ aiResult.indicator_context?.history_source || "none" }}</p>
+      <p class="sub">日期：{{ aiResult.indicator_context?.as_of_date || "N/A" }}</p>
+      <p class="sub">SMA5：{{ fmt(aiResult.indicator_context?.latest?.sma5, 4) }}</p>
+      <p class="sub">SMA20：{{ fmt(aiResult.indicator_context?.latest?.sma20, 4) }}</p>
+      <p class="sub">RSI14：{{ fmt(aiResult.indicator_context?.latest?.rsi14, 4) }}</p>
+      <p class="sub">MACD：{{ fmt(aiResult.indicator_context?.latest?.macd, 4) }}</p>
+    </article>
+
+    <article class="card">
+      <p class="label">成本摘要</p>
+      <p class="sub">本次成本：${{ fmt(aiResult.cost?.total_request_cost_usd, 8) }}</p>
+      <p class="sub">今日累計：${{ fmt(aiResult.cost?.daily_total_usd, 8) }}</p>
+      <p class="sub">今日預算：${{ fmt(aiResult.cost?.daily_budget_usd, 2) }}</p>
+      <p class="sub">是否超預算：{{ aiResult.cost?.budget_exceeded ? "是" : "否" }}</p>
+    </article>
+
     <article v-for="item in aiResult.results" :key="item.provider" class="card">
       <p class="label">{{ item.provider }}</p>
       <p class="value" :class="item.ok ? 'ok' : 'warn'">{{ item.ok ? "成功" : "失敗" }}</p>
       <p class="sub" v-if="item.ok">{{ item.data.summary }}</p>
       <p class="sub" v-else>{{ item.error }}</p>
-      <p class="sub" v-if="item.ok">方向：{{ toSignalLabel(item.data.signal) }}，信心：{{ item.data.confidence }}</p>
+      <p class="sub" v-if="item.ok">
+        方向：{{ toSignalLabel(item.data.signal) }}，信心：{{ item.data.confidence }}
+      </p>
+      <p class="sub" v-if="item.ok && item.cost">成本：${{ fmt(item.cost.request_cost_usd, 8) }}</p>
     </article>
   </div>
 </template>

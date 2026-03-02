@@ -134,6 +134,20 @@ export async function getStockHistory(symbol, days = 5, signal) {
   return response.json();
 }
 
+export async function getStockIndicators(symbol, days = 60, signal) {
+  const quoteSymbol = (symbol || "").trim();
+  const response = await fetchProtected(
+    `/stocks/indicators?symbol=${encodeURIComponent(quoteSymbol)}&days=${encodeURIComponent(days)}`,
+    { signal },
+  );
+
+  if (!response.ok) {
+    throwApiError("技術指標", response.status, quoteSymbol);
+  }
+
+  return response.json();
+}
+
 export async function analyzeStock(symbol, userPrompt = "", providers = ["claude"], signal) {
   const quoteSymbol = (symbol || "").trim();
   const payload = {

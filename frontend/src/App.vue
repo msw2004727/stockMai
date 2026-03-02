@@ -23,6 +23,8 @@ const {
   quoteCheckedAt,
   history,
   historyError,
+  indicators,
+  indicatorsError,
   selectedDays,
   dayOptions,
   refreshQuote,
@@ -88,6 +90,8 @@ onMounted(() => {
       :quote-checked-at="quoteCheckedAt"
       :history="history"
       :history-error="historyError"
+      :indicators="indicators"
+      :indicators-error="indicatorsError"
       :selected-days="selectedDays"
       :day-options="dayOptions"
       @update:symbol="updateSymbol"

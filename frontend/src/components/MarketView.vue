@@ -9,6 +9,8 @@ defineProps({
   quoteCheckedAt: { type: String, default: "" },
   history: { type: Object, default: null },
   historyError: { type: String, default: "" },
+  indicators: { type: Object, default: null },
+  indicatorsError: { type: String, default: "" },
   selectedDays: { type: Number, default: 5 },
   dayOptions: { type: Array, default: () => [5, 20] },
 });
@@ -27,6 +29,8 @@ const emit = defineEmits(["update:symbol", "refresh", "change-day"]);
         :quote-checked-at="quoteCheckedAt"
         :history="history"
         :history-error="historyError"
+        :indicators="indicators"
+        :indicators-error="indicatorsError"
         :selected-days="selectedDays"
         :day-options="dayOptions"
         @update:symbol="emit('update:symbol', $event)"

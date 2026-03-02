@@ -422,6 +422,12 @@ h2 {
   cursor: wait;
 }
 
+.period-btn.locked:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+  filter: grayscale(0.15);
+}
+
 .provider-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(120px, 140px));

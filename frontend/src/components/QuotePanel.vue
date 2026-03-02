@@ -52,6 +52,10 @@ function onShortcut(item) {
   emit("refresh");
 }
 
+function isLockedRange(days) {
+  return Number(days) === 90 || Number(days) === 180;
+}
+
 function fmt(value, digits = 2) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
   return Number(value).toFixed(digits);
@@ -233,8 +237,8 @@ function macdDirectionClass(indicatorPayload) {
         :key="d"
         type="button"
         class="period-btn"
-        :class="{ active: selectedDays === d }"
-        :disabled="quoteLoading"
+        :class="{ active: selectedDays === d, locked: isLockedRange(d) }"
+        :disabled="quoteLoading || isLockedRange(d)"
         @click="emit('change-day', d)"
       >
         {{ d }} 天

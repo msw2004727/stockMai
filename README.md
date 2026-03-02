@@ -166,3 +166,8 @@ Real provider clients now available:
 - Gemini: `GEMINI_API_KEY` + `GEMINI_MODEL`
 
 If a key is missing, that provider automatically falls back to mock.
+
+Step 4 additions:
+- Weighted consensus: set `AI_PROVIDER_WEIGHTS` (example: `claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0`).
+- Cost tracking + budget: set `AI_DAILY_BUDGET_USD` (defaults to `5.0`).
+- `/ai/analyze` response now includes `provider_weights` and `cost` summary.

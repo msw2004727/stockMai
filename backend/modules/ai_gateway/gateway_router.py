@@ -1,9 +1,11 @@
 from __future__ import annotations
 
 import asyncio
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 from .claude_client import ClaudeClient
+from .consensus import build_weighted_consensus
+from .cost_tracker import CostTracker
 from .gemini_client import GeminiClient
 from .grok_client import GrokClient
 from .mock_clients import MockAIClient
@@ -20,6 +22,10 @@ class GatewayRequest:
     timeout_seconds: int
     retry_count: int = 2
     retry_backoff_seconds: float = 0.35
+    provider_weights: dict[str, float] = field(default_factory=dict)
+    user_id: str = "anonymous"
+    daily_budget_usd: float = 0.0
+    cost_tracker: CostTracker | None = None
 
 
 class GatewayRouter:
@@ -27,9 +33,12 @@ class GatewayRouter:
         self.clients = clients
 
     async def run(self, request: GatewayRequest) -> dict:
-        results = []
+        results: list[dict] = []
+        cost_entries: list[dict] = []
         fallback_used = False
         previous_failure = False
+        budget_blocked = False
+        user_id = _normalize_user_id(request.user_id)
         for provider in request.providers:
             client = self.clients.get(provider)
             if client is None:
@@ -39,9 +48,30 @@ class GatewayRouter:
                         "provider": provider,
                         "ok": False,
                         "error": f"Provider not configured: {provider}",
+                        "error_type": "config",
                     }
                 )
                 continue
+
+            if request.cost_tracker is not None:
+                try:
+                    request.cost_tracker.check_budget_before_request(
+                        user_id=user_id,
+                        daily_budget_usd=request.daily_budget_usd,
+                    )
+                except ProviderCallError as exc:
+                    previous_failure = True
+                    budget_blocked = True
+                    results.append(
+                        {
+                            "provider": provider,
+                            "ok": False,
+                            "error": str(exc),
+                            "retryable": False,
+                            "error_type": "budget",
+                        }
+                    )
+                    break
 
             try:
                 raw_text, attempts = await _run_with_retry(
@@ -60,6 +90,7 @@ class GatewayRouter:
                         "ok": False,
                         "error": str(exc),
                         "retryable": _is_retryable_error(exc),
+                        "error_type": "provider",
                     }
                 )
                 continue
@@ -67,36 +98,40 @@ class GatewayRouter:
             if previous_failure:
                 fallback_used = True
             normalized = normalize_ai_response(provider=provider, raw_text=raw_text)
-            results.append(
-                {
-                    "provider": provider,
-                    "ok": True,
-                    "data": normalized,
-                    "attempts": attempts,
-                }
+            result_item = {
+                "provider": provider,
+                "ok": True,
+                "data": normalized,
+                "attempts": attempts,
+            }
+            usage = _track_cost_usage(
+                request=request,
+                user_id=user_id,
+                provider=provider,
+                raw_text=raw_text,
             )
+            if usage is not None:
+                result_item["cost"] = usage
+                cost_entries.append(usage)
+            results.append(result_item)
 
         successful = [item["data"] for item in results if item.get("ok")]
-        consensus = _build_consensus(successful)
-        return {"results": results, "consensus": consensus, "fallback_used": fallback_used}
-
-
-def _build_consensus(successful: list[dict]) -> dict:
-    if not successful:
+        consensus = build_weighted_consensus(
+            successful=successful,
+            provider_weights=request.provider_weights,
+        )
+        cost_summary = _build_cost_summary(
+            request=request,
+            user_id=user_id,
+            entries=cost_entries,
+            budget_blocked=budget_blocked,
+        )
         return {
-            "signal": "neutral",
-            "confidence": 0.0,
-            "summary": "No provider produced usable output.",
+            "results": results,
+            "consensus": consensus,
+            "fallback_used": fallback_used,
+            "cost": cost_summary,
         }
-
-    sorted_by_conf = sorted(successful, key=lambda item: item.get("confidence", 0.0), reverse=True)
-    best = sorted_by_conf[0]
-    return {
-        "signal": best.get("signal", "neutral"),
-        "confidence": best.get("confidence", 0.0),
-        "summary": best.get("summary", ""),
-        "source_provider": best.get("provider", ""),
-    }
 
 
 def _is_retryable_error(exc: Exception) -> bool:
@@ -133,6 +168,53 @@ async def _run_with_retry(
 
     assert last_exc is not None
     raise last_exc
+
+
+def _normalize_user_id(user_id: str) -> str:
+    parsed = user_id.strip()
+    return parsed if parsed else "anonymous"
+
+
+def _track_cost_usage(
+    request: GatewayRequest,
+    user_id: str,
+    provider: str,
+    raw_text: str,
+) -> dict | None:
+    if request.cost_tracker is None:
+        return None
+
+    input_tokens = request.cost_tracker.estimate_tokens(request.prompt)
+    output_tokens = request.cost_tracker.estimate_tokens(raw_text)
+    return request.cost_tracker.record_usage(
+        user_id=user_id,
+        provider=provider,
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        daily_budget_usd=request.daily_budget_usd,
+    )
+
+
+def _build_cost_summary(
+    request: GatewayRequest,
+    user_id: str,
+    entries: list[dict],
+    budget_blocked: bool,
+) -> dict:
+    total_request_cost = round(sum(float(item.get("request_cost_usd", 0.0)) for item in entries), 8)
+    daily_total = 0.0
+    if request.cost_tracker is not None:
+        daily_total = round(request.cost_tracker.get_daily_total_usd(user_id), 8)
+
+    budget_exceeded = budget_blocked or any(bool(item.get("budget_exceeded")) for item in entries)
+    return {
+        "enabled": request.cost_tracker is not None,
+        "entries": entries,
+        "total_request_cost_usd": total_request_cost,
+        "daily_total_usd": daily_total,
+        "daily_budget_usd": round(request.daily_budget_usd, 8),
+        "budget_exceeded": budget_exceeded,
+    }
 
 
 def build_default_router(

@@ -20,7 +20,7 @@ defineProps({
     <p>區間：<strong>{{ first?.date }}</strong> ~ <strong>{{ last?.date }}</strong></p>
     <p>
       區間漲跌：
-      <strong :class="Number(pctChange) >= 0 ? 'up' : 'down'">{{ pctChange }}%</strong>
+      <strong :class="Number(pctChange) >= 0 ? 'ok' : 'warn'">{{ pctChange }}%</strong>
     </p>
   </div>
 </template>
@@ -31,7 +31,7 @@ defineProps({
   display: flex;
   justify-content: space-between;
   gap: 10px;
-  color: #334155;
+  color: var(--muted);
   font-size: 0.88rem;
 }
 
@@ -39,15 +39,7 @@ defineProps({
   margin: 0;
 }
 
-.up {
-  color: #0f766e;
-}
-
-.down {
-  color: #b45309;
-}
-
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .kline-meta {
     flex-direction: column;
   }

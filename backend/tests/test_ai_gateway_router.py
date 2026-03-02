@@ -2,6 +2,7 @@ import asyncio
 import json
 import unittest
 
+from backend.modules.ai_gateway.cost_tracker import CostTracker
 from backend.modules.ai_gateway.gateway_router import GatewayRequest, GatewayRouter, build_default_router
 from backend.modules.ai_gateway.provider_client import ProviderCallError
 
@@ -53,6 +54,22 @@ class _SuccessClient:
         )
 
 
+class _StaticResponseClient:
+    def __init__(self, provider: str, signal: str, confidence: float):
+        self.provider = provider
+        self.signal = signal
+        self.confidence = confidence
+
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+        return json.dumps(
+            {
+                "summary": f"{self.provider} view for {symbol}",
+                "signal": self.signal,
+                "confidence": self.confidence,
+            }
+        )
+
+
 class AIGatewayRouterAsyncTest(unittest.TestCase):
     def test_run_with_default_router(self):
         router = build_default_router(
@@ -77,6 +94,7 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
         self.assertIn("consensus", result)
         self.assertIn("signal", result["consensus"])
         self.assertFalse(result["fallback_used"])
+        self.assertIn("cost", result)
 
     def test_run_handles_unknown_provider(self):
         router = build_default_router(
@@ -145,6 +163,73 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
         self.assertFalse(result["results"][0]["ok"])
         self.assertTrue(result["results"][1]["ok"])
         self.assertTrue(result["fallback_used"])
+
+    def test_run_weighted_consensus_prefers_high_weight_provider(self):
+        router = GatewayRouter(
+            clients={
+                "p1": _StaticResponseClient(provider="p1", signal="bullish", confidence=0.7),
+                "p2": _StaticResponseClient(provider="p2", signal="bearish", confidence=0.9),
+            }
+        )
+        request = GatewayRequest(
+            symbol="2330",
+            prompt="test prompt",
+            providers=["p1", "p2"],
+            provider_weights={"p1": 2.0, "p2": 1.0},
+            timeout_seconds=10,
+            retry_count=0,
+        )
+        result = asyncio.run(router.run(request))
+        self.assertEqual(result["consensus"]["signal"], "bullish")
+        self.assertEqual(result["consensus"]["source_provider"], "p1")
+        self.assertAlmostEqual(result["consensus"]["confidence"], 0.6087, places=4)
+
+    def test_run_tracks_cost_when_cost_tracker_enabled(self):
+        cost_tracker = CostTracker(redis_url="")
+        router = GatewayRouter(clients={"p1": _StaticResponseClient(provider="p1", signal="neutral", confidence=0.6)})
+        request = GatewayRequest(
+            symbol="2330",
+            prompt="test prompt",
+            providers=["p1"],
+            timeout_seconds=10,
+            retry_count=0,
+            user_id="cost-user",
+            daily_budget_usd=1.0,
+            cost_tracker=cost_tracker,
+        )
+        result = asyncio.run(router.run(request))
+        self.assertTrue(result["results"][0]["ok"])
+        self.assertTrue(result["cost"]["enabled"])
+        self.assertEqual(len(result["cost"]["entries"]), 1)
+        self.assertGreater(result["cost"]["total_request_cost_usd"], 0)
+        self.assertIn("cost", result["results"][0])
+
+    def test_run_blocks_when_budget_already_exceeded(self):
+        cost_tracker = CostTracker(redis_url="")
+        cost_tracker.record_usage(
+            user_id="budget-user",
+            provider="claude",
+            input_tokens=1_000_000,
+            output_tokens=0,
+            daily_budget_usd=1.0,
+        )
+
+        router = GatewayRouter(clients={"claude": _StaticResponseClient(provider="claude", signal="neutral", confidence=0.5)})
+        request = GatewayRequest(
+            symbol="2330",
+            prompt="test prompt",
+            providers=["claude"],
+            timeout_seconds=10,
+            retry_count=0,
+            user_id="budget-user",
+            daily_budget_usd=0.5,
+            cost_tracker=cost_tracker,
+        )
+        result = asyncio.run(router.run(request))
+        self.assertFalse(result["results"][0]["ok"])
+        self.assertEqual(result["results"][0]["error_type"], "budget")
+        self.assertTrue(result["cost"]["budget_exceeded"])
+        self.assertEqual(len(result["cost"]["entries"]), 0)
 
 
 if __name__ == "__main__":

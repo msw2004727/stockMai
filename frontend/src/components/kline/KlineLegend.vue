@@ -12,8 +12,9 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  color: #475569;
+  color: var(--muted);
   font-size: 0.82rem;
+  flex-wrap: wrap;
 }
 
 .legend span {
@@ -29,21 +30,14 @@
 }
 
 .legend-line.ma5 {
-  background: #0369a1;
+  background: var(--ma5-color);
 }
 
 .legend-line.ma20 {
-  background: repeating-linear-gradient(90deg, #be185d 0 8px, transparent 8px 12px);
+  background: repeating-linear-gradient(90deg, var(--ma20-color) 0 8px, transparent 8px 12px);
 }
 
 .legend-line.vma5 {
-  background: #ea580c;
-}
-
-@media (max-width: 760px) {
-  .legend {
-    flex-wrap: wrap;
-    gap: 10px;
-  }
+  background: var(--vma5-color);
 }
 </style>

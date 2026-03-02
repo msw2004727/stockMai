@@ -33,12 +33,16 @@ services:
         value: "200"
       - key: AI_TIMEOUT_SECONDS
         value: "15"
+      - key: AI_DAILY_BUDGET_USD
+        value: "5.0"
       - key: AI_RETRY_COUNT
         value: "2"
       - key: AI_RETRY_BACKOFF_SECONDS
         value: "0.35"
       - key: AI_DEFAULT_PROVIDERS
         value: "claude,gpt5,grok,gemini"
+      - key: AI_PROVIDER_WEIGHTS
+        value: "claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0"
       - key: CLAUDE_MODEL
         value: "claude-opus-4-6"
       - key: GPT_MODEL

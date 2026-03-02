@@ -74,19 +74,19 @@ const lastPoint = computed(() => props.points[props.points.length - 1] || null);
     <svg :viewBox="`0 0 ${width} ${height}`" class="chart-svg" role="img" aria-label="最近收盤價趨勢圖">
       <defs>
         <linearGradient id="trendArea" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stop-color="#0b4f6c" stop-opacity="0.28" />
-          <stop offset="100%" stop-color="#0b4f6c" stop-opacity="0.04" />
+          <stop offset="0%" class="trend-stop-start" stop-opacity="0.28" />
+          <stop offset="100%" class="trend-stop-end" stop-opacity="0.04" />
         </linearGradient>
       </defs>
       <polyline :points="areaPoints" fill="url(#trendArea)" stroke="none" />
-      <polyline :points="polylinePoints" fill="none" stroke="#0b4f6c" stroke-width="3.2" stroke-linecap="round" />
+      <polyline :points="polylinePoints" fill="none" class="trend-line" stroke-width="3.2" stroke-linecap="round" />
       <circle
         v-for="point in dots"
         :key="point.date"
         :cx="point.x"
         :cy="point.y"
         r="3.3"
-        fill="#146c94"
+        class="trend-dot"
       />
     </svg>
 
@@ -110,8 +110,24 @@ const lastPoint = computed(() => props.points[props.points.length - 1] || null);
   width: 100%;
   height: auto;
   border-radius: 10px;
-  border: 1px solid rgba(15, 23, 42, 0.08);
-  background: linear-gradient(180deg, rgba(215, 238, 247, 0.45), rgba(255, 255, 255, 0.85));
+  border: 1px solid var(--border);
+  background: var(--trend-bg);
+}
+
+.trend-stop-start {
+  stop-color: var(--trend-fill);
+}
+
+.trend-stop-end {
+  stop-color: var(--trend-fill);
+}
+
+.trend-line {
+  stroke: var(--trend-fill);
+}
+
+.trend-dot {
+  fill: var(--brand);
 }
 
 .chart-meta {
@@ -119,7 +135,7 @@ const lastPoint = computed(() => props.points[props.points.length - 1] || null);
   justify-content: space-between;
   gap: 10px;
   margin-top: 8px;
-  color: #334155;
+  color: var(--muted);
   font-size: 0.88rem;
 }
 
@@ -129,10 +145,10 @@ const lastPoint = computed(() => props.points[props.points.length - 1] || null);
 
 .chart-empty {
   margin-top: 8px;
-  color: #7c2d12;
+  color: var(--warn);
 }
 
-@media (max-width: 760px) {
+@media (max-width: 767px) {
   .chart-meta {
     flex-direction: column;
   }

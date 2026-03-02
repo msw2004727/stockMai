@@ -6,9 +6,11 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
 from backend.modules.ai_gateway import GatewayRequest, build_default_router
+from backend.modules.ai_gateway.consensus import parse_provider_weights
+from backend.modules.ai_gateway.cost_tracker import CostTracker
 from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt
 
-from ..auth import enforce_rate_limit
+from ..auth import enforce_rate_limit, get_current_user
 from ..config import get_settings
 
 router = APIRouter(prefix="/ai", tags=["ai"])
@@ -48,14 +50,22 @@ def _get_gateway_router(
     )
 
 
+@lru_cache(maxsize=4)
+def _get_cost_tracker(redis_url: str) -> CostTracker:
+    return CostTracker(redis_url=redis_url)
+
+
 @router.post("/analyze")
 async def analyze_stock(
     payload: AnalyzeRequest,
+    user: dict = Depends(get_current_user),
     _quota: dict = Depends(enforce_rate_limit("ai_analyze")),
 ) -> dict:
     settings = get_settings()
     providers = payload.providers or _parse_default_providers(settings.ai_default_providers)
+    provider_weights = parse_provider_weights(settings.ai_provider_weights)
     prompt = build_analysis_prompt(payload.symbol, payload.user_prompt)
+    cost_tracker = _get_cost_tracker(settings.redis_url)
 
     request = GatewayRequest(
         symbol=payload.symbol,
@@ -64,6 +74,10 @@ async def analyze_stock(
         timeout_seconds=settings.ai_timeout_seconds,
         retry_count=settings.ai_retry_count,
         retry_backoff_seconds=settings.ai_retry_backoff_seconds,
+        provider_weights=provider_weights,
+        user_id=user["user_id"],
+        daily_budget_usd=settings.ai_daily_budget_usd,
+        cost_tracker=cost_tracker,
     )
     router = _get_gateway_router(
         claude_api_key=settings.anthropic_api_key,
@@ -80,8 +94,10 @@ async def analyze_stock(
     return {
         "symbol": payload.symbol,
         "providers_requested": providers,
+        "provider_weights": provider_weights,
         "prompt": prompt,
         "results": gateway_result["results"],
         "consensus": gateway_result["consensus"],
         "fallback_used": gateway_result["fallback_used"],
+        "cost": gateway_result["cost"],
     }

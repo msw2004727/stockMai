@@ -88,12 +88,12 @@ const {
 
 .hint-tip {
   margin: 7px 0 0;
-  color: #64748b;
+  color: var(--muted);
   font-size: 0.82rem;
 }
 
 .chart-empty {
   margin-top: 8px;
-  color: #7c2d12;
+  color: var(--warn);
 }
 </style>

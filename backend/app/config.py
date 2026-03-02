@@ -13,10 +13,12 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     grok_api_key: str = ""
     gemini_api_key: str = ""
+    ai_daily_budget_usd: float = 5.0
     ai_timeout_seconds: int = 15
     ai_retry_count: int = 2
     ai_retry_backoff_seconds: float = 0.35
     ai_default_providers: str = "claude,gpt5,grok,gemini"
+    ai_provider_weights: str = "claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0"
     claude_model: str = "claude-opus-4-6"
     gpt_model: str = "gpt-5.2"
     grok_model: str = "grok-4.1-fast"

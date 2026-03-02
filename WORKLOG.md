@@ -227,3 +227,31 @@
 - 目前狀態：Done（第 3 步可用）。
 - 下一步：可進入第 4 步（加權 consensus + cost tracker v1）。
 - 驗收結果：backend tests 48/48 通過；scripts/smoke-check.ps1 通過（backend + frontend build）。
+## [2026-03-02 15:20] UI 重新設計：Mobile-first + 深淺主題 + 頁籤導航
+- 做了什麼：全面重構前端 UI 為 App-like 體驗，涵蓋以下變更：
+  1. **新增 `useTheme.js` composable**：管理深淺主題切換，支援 `localStorage` 持久化與 `prefers-color-scheme` 系統偏好偵測，透過 `document.documentElement.dataset.theme` 同步至 CSS。
+  2. **重寫 `styles.css`**：新增 30+ 組 CSS custom properties（含 `:root` 淺色與 `[data-theme="dark"]` 深色兩套色），覆蓋背景、文字、邊框、品牌色、圖表色、tooltip 色、K 線漲跌色、均線色等。佈局改為 mobile-first（預設單欄），桌面端 `≥ 768px` 升級為多欄且 `max-width: 768px` 居中。新增 tab bar、app header、settings 頁面樣式，支援 `safe-area-inset-bottom`（iPhone 瀏海機）。
+  3. **新增 `TabBar.vue`**：iOS 風格固定底部導航，3 個頁籤（行情/AI 分析/設定），使用 inline SVG 圖示（chart / brain / gear），active 狀態以 brand 色 + 微放大呈現。
+  4. **新增 `MarketView.vue`**：行情頁，封裝 `QuotePanel` 的 props/events 接線，全寬顯示。
+  5. **新增 `AiView.vue`**：AI 分析頁，封裝 `AIPanel` 的 props/events 接線，symbol 與行情頁共享。
+  6. **新增 `SettingsView.vue`**：設定頁，包含系統狀態（`HealthPanel`）、主題切換大按鈕、Google 登入預留區（disabled 按鈕 +「即將推出」提示）、版本資訊。
+  7. **重寫 `App.vue`**：改為 tab 路由容器，使用 `shallowRef` 管理 `activeTab`（`market` / `ai` / `settings`），以 `v-show` 切換三個 view（保留狀態避免重複 fetch）。Header 區含 App 標題與主題切換按鈕（太陽/月亮 SVG 圖示）。
+  8. **適配現有元件至新主題**：
+     - `KlineSvgLayer.vue`：所有 hardcoded SVG 顏色改為 CSS class + `var()` token（grid-line、tick-text、wick-up/down、body-up/down、vol-up/down、ma5/ma20/vma5-line、crosshair、tooltip-bg/text/sub/dim）。
+     - `KlineLegend.vue`：legend 文字色改用 `var(--muted)`，MA 線色改用 `var(--ma5-color)` / `var(--ma20-color)` / `var(--vma5-color)`。
+     - `KlineMeta.vue`：文字色改用 `var(--muted)`，漲跌改用 `.ok` / `.warn` class。
+     - `PriceTrendChart.vue`：趨勢線、漸層填充、圓點、背景、邊框、meta 文字全部改用 CSS variable。
+     - `KLineChart.vue`：hint-tip 與 chart-empty 改用 `var(--muted)` / `var(--warn)`。
+- 目前狀態：Done（UI 重構完成，build 通過）。
+- 下一步：可部署至 Render 驗證線上效果，或進一步加入頁籤切換動畫、桌面端卡片並排佈局優化。
+- 驗收結果：
+  - `npm run build` 成功（745ms，CSS 10.31KB、JS 95.69KB / gzip 35.34KB）。
+  - 無新增外部依賴，維持純 CSS + Vue 3 Composition API + inline SVG。
+  - 三個頁籤以 `v-show` 切換，已查詢資料不會因切頁遺失。
+  - 深淺主題 token 覆蓋完整，K 線圖在深色模式下顏色可讀（漲：teal→cyan、跌：amber→yellow）。
+  - 設定頁 Google 登入按鈕顯示「即將推出」，disabled 狀態。
+## [2026-03-02 14:26] Validate user UI changes + commit push
+- Scope: validated backend + frontend after user-made UI refactor and theme updates.
+- Status: In Progress
+- Verification: backend unittest 58/58 pass, frontend vite build pass, smoke-check.ps1 pass.
+- Next: stage all modified/new files, create one commit, push to origin/main.

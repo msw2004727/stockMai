@@ -6,6 +6,7 @@ from unittest.mock import patch
 
 from backend.app.main import app
 from backend.app.stocks.service import DataUnavailableError, QuoteRateLimitedError, SymbolNotFoundError
+from backend.app.strategy.service import StrategyDataUnavailableError, StrategySymbolNotFoundError
 
 
 class _FakeRedis:
@@ -455,6 +456,114 @@ class ApiIntegrationTest(unittest.TestCase):
                 self.assertEqual(second_status, 429)
                 self.assertEqual(second_payload["detail"], "Daily quota exceeded")
                 self.assertEqual(second_payload["error_code"], "daily_quota_exceeded")
+
+    def test_strategy_decision_requires_token(self):
+        status, payload = self._request_json(
+            "POST",
+            "/strategy/decision",
+            payload={"symbol": "2330"},
+        )
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_strategy_decision_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_decision = {
+            "symbol": "2330",
+            "generated_at": "2026-03-02T12:00:00+00:00",
+            "history_source": "integration",
+            "as_of_date": "2026-03-02",
+            "action": "hold",
+            "confidence": 0.55,
+            "risk_level": "medium",
+            "weighted_score": 0.1,
+            "reasons": ["測試策略結果"],
+            "components": {
+                "indicators": {"label": "neutral", "score": 0.0},
+                "sentiment": {"label": "neutral", "score": 0.0},
+                "ai_consensus": {"label": "neutral", "score": 0.0},
+            },
+            "indicator_context": {"symbol": "2330", "latest": {}},
+            "sentiment_context": {"symbol": "2330", "market_sentiment": "neutral"},
+            "ai_consensus": {"signal": "neutral", "confidence": 0.5},
+            "ai_fallback_used": False,
+            "providers_requested": ["claude"],
+            "provider_weights": {"claude": 1.0},
+            "ai_results": [],
+            "cost": {"enabled": True},
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.strategy.routes.build_strategy_decision", return_value=fake_decision):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "strategy-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "POST",
+                        "/strategy/decision",
+                        headers={"authorization": f"Bearer {token}"},
+                        payload={"symbol": "2330"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["symbol"], "2330")
+                    self.assertEqual(payload["action"], "hold")
+                    self.assertIn("components", payload)
+
+    def test_strategy_decision_returns_503_when_data_unavailable(self):
+        fake_redis = _FakeRedis()
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch(
+                    "backend.app.strategy.routes.build_strategy_decision",
+                    side_effect=StrategyDataUnavailableError("Market data providers are temporarily unavailable."),
+                ):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "strategy-unavailable-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "POST",
+                        "/strategy/decision",
+                        headers={"authorization": f"Bearer {token}"},
+                        payload={"symbol": "2330"},
+                    )
+                    self.assertEqual(status, 503)
+                    self.assertEqual(payload["error_code"], "service_unavailable")
+
+    def test_strategy_decision_returns_404_when_symbol_not_found(self):
+        fake_redis = _FakeRedis()
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch(
+                    "backend.app.strategy.routes.build_strategy_decision",
+                    side_effect=StrategySymbolNotFoundError("No history data found for symbol=9999"),
+                ):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "strategy-not-found-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "POST",
+                        "/strategy/decision",
+                        headers={"authorization": f"Bearer {token}"},
+                        payload={"symbol": "9999"},
+                    )
+                    self.assertEqual(status, 404)
+                    self.assertEqual(payload["error_code"], "not_found")
 
 
 if __name__ == "__main__":

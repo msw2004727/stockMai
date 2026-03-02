@@ -8,6 +8,7 @@ import TabBar from "./components/TabBar.vue";
 import { useAiAnalysis } from "./composables/useAiAnalysis";
 import { useHealthStatus } from "./composables/useHealthStatus";
 import { useQuoteHistory } from "./composables/useQuoteHistory";
+import { useStrategyDecision } from "./composables/useStrategyDecision";
 import { useTheme } from "./composables/useTheme";
 
 const { theme, toggleTheme } = useTheme();
@@ -41,6 +42,13 @@ const {
   refreshAi,
   setProvider,
 } = useAiAnalysis(symbol, "claude");
+const {
+  strategyResult,
+  strategyLoading,
+  strategyError,
+  strategyCheckedAt,
+  refreshStrategy,
+} = useStrategyDecision(symbol, userPrompt, selectedProvider);
 
 function updateSymbol(value) {
   symbol.value = value;
@@ -50,10 +58,15 @@ function updateUserPrompt(value) {
   userPrompt.value = value;
 }
 
+function refreshAiAndStrategy() {
+  refreshAi();
+  refreshStrategy();
+}
+
 onMounted(() => {
   refreshHealth();
   refreshQuote();
-  refreshAi();
+  refreshAiAndStrategy();
 });
 </script>
 
@@ -109,7 +122,11 @@ onMounted(() => {
       :user-prompt="userPrompt"
       :selected-provider="selectedProvider"
       :provider-options="providerOptions"
-      @refresh="refreshAi"
+      :strategy-result="strategyResult"
+      :strategy-loading="strategyLoading"
+      :strategy-error="strategyError"
+      :strategy-checked-at="strategyCheckedAt"
+      @refresh="refreshAiAndStrategy"
       @update:prompt="updateUserPrompt"
       @change-provider="setProvider"
     />

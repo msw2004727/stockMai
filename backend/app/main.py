@@ -9,6 +9,7 @@ from .config import get_settings
 from .errors import http_exception_handler, validation_exception_handler
 from .health import check_postgres, check_redis
 from .stocks import router as stocks_router
+from .strategy import router as strategy_router
 
 app = FastAPI(title="Taiwan Stock AI API", version="0.1.0")
 app.add_exception_handler(StarletteHTTPException, http_exception_handler)
@@ -16,6 +17,7 @@ app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.include_router(auth_router)
 app.include_router(ai_router)
 app.include_router(stocks_router)
+app.include_router(strategy_router)
 
 
 def _parse_cors_origins(raw: str) -> list[str]:

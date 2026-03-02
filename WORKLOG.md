@@ -188,3 +188,21 @@
 - 目前進度：In Progress
 - 下一步：commit + push 後，待明天驗證第 3 項（08:30 排程自動執行與失敗通知行為）。
 - 備註（可選）：本次提交僅含監控與文件調整，不含 API 行為變更。
+
+## [2026-03-02 19:58] 下一步計劃確認：進入第 2 階段（策略決策 MVP）
+- 完成事項：確認第 1 階段已完成並已 push；第 3 項排程驗證待明天。檢視現有 `/ai/analyze` 與前端 AI 面板資料欄位後，制定第 2 階段可執行清單。
+- 目前進度：In Progress
+- 下一步：先做第 2 階段最小動作：新增 `/strategy/decision` API（輸入 symbol，輸出 action/confidence/reasons/risk），規則先以 indicators + sentiment + ai consensus 組合，並補成功/失敗測試。
+- 備註（可選）：本回合無程式變更，屬計劃確認與拆解。
+
+## [2026-03-02 20:10] 第 2 階段 API 骨架完成：/strategy/decision
+- 完成事項：新增 `backend/app/strategy` 模組（`routes/service/provider/mapper/constants/schemas`），實作 `POST /strategy/decision`（JWT + quota 保護），整合 indicators + sentiment + AI consensus 產出 `action/confidence/risk_level/reasons`。`backend/app/main.py` 已掛載新 router；README 新增 endpoint 使用說明。補測試 `test_strategy_service` 並擴充 `test_api_integration` 的 strategy 成功/401/404/503 路徑。
+- 目前進度：Done
+- 下一步：前端新增 Strategy 卡片呼叫 `/strategy/decision`（先最小顯示 action/confidence/risk），並補一次 frontend build + cloud smoke 回歸。
+- 備註（可選）：backend 全量測試 `105/105` pass。
+
+## [2026-03-02 20:13] 第 2 階段延伸完成：前後端串接策略決策
+- 完成事項：完成 `/strategy/decision` API 骨架並接到前端 AI 頁（新增 StrategyPanel 與 useStrategyDecision）。AI 頁按「分析」會同時刷新 AI 分析與策略決策；README 補 strategy endpoint 說明。驗收通過：backend unittest 105/105、frontend build pass。
+- 目前進度：Done
+- 下一步：在雲端手動驗證前端策略卡片顯示（action/confidence/risk/reasons）與錯誤情境，再評估是否加入策略歷史紀錄。
+- 備註（可選）：本回合將進行 commit + push。

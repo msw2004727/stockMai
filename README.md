@@ -237,6 +237,28 @@ Response includes:
 - `indicator_engine`: indicator calculator engine (`talib` or `python` fallback)
 - `freshness`: as-of freshness metadata (`as_of_date`, `age_days`, `is_fresh`, `max_age_days`)
 
+## Strategy decision MVP endpoint
+Protected endpoint: `POST /strategy/decision`
+
+```powershell
+# issue token
+$tokenResp = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/auth/token" -ContentType "application/json" -Body '{"user_id":"demo-user","expires_minutes":60}'
+$token = $tokenResp.access_token
+
+# strategy decision
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/strategy/decision" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{"symbol":"2330","user_prompt":"偏短線，重視風險控制"}'
+```
+
+Response includes:
+- `action` (`buy` / `hold` / `sell`)
+- `confidence` (`0~1`)
+- `risk_level` (`low` / `medium` / `high`)
+- `reasons` (decision rationale)
+- `components` (`indicators` / `sentiment` / `ai_consensus` scores)
+
 ## CI checks
 GitHub Actions workflow: `.github/workflows/ci.yml`
 

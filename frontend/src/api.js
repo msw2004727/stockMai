@@ -170,3 +170,27 @@ export async function analyzeStock(symbol, userPrompt = "", providers = ["claude
   }
   return analyzedResponse.json();
 }
+
+export async function getStrategyDecision(symbol, userPrompt = "", providers = ["claude"], signal) {
+  const quoteSymbol = (symbol || "").trim();
+  const payload = {
+    symbol: quoteSymbol,
+    user_prompt: (userPrompt || "").trim(),
+    providers: providers.length > 0 ? providers : ["claude"],
+  };
+
+  const response = await fetchProtected("/strategy/decision", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!response.ok) {
+    throwApiError("策略決策", response.status, quoteSymbol);
+  }
+
+  return response.json();
+}

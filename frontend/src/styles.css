@@ -1007,6 +1007,35 @@ h2 {
   justify-content: center;
 }
 
+.reason-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.reason-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--bg-card) 90%, var(--bg-b));
+}
+
+.reason-index {
+  margin: 0;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--brand);
+  letter-spacing: 0.04em;
+}
+
+.reason-text {
+  margin: 6px 0 0;
+  color: var(--ink);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 /* ── AI Detail Toggle ── */
 .detail-toggle {
   width: 100%;
@@ -1071,4 +1100,16 @@ h2 {
 .settings-row-desc {
   font-size: 0.79rem;
   color: var(--muted);
+}
+
+.short-term-evidence {
+  margin: 8px 0 0;
+  padding-left: 18px;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.short-term-evidence li + li {
+  margin-top: 4px;
 }

@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import { displayOrFallback, localizeAiText } from "../utils/aiTextLocalizer";
 
 defineProps({
@@ -11,9 +11,9 @@ defineProps({
 
 function toActionLabel(action) {
   const parsed = String(action || "").toLowerCase();
-  if (parsed === "buy") return "偏  多";
-  if (parsed === "sell") return "偏  空";
-  return "觀  望";
+  if (parsed === "buy") return "買進";
+  if (parsed === "sell") return "賣出";
+  return "觀望";
 }
 
 function actionClass(action) {
@@ -61,18 +61,18 @@ function componentActionClass(value) {
 
 function confidencePct(confidence) {
   const v = parseFloat(confidence);
-  if (isNaN(v)) return 0;
+  if (Number.isNaN(v)) return 0;
   return Math.round(Math.min(Math.max(v, 0), 1) * 100);
 }
 
 function componentScorePct(item) {
   const v = parseFloat(item?.score ?? 0);
-  if (isNaN(v)) return 0;
+  if (Number.isNaN(v)) return 0;
   return Math.round(Math.min(Math.abs(v), 1) * 100);
 }
 
 function fmt(value, digits = 2) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "－";
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
   return Number(value).toFixed(digits);
 }
 
@@ -88,24 +88,21 @@ function localizeError(value) {
 <template>
   <article class="card full-span">
     <p class="label">策略決策</p>
-    <p class="sub no-wrap" style="font-size:0.82rem;">
+    <p class="sub no-wrap" style="font-size: 0.82rem">
       標的：{{ symbol || "未輸入" }}
       <span v-if="strategyCheckedAt">・更新：{{ strategyCheckedAt }}</span>
     </p>
 
-    <p v-if="strategyLoading" class="sub" style="margin-top:12px;">策略計算中...</p>
-    <p v-else-if="strategyError" class="sub warn" style="margin-top:12px;">{{ localizeError(strategyError) }}</p>
+    <p v-if="strategyLoading" class="sub" style="margin-top: 12px">策略計算中...</p>
+    <p v-else-if="strategyError" class="sub warn" style="margin-top: 12px">{{ localizeError(strategyError) }}</p>
 
     <template v-else-if="strategyResult">
-
-      <!-- Action Badge -->
       <div class="strategy-action-row">
         <div class="action-badge" :class="actionClass(strategyResult.action)">
           {{ toActionLabel(strategyResult.action) }}
         </div>
       </div>
 
-      <!-- 信心進度條 -->
       <div class="confidence-row">
         <span class="confidence-label">信心</span>
         <div class="progress-track">
@@ -118,7 +115,6 @@ function localizeError(value) {
         <span class="confidence-pct">{{ confidencePct(strategyResult.confidence) }}%</span>
       </div>
 
-      <!-- 風險 + 分數 -->
       <div class="strategy-meta-row">
         <span class="sub">風險：{{ toRiskLabel(strategyResult.risk_level) }}</span>
         <span class="sub">分數：{{ fmt(strategyResult.weighted_score, 3) }}</span>
@@ -126,13 +122,8 @@ function localizeError(value) {
 
       <div class="divider"></div>
 
-      <!-- 分項評估進度條 -->
-      <p class="field-title">分項評估</p>
-      <div
-        v-for="(item, key) in strategyResult.components || {}"
-        :key="`comp-${key}`"
-        class="component-row"
-      >
+      <p class="field-title">構成分數</p>
+      <div v-for="(item, key) in strategyResult.components || {}" :key="`comp-${key}`" class="component-row">
         <span class="component-name">{{ componentLabel(key) }}</span>
         <div class="progress-track">
           <div
@@ -148,18 +139,16 @@ function localizeError(value) {
 
       <div class="divider"></div>
 
-      <!-- 決策理由 -->
       <p class="field-title">決策理由</p>
-      <p
-        v-for="(reason, idx) in strategyResult.reasons || []"
-        :key="`reason-${idx}`"
-        class="sub"
-      >
-        {{ idx + 1 }}. {{ localize(reason) }}
-      </p>
-
+      <div v-if="(strategyResult.reasons || []).length > 0" class="reason-grid">
+        <article v-for="(reason, idx) in strategyResult.reasons || []" :key="`reason-${idx}`" class="reason-card">
+          <p class="reason-index">理由 {{ idx + 1 }}</p>
+          <p class="reason-text">{{ localize(reason) }}</p>
+        </article>
+      </div>
+      <p v-else class="sub">暫無決策理由資料</p>
     </template>
 
-    <p v-else class="sub" style="margin-top:12px;">尚未執行策略決策。</p>
+    <p v-else class="sub" style="margin-top: 12px">尚未執行策略決策。</p>
   </article>
 </template>

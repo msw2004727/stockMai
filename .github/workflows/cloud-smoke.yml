@@ -1,0 +1,27 @@
+name: Cloud Smoke
+
+on:
+  workflow_dispatch:
+    inputs:
+      backend_base_url:
+        description: "Backend base URL, for example https://stockmai-backend.onrender.com"
+        required: true
+        default: "https://stockmai-backend.onrender.com"
+      user_id:
+        description: "Token user id used for smoke"
+        required: false
+        default: "cloud-smoke-gha"
+
+jobs:
+  cloud-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Run cloud smoke script
+        shell: pwsh
+        run: |
+          ./scripts/cloud-smoke.ps1 `
+            -BackendBaseUrl "${{ inputs.backend_base_url }}" `
+            -UserId "${{ inputs.user_id }}"

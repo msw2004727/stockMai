@@ -154,6 +154,19 @@ Notes:
 - Backend service URL is injected into frontend `VITE_API_BASE` automatically.
 - Backend currently uses `CORS_ALLOW_ORIGINS=*` for easy deployment. You can tighten it later.
 
+## 1-minute cloud validation (no Docker)
+Run from any device with PowerShell:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\scripts\cloud-smoke.ps1 -BackendBaseUrl "https://stockmai-backend.onrender.com"
+```
+
+Or run in GitHub Actions:
+1. Open `Actions` -> `Cloud Smoke`.
+2. Click `Run workflow`.
+3. Input your backend URL and run.
+4. Check logs for `Cloud smoke check PASSED`.
+
 ## AI gateway MVP endpoint
 Protected endpoint: `POST /ai/analyze`
 

@@ -107,14 +107,10 @@
 - 備註（可選）：驗收通過：backend unittest `91/91`、frontend build pass。
 
 ## [2026-03-02 17:50] 第 4 批計劃（雲端 smoke + 可觀測）
-- 完成事項：Plan only（尚未實作）。
-- 目前進度：Pending
-- 下一步：
-  1) 新增 `scripts/cloud-smoke.ps1`：自動測 `/health`、`/auth/token`、`/stocks/quote?symbol=2330`、`/stocks/quote?symbol=00878`，並驗證 `is_realtime/source_priority/freshness` 欄位存在。
-  2) 新增 CI 手動工作流（workflow_dispatch）：可輸入 backend URL 執行 smoke。
-  3) 在 README 補「換設備雲端驗收 1 分鐘流程」。
-  4) Render 端完成一次手動 smoke 截圖/結果寫入 WORKLOG。
-- 備註（可選）：完成標準：新設備不開 Docker 也能 1 分鐘驗證線上 API 狀態。
+- 完成事項：完成 `scripts/cloud-smoke.ps1`（驗證 `/health`、`/auth/token`、`2330/00878` 與即時欄位）；新增 `.github/workflows/cloud-smoke.yml`（`workflow_dispatch` 手動輸入 backend URL 執行 smoke）；README 補齊「1 分鐘雲端驗收」流程。
+- 目前進度：Done
+- 下一步：進入第 5 批正式上線收尾（CORS 白名單、錯誤碼標準化、上線驗收清單）。
+- 備註（可選）：本機沙箱對外網連線受限，無法直接連通 Render；可在你設備或 GitHub Actions 執行 smoke 並取得最終結果。
 
 ## [2026-03-02 17:50] 第 5 批計劃（正式上線收尾）
 - 完成事項：Plan only（尚未實作）。

@@ -39,9 +39,12 @@ services:
   - type: web
     name: stockmai-frontend
     runtime: static
-    rootDir: frontend
-    buildCommand: npm ci && npm run build
-    staticPublishPath: dist
+    buildCommand: cd frontend && npm ci && npm run build
+    staticPublishPath: frontend/dist
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_BASE
         fromService:
@@ -52,4 +55,3 @@ services:
         value: h5-demo-user
       - key: VITE_API_TOKEN_EXPIRES_MINUTES
         value: "60"
-

@@ -146,3 +146,8 @@
 - 目前狀態：Done（可於 Render 以 Blueprint 一次建置）。
 - 下一步：使用者於 Render Dashboard 建立 Blueprint，部署後補上 backend FINMIND_TOKEN。
 - 驗收結果：scripts/smoke-check.ps1 通過（backend 22/22 tests + frontend build success）。
+## [2026-03-02 13:25] 修正 Render Frontend Not Found（發布目錄）
+- 做了什麼：調整 ender.yaml 前端服務，移除 ootDir，改用 uildCommand: cd frontend && npm ci && npm run build，並將 staticPublishPath 設為 rontend/dist，同時加入 SPA rewrite (/* -> /index.html)。
+- 目前狀態：Done（待 Render 重新同步部署）。
+- 下一步：Render Dashboard 執行 Blueprint Sync/Manual Deploy，確認 stockmai-frontend 可正常開啟首頁。
+- 備註：此前 Not Found 高機率是 publish path 指向錯誤位置。

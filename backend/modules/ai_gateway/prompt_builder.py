@@ -33,6 +33,7 @@ def build_analysis_prompt(
     symbol: str,
     user_prompt: str = "",
     indicator_context: dict | None = None,
+    sentiment_context: dict | None = None,
     provider: str | None = None,
 ) -> str:
     prompt = (
@@ -51,6 +52,10 @@ def build_analysis_prompt(
     if indicator_block:
         prompt += f"\n{indicator_block}"
 
+    sentiment_block = _build_sentiment_block(sentiment_context)
+    if sentiment_block:
+        prompt += f"\n{sentiment_block}"
+
     if user_prompt.strip():
         prompt += f"\nUser focus: {user_prompt.strip()}"
 
@@ -63,6 +68,7 @@ def build_provider_prompts(
     providers: list[str],
     user_prompt: str = "",
     indicator_context: dict | None = None,
+    sentiment_context: dict | None = None,
 ) -> dict[str, str]:
     prompts: dict[str, str] = {}
     for provider in providers:
@@ -73,6 +79,7 @@ def build_provider_prompts(
             symbol=symbol,
             user_prompt=user_prompt,
             indicator_context=indicator_context,
+            sentiment_context=sentiment_context,
             provider=key,
         )
     return prompts
@@ -117,6 +124,35 @@ def _build_indicator_block(indicator_context: dict | None) -> str:
     parts.append(f"MACD={_fmt(latest.get('macd'))}")
     parts.append(f"MACD_SIGNAL={_fmt(latest.get('macd_signal'))}")
     parts.append(f"MACD_HIST={_fmt(latest.get('macd_hist'))}")
+    return " ".join(parts)
+
+
+def _build_sentiment_block(sentiment_context: dict | None) -> str:
+    if not sentiment_context:
+        return ""
+
+    score = sentiment_context.get("sentiment_score")
+    sentiment = str(sentiment_context.get("market_sentiment", "neutral"))
+    source = str(sentiment_context.get("source", "unknown"))
+    as_of_date = str(sentiment_context.get("as_of_date", ""))
+    window_days = int(sentiment_context.get("window_days", 0) or 0)
+    summary = str(sentiment_context.get("summary", "")).strip()
+    volatility_level = str(sentiment_context.get("volatility_level", "unknown"))
+    price_change_pct = sentiment_context.get("price_change_pct")
+
+    if score is None and not summary:
+        return ""
+
+    parts = [
+        "Sentiment context "
+        f"(source={source}, as_of={as_of_date}, window_days={window_days}):",
+        f"label={sentiment}",
+        f"score={_fmt(score)}",
+        f"price_change_pct={_fmt(price_change_pct)}",
+        f"volatility_level={volatility_level}",
+    ]
+    if summary:
+        parts.append(f"summary={summary}")
     return " ".join(parts)
 
 

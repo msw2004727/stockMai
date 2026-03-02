@@ -32,6 +32,29 @@ class PromptBuilderTest(unittest.TestCase):
         self.assertIn("MACD_HIST=0.2", prompt)
         self.assertIn("User focus: focus on risk", prompt)
 
+    def test_build_analysis_prompt_with_sentiment_context(self):
+        sentiment_context = {
+            "symbol": "2330",
+            "as_of_date": "2026-03-02",
+            "window_days": 20,
+            "market_sentiment": "bullish",
+            "sentiment_score": 0.38,
+            "price_change_pct": 2.14,
+            "volatility_level": "medium",
+            "source": "price_action_heuristic",
+            "summary": "Heuristic sentiment is bullish.",
+        }
+        prompt = build_analysis_prompt(
+            "2330",
+            "focus on risk",
+            sentiment_context=sentiment_context,
+        )
+        self.assertIn("Sentiment context", prompt)
+        self.assertIn("label=bullish", prompt)
+        self.assertIn("score=0.38", prompt)
+        self.assertIn("price_change_pct=2.14", prompt)
+        self.assertIn("volatility_level=medium", prompt)
+
     def test_build_provider_prompts_are_differentiated(self):
         providers = ["claude", "gpt5", "grok", "gemini"]
         prompts = build_provider_prompts(
@@ -39,6 +62,15 @@ class PromptBuilderTest(unittest.TestCase):
             providers=providers,
             user_prompt="focus on momentum",
             indicator_context=None,
+            sentiment_context={
+                "market_sentiment": "neutral",
+                "sentiment_score": 0.0,
+                "price_change_pct": 0.0,
+                "volatility_level": "low",
+                "source": "price_action_heuristic",
+                "window_days": 20,
+                "as_of_date": "2026-03-02",
+            },
         )
 
         self.assertEqual(set(prompts.keys()), set(providers))

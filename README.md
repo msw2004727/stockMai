@@ -172,6 +172,7 @@ Step 4 additions:
 - Cost tracking + budget: set `AI_DAILY_BUDGET_USD` (defaults to `5.0`).
 - `/ai/analyze` response now includes `provider_weights` and `cost` summary.
 - `/ai/analyze` now also includes `indicator_context` (from PostgreSQL cache when available), and prompt will append technical indicators for better AI analysis.
+- `/ai/analyze` now also includes `sentiment_context` (price-action heuristic sentiment signals), and prompt will append sentiment context for better event/risk interpretation.
 
 ## Phase 1 data persistence (PostgreSQL + Alembic)
 Run DB migration:

@@ -63,3 +63,9 @@
 - 狀態：Done
 - 驗收：新增/更新 `test_prompt_builder`、`test_ai_gateway_router`、`test_api_integration`；全量 backend tests `76/76` 通過。
 - 補充：回應中保留原 `prompt`，並新增 `provider_prompts` 方便前端或除錯查看各 AI 實際提示詞。
+
+## [2026-03-02 16:54] 下一步執行：情緒訊號接入 /ai/analyze（MVP）
+- 完成內容：新增 `sentiment_analysis` 模組（price-action heuristic），產出 `sentiment_context`；`/ai/analyze` 回傳新增 `sentiment_context`，並將情緒區塊注入所有 provider prompt。
+- 狀態：Done
+- 驗收：新增 `test_sentiment_analysis`，並更新 `test_prompt_builder`、`test_api_integration`；全量 backend tests `80/80` 通過。
+- 補充：目前情緒來源為行情推導，後續可無痛替換為新聞/社群來源並沿用同一 context schema。

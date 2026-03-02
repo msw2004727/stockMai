@@ -254,3 +254,9 @@
 - 目前進度：In Progress
 - 下一步：commit + push 後，依安全流程在雲端設定金鑰並執行一次真實 LLM 驗收。
 - 備註（可選）：本回合包含操作指引，不提交任何明碼金鑰。
+
+## [2026-03-02 20:56] Commit/Push 完成並提供金鑰安全上線流程
+- 完成事項：已完成 commit `d1d1d94` 並 push 到 `origin/main`；確認 repo 只追蹤 `.env.example`，未追蹤 `.env`；整理真實 LLM 上線的安全做法（Render Secret + 本機 `.env`，不進 GitHub）。
+- 目前進度：Done
+- 下一步：在 Render 設定至少一組後端金鑰（例如 `OPENAI_API_KEY`）後，重新部署並驗收 `/ai/analyze` 回應不再出現 `Mock analysis`。
+- 備註（可選）：本回合無新增功能碼，重點為部署安全與操作流程。

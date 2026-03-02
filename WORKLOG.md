@@ -40,3 +40,8 @@
 - 新增 /stocks/indicators API。
 - /ai/analyze prompt 已接入 indicator_context。
 - 前端 Market/AI 顯示技術指標與成本摘要。
+## [2026-03-02 16:13] 下一步計劃執行：建立 GitHub Actions CI 最小集
+- 完成內容：新增 `.github/workflows/ci.yml`，在 push/PR(main) 自動執行 backend unittest、frontend build、WORKLOG UTF-8 檢查。
+- 狀態：Done
+- 驗收：本機 backend tests 73/73 pass；frontend build pass。
+- 補充：README 新增 CI checks 說明。

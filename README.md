@@ -196,3 +196,11 @@ Response includes:
 - `latest`: `sma5`, `sma20`, `rsi14`, `macd`, `macd_signal`, `macd_hist`
 - `series`: indicator time series aligned by date
 - `history_source`: where source history was loaded from (`postgres/finmind/twse/demo`)
+
+## CI checks
+GitHub Actions workflow: `.github/workflows/ci.yml`
+
+Runs on every push / PR to `main`:
+- backend unit tests
+- frontend production build
+- UTF-8 validation for `WORKLOG.md` (avoids Pages Jekyll encoding failures)

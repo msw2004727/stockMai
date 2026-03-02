@@ -83,33 +83,6 @@ function toNum(value) {
   return Number.isFinite(parsed) ? parsed : null;
 }
 
-function shortTermViewLabel(result) {
-  const parsed = String(result?.consensus?.signal || "").toLowerCase();
-  if (parsed === "bullish") return "短線情境：偏多";
-  if (parsed === "bearish") return "短線情境：偏空";
-  return "短線情境：中性";
-}
-
-function shortTermSummary(result) {
-  if (!result) {
-    return "尚無短線分析資料，請先執行 AI 分析。";
-  }
-
-  const summary = localize(result?.consensus?.summary, "");
-  const points = Array.isArray(result?.consensus?.key_points) ? result.consensus.key_points : [];
-  const topPoints = points
-    .slice(0, 2)
-    .map((item) => localize(item, ""))
-    .filter((item) => Boolean(item));
-
-  const merged = [summary, ...topPoints].filter((item) => Boolean(item));
-  if (merged.length === 0) {
-    return "目前資料不足，建議先觀察關鍵價位與量能變化。";
-  }
-
-  return merged.join(" ");
-}
-
 function shortTermEvidence(result) {
   if (!result) {
     return ["尚無可用資料，請先執行 AI 分析。"];
@@ -145,19 +118,6 @@ function shortTermEvidence(result) {
     evidence.push(`情緒依據：市場情緒 ${sentimentLabel}。${sentimentSummary}`);
   } else {
     evidence.push(`情緒依據：市場情緒 ${sentimentLabel}。`);
-  }
-
-  const confidence = toNum(result?.consensus?.confidence);
-  if (confidence !== null) {
-    evidence.push(`AI共識依據：${toSignalLabel(result?.consensus?.signal)}，信心 ${fmt(confidence, 2)}。`);
-  }
-
-  const keyPoints = Array.isArray(result?.consensus?.key_points) ? result.consensus.key_points : [];
-  for (const point of keyPoints.slice(0, 2)) {
-    const localized = localize(point, "");
-    if (localized) {
-      evidence.push(`補充重點：${localized}`);
-    }
   }
 
   return evidence.slice(0, 6);
@@ -251,12 +211,6 @@ function shortTermEvidence(result) {
 
     <article class="card full-span" style="margin-top:0;">
       <p class="label">AI短線分析（1~5 個交易日）</p>
-      <p class="sub" style="margin-top:6px;">
-        <span :class="signalClass(aiResult.consensus?.signal)" style="font-weight:700;">
-          {{ shortTermViewLabel(aiResult) }}
-        </span>
-      </p>
-      <p class="sub">{{ shortTermSummary(aiResult) }}</p>
       <p class="sub" style="margin-top:8px;font-weight:700;">AI依據資料分析：</p>
       <ul class="short-term-evidence">
         <li v-for="(line, idx) in shortTermEvidence(aiResult)" :key="`short-evidence-${idx}`">
@@ -280,7 +234,7 @@ function shortTermEvidence(result) {
     </article>
 
     <button class="detail-toggle" @click="showDetail = !showDetail">
-      {{ showDetail ? "收合詳細分析" : "展開詳細分析" }}
+      {{ showDetail ? "收合AI反饋數據" : "展開AI反饋數據" }}
     </button>
 
     <template v-if="showDetail">

@@ -1,0 +1,34 @@
+services:
+  postgres:
+    image: postgres:16
+    container_name: stockmai-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-twstock}
+      POSTGRES_USER: ${POSTGRES_USER:-twstock_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-twstock_pass}
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-twstock_user} -d ${POSTGRES_DB:-twstock}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: stockmai-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  pg_data:
+

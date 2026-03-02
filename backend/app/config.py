@@ -14,6 +14,8 @@ class Settings(BaseSettings):
     grok_api_key: str = ""
     gemini_api_key: str = ""
     jwt_secret: str = "change_me"
+    jwt_expire_minutes: int = 60
+    api_daily_limit: int = 200
 
     model_config = SettingsConfigDict(
         env_file=".env",
@@ -26,4 +28,3 @@ class Settings(BaseSettings):
 @lru_cache(maxsize=1)
 def get_settings() -> Settings:
     return Settings()
-

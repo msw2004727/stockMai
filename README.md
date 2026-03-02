@@ -98,3 +98,30 @@ cd ..
 # optional one-shot smoke check
 powershell -ExecutionPolicy Bypass -File .\scripts\smoke-check.ps1
 ```
+
+## JWT quick start
+`/stocks/quote` and `/stocks/history` now require bearer token and daily quota check.
+
+```powershell
+# 1) issue a token for a user id
+$tokenResp = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/auth/token" `
+  -ContentType "application/json" `
+  -Body '{"user_id":"demo-user","expires_minutes":60}'
+
+$token = $tokenResp.access_token
+
+# 2) call protected endpoints
+Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/stocks/quote?symbol=2330" `
+  -Headers @{ Authorization = "Bearer $token" } | Select-Object -ExpandProperty Content
+```
+
+## Frontend auth behavior
+Frontend now auto-requests JWT from `/auth/token` and attaches `Authorization: Bearer <token>` for `/stocks/*` calls.
+
+Optional frontend env vars:
+
+```env
+VITE_API_BASE=/api
+VITE_API_USER_ID=h5-demo-user
+VITE_API_TOKEN_EXPIRES_MINUTES=60
+```

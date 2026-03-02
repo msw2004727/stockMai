@@ -2,6 +2,9 @@ from __future__ import annotations
 
 from datetime import date, timedelta
 
+from backend.modules.data_pipeline import fetch_finmind_history, fetch_finmind_quote
+
+from ..config import get_settings
 from .constants import DEMO_QUOTES
 from .parsers import parse_daily_row, to_ohlc_series
 from .provider import fetch_twse_month, month_candidates
@@ -9,6 +12,16 @@ from .provider import fetch_twse_month, month_candidates
 
 class SymbolNotFoundError(Exception):
     pass
+
+
+def _fetch_quote_from_finmind(symbol: str) -> dict | None:
+    token = get_settings().finmind_token
+    return fetch_finmind_quote(symbol, token=token)
+
+
+def _fetch_history_from_finmind(symbol: str, days: int) -> dict | None:
+    token = get_settings().finmind_token
+    return fetch_finmind_history(symbol, days=days, token=token)
 
 
 def _fetch_quote_from_twse(symbol: str) -> dict:
@@ -116,6 +129,13 @@ def _build_demo_history(symbol: str, days: int) -> list[dict]:
 
 def get_quote(symbol: str) -> dict:
     try:
+        finmind_quote = _fetch_quote_from_finmind(symbol)
+        if finmind_quote:
+            return finmind_quote
+    except Exception:
+        pass
+
+    try:
         return _fetch_quote_from_twse(symbol)
     except Exception:
         demo = DEMO_QUOTES.get(symbol)
@@ -139,6 +159,13 @@ def get_quote(symbol: str) -> dict:
 
 
 def get_history(symbol: str, days: int) -> dict:
+    try:
+        finmind_history = _fetch_history_from_finmind(symbol, days=days)
+        if finmind_history:
+            return finmind_history
+    except Exception:
+        pass
+
     try:
         return _fetch_history_from_twse(symbol, days=days)
     except Exception:

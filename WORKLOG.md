@@ -111,3 +111,28 @@
 - 目前進度：In Progress（收斂中）
 - 下一步：執行第 4 波（KLine 視圖拆分）與第 5 波（測試/規範收尾）。
 - 備註（可選）：本回合無程式功能變更。
+## [2026-03-02 12:49] 檢查規格書並評估下一步與完成度
+- 做了什麼：逐條檢視《台股AI平台_專案規格書_v3.0.md》的 Phase 0~7、P0/P1/P2，並對照目前實作檔案與 README/WORKLOG。
+- 目前狀態：In Progress（規格完成度評估已完成，待執行下一個開發階段）。
+- 下一步：優先啟動 Phase 1（FinMind 數據管道）補齊 provider/client + 清洗與缺失值處理，再銜接 Phase 5 的 JWT/速率限制基礎。
+- 風險與備註：目前有 stocks MVP 與前端 K 線圖，但尚未落地 ai_gateway、TA-Lib、Backtrader、JWT、NLP/預測主流程。
+## [2026-03-02 12:54] 完成 FinMind data_pipeline 模組化與 service 串接
+- 做了什麼：新增 ackend/modules/data_pipeline/{finmind_client.py, normalizer.py, repository.py}，並在 ackend/app/stocks/service.py 實作 FinMind 優先、TWSE 次之、demo 最後 fallback。同步補齊 ackend/tests/test_stock_service.py 與新增 ackend/tests/test_data_pipeline.py。
+- 目前狀態：Done（建置 + 串接 + 測試皆完成）。
+- 下一步：若你同意，下一階段可接著做 Phase 5 的 JWT + rate limit 基礎骨架，讓 API 進入可控存取。
+- 驗收結果：python -m unittest discover -s backend/tests -p "test_*.py" 共 16/16 通過，未發現拆分造成的回歸 bug。
+## [2026-03-02 12:59] 啟動 Phase 5：JWT 驗證 + 每日速率限制骨架
+- 做了什麼：新增 ackend/app/auth.py（JWT 簽發/驗證、get_current_user、Redis 每日 quota、/auth/token），並把 /stocks/quote、/stocks/history 接上 enforce_rate_limit 依賴。同步更新 ackend/app/main.py、ackend/app/config.py、.env.example、README.md。
+- 目前狀態：Done（保護層已啟用）。
+- 下一步：前端若要串接受保護 API，需先呼叫 /auth/token 取得 bearer token，再帶 Authorization header。
+- 驗收結果：python -m unittest discover -s backend/tests -p "test_*.py" 共 22/22 通過。
+## [2026-03-02 13:02] 前端接入 JWT 自動取 token 與授權 header
+- 做了什麼：重構 rontend/src/api.js，加入 token 快取/自動更新/401 重試邏輯，/stocks/quote 與 /stocks/history 改為受保護呼叫。補充 rontend/.env.example 新增 VITE_API_USER_ID 與 VITE_API_TOKEN_EXPIRES_MINUTES，並更新 README 前端認證行為說明。
+- 目前狀態：Done（前端已可自動走 auth token，不需手動貼 header）。
+- 下一步：可進入「多角色/真實登入對接」或先做「JWT + rate limit 的 API 整合測試（含 401/429）」。
+- 驗收結果：scripts/smoke-check.ps1 通過（backend 22/22 tests + frontend build success）。
+## [2026-03-02 13:04] 提供 GitHub 部署（推送）步驟
+- 做了什麼：檢查本機 git 狀態與遠端設定，確認目前分支為 master、尚未設定 origin、且有未提交變更。
+- 目前狀態：In Progress（待使用者執行 add/commit/remote/push）。
+- 下一步：依序執行 git add .、git commit、git branch -M main、git remote add origin ...、git push -u origin main。
+- 備註：若遠端已存在提交，先 git pull --rebase origin main 再 push。

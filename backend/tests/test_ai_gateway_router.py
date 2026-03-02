@@ -70,6 +70,22 @@ class _StaticResponseClient:
         )
 
 
+class _CapturePromptClient:
+    def __init__(self, provider: str):
+        self.provider = provider
+        self.last_prompt = ""
+
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+        self.last_prompt = prompt
+        return json.dumps(
+            {
+                "summary": f"{self.provider} captured prompt for {symbol}",
+                "signal": "neutral",
+                "confidence": 0.5,
+            }
+        )
+
+
 class AIGatewayRouterAsyncTest(unittest.TestCase):
     def test_run_with_default_router(self):
         router = build_default_router(
@@ -230,6 +246,34 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
         self.assertEqual(result["results"][0]["error_type"], "budget")
         self.assertTrue(result["cost"]["budget_exceeded"])
         self.assertEqual(len(result["cost"]["entries"]), 0)
+
+    def test_run_uses_provider_specific_prompts(self):
+        c1 = _CapturePromptClient(provider="claude")
+        c2 = _CapturePromptClient(provider="gpt5")
+        router = GatewayRouter(
+            clients={
+                "claude": c1,
+                "gpt5": c2,
+            }
+        )
+        request = GatewayRequest(
+            symbol="2330",
+            prompt="base prompt",
+            providers=["claude", "gpt5"],
+            provider_prompts={
+                "claude": "claude prompt",
+                "gpt5": "gpt prompt",
+            },
+            timeout_seconds=10,
+            retry_count=0,
+        )
+
+        result = asyncio.run(router.run(request))
+
+        self.assertTrue(result["results"][0]["ok"])
+        self.assertTrue(result["results"][1]["ok"])
+        self.assertEqual(c1.last_prompt, "claude prompt")
+        self.assertEqual(c2.last_prompt, "gpt prompt")
 
 
 if __name__ == "__main__":

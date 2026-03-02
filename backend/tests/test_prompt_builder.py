@@ -1,6 +1,6 @@
 import unittest
 
-from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt
+from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt, build_provider_prompts
 
 
 class PromptBuilderTest(unittest.TestCase):
@@ -31,6 +31,23 @@ class PromptBuilderTest(unittest.TestCase):
         self.assertIn("RSI14=56.2", prompt)
         self.assertIn("MACD_HIST=0.2", prompt)
         self.assertIn("User focus: focus on risk", prompt)
+
+    def test_build_provider_prompts_are_differentiated(self):
+        providers = ["claude", "gpt5", "grok", "gemini"]
+        prompts = build_provider_prompts(
+            symbol="2330",
+            providers=providers,
+            user_prompt="focus on momentum",
+            indicator_context=None,
+        )
+
+        self.assertEqual(set(prompts.keys()), set(providers))
+        self.assertIn("Provider role: Deep semantic analyst", prompts["claude"])
+        self.assertIn("Provider role: Technical analyst", prompts["gpt5"])
+        self.assertIn("Provider role: Real-time intelligence scout", prompts["grok"])
+        self.assertIn("Provider role: Capital-flow and data auditor", prompts["gemini"])
+        self.assertIn("User focus: focus on momentum", prompts["claude"])
+        self.assertIn("Target symbol: 2330", prompts["gemini"])
 
 
 if __name__ == "__main__":

@@ -8,7 +8,7 @@ from pydantic import BaseModel, Field
 from backend.modules.ai_gateway import GatewayRequest, build_default_router
 from backend.modules.ai_gateway.consensus import parse_provider_weights
 from backend.modules.ai_gateway.cost_tracker import CostTracker
-from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt
+from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt, build_provider_prompts
 from backend.modules.data_pipeline import load_recent_history
 from backend.modules.feature_engineering import compute_latest_indicators
 
@@ -105,12 +105,19 @@ async def analyze_stock(
         payload.user_prompt,
         indicator_context=indicator_context,
     )
+    provider_prompts = build_provider_prompts(
+        symbol=payload.symbol,
+        providers=providers,
+        user_prompt=payload.user_prompt,
+        indicator_context=indicator_context,
+    )
     cost_tracker = _get_cost_tracker(settings.redis_url)
 
     request = GatewayRequest(
         symbol=payload.symbol,
         prompt=prompt,
         providers=providers,
+        provider_prompts=provider_prompts,
         timeout_seconds=settings.ai_timeout_seconds,
         retry_count=settings.ai_retry_count,
         retry_backoff_seconds=settings.ai_retry_backoff_seconds,
@@ -137,6 +144,7 @@ async def analyze_stock(
         "provider_weights": provider_weights,
         "indicator_context": indicator_context,
         "prompt": prompt,
+        "provider_prompts": provider_prompts,
         "results": gateway_result["results"],
         "consensus": gateway_result["consensus"],
         "fallback_used": gateway_result["fallback_used"],

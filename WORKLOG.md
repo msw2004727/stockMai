@@ -51,3 +51,15 @@
 - 狀態：Done
 - 驗收：補齊 `test_feature_engineering` 與 `test_stock_service` 對 `indicator_engine` 的斷言，並放大 MACD 測試資料長度避免長週期指標空值誤判。
 - 補充：README 的 indicators endpoint 說明已同步新增 `indicator_engine` 欄位。
+
+## [2026-03-02 16:32] 規格書對齊檢視與下一步規劃
+- 完成內容：比對 `台股AI平台_專案規格書_v3.0.md` 與現行程式，整理已完成與待完成項目。
+- 狀態：Done
+- 驗收：確認目前主要缺口集中在 Phase 3/4（預測策略決策、情緒訊號接入）、P1（Backtrader 回測）、與動態權重自動更新。
+- 補充：下一步建議先做「情緒訊號接入 /ai/analyze」最小可用版本，之後再接動態權重與回測。
+
+## [2026-03-02 16:39] 差異化 Prompt 第 1 項完成
+- 完成內容：`prompt_builder` 新增 per-provider 角色化 prompt（claude/gpt5/grok/gemini）；`/ai/analyze` 改為產生並傳遞 `provider_prompts`；gateway router 逐 provider 套用對應 prompt。
+- 狀態：Done
+- 驗收：新增/更新 `test_prompt_builder`、`test_ai_gateway_router`、`test_api_integration`；全量 backend tests `76/76` 通過。
+- 補充：回應中保留原 `prompt`，並新增 `provider_prompts` 方便前端或除錯查看各 AI 實際提示詞。

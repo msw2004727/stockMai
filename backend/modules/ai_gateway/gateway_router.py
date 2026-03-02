@@ -20,6 +20,7 @@ class GatewayRequest:
     prompt: str
     providers: list[str]
     timeout_seconds: int
+    provider_prompts: dict[str, str] = field(default_factory=dict)
     retry_count: int = 2
     retry_backoff_seconds: float = 0.35
     provider_weights: dict[str, float] = field(default_factory=dict)
@@ -41,6 +42,7 @@ class GatewayRouter:
         user_id = _normalize_user_id(request.user_id)
         for provider in request.providers:
             client = self.clients.get(provider)
+            provider_prompt = _resolve_provider_prompt(request, provider)
             if client is None:
                 previous_failure = True
                 results.append(
@@ -76,7 +78,7 @@ class GatewayRouter:
             try:
                 raw_text, attempts = await _run_with_retry(
                     client=client,
-                    prompt=request.prompt,
+                    prompt=provider_prompt,
                     symbol=request.symbol,
                     timeout_seconds=request.timeout_seconds,
                     retry_count=request.retry_count,
@@ -108,6 +110,7 @@ class GatewayRouter:
                 request=request,
                 user_id=user_id,
                 provider=provider,
+                prompt_text=provider_prompt,
                 raw_text=raw_text,
             )
             if usage is not None:
@@ -179,12 +182,13 @@ def _track_cost_usage(
     request: GatewayRequest,
     user_id: str,
     provider: str,
+    prompt_text: str,
     raw_text: str,
 ) -> dict | None:
     if request.cost_tracker is None:
         return None
 
-    input_tokens = request.cost_tracker.estimate_tokens(request.prompt)
+    input_tokens = request.cost_tracker.estimate_tokens(prompt_text)
     output_tokens = request.cost_tracker.estimate_tokens(raw_text)
     return request.cost_tracker.record_usage(
         user_id=user_id,
@@ -215,6 +219,12 @@ def _build_cost_summary(
         "daily_budget_usd": round(request.daily_budget_usd, 8),
         "budget_exceeded": budget_exceeded,
     }
+
+
+def _resolve_provider_prompt(request: GatewayRequest, provider: str) -> str:
+    prompt = request.provider_prompts.get(provider, request.prompt)
+    parsed = prompt.strip()
+    return parsed if parsed else request.prompt
 
 
 def build_default_router(

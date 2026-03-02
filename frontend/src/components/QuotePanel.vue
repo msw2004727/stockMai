@@ -65,14 +65,14 @@ function fmt(value) {
 
 <template>
   <h2 class="section-title">股票即時報價</h2>
-  <p class="hint">支援 4 碼台股代號，例如 2330、2317、0050。</p>
+  <p class="hint">支援 4~6 碼台股代號，例如 2330、2485、00878。</p>
 
   <div class="query-row">
     <input
       :value="symbol"
       class="input"
       type="text"
-      maxlength="4"
+      maxlength="6"
       inputmode="numeric"
       placeholder="請輸入股票代號"
       @input="onSymbolInput"

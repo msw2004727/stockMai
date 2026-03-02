@@ -5,6 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.app.main import app
+from backend.app.stocks.service import DataUnavailableError
 
 
 class _FakeRedis:
@@ -197,6 +198,73 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertEqual(first_status, 200)
                     self.assertEqual(second_status, 429)
                     self.assertEqual(second_payload["detail"], "Daily quota exceeded")
+
+    def test_quote_supports_five_digit_symbol(self):
+        fake_redis = _FakeRedis()
+        fake_quote = {
+            "symbol": "00878",
+            "name": "00878",
+            "as_of_date": "2026-03-02",
+            "open": 21.4,
+            "high": 21.7,
+            "low": 21.3,
+            "close": 21.6,
+            "change": 0.2,
+            "volume": 15230000,
+            "source": "integration",
+            "is_fallback": False,
+            "note": "",
+            "freshness": {
+                "as_of_date": "2026-03-02",
+                "age_days": 0,
+                "is_fresh": True,
+                "max_age_days": 5,
+            },
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.get_quote", return_value=fake_quote):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "five-digit-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/quote",
+                        query="symbol=00878",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["symbol"], "00878")
+
+    def test_quote_returns_503_when_market_data_unavailable(self):
+        fake_redis = _FakeRedis()
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch(
+                    "backend.app.stocks.routes.get_quote",
+                    side_effect=DataUnavailableError("Market data providers are temporarily unavailable."),
+                ):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "unavailable-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/quote",
+                        query="symbol=2330",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 503)
+                    self.assertEqual(payload["detail"], "Market data providers are temporarily unavailable.")
 
     def test_stocks_indicators_requires_token(self):
         status, payload = self._request_json("GET", "/stocks/indicators", query="symbol=2330&days=60")

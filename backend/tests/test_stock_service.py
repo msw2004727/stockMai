@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from backend.app.stocks.service import SymbolNotFoundError, get_history, get_indicators, get_quote
+from backend.app.stocks.service import DataUnavailableError, SymbolNotFoundError, get_history, get_indicators, get_quote
 
 
 class StockServiceTest(unittest.TestCase):
@@ -38,6 +38,8 @@ class StockServiceTest(unittest.TestCase):
 
         result = get_quote("2330")
         self.assertEqual(result["source"], "finmind")
+        self.assertIn("freshness", result)
+        self.assertIn("is_fresh", result["freshness"])
         mock_twse.assert_not_called()
 
     @patch("backend.app.stocks.service._fetch_quote_from_twse")
@@ -60,17 +62,17 @@ class StockServiceTest(unittest.TestCase):
 
         result = get_quote("2330")
         self.assertEqual(result["source"], "twse")
+        self.assertIn("freshness", result)
+        self.assertIn("is_fresh", result["freshness"])
 
     @patch("backend.app.stocks.service._fetch_quote_from_twse", side_effect=RuntimeError("twse error"))
     @patch("backend.app.stocks.service._fetch_quote_from_finmind", side_effect=RuntimeError("finmind error"))
-    def test_get_quote_fallback_demo(self, _mock_finmind, _mock_twse):
-        result = get_quote("2330")
-        self.assertEqual(result["symbol"], "2330")
-        self.assertEqual(result["source"], "demo")
-        self.assertTrue(result["is_fallback"])
+    def test_get_quote_raises_data_unavailable_when_all_sources_fail(self, _mock_finmind, _mock_twse):
+        with self.assertRaises(DataUnavailableError):
+            get_quote("2330")
 
-    @patch("backend.app.stocks.service._fetch_quote_from_twse", side_effect=RuntimeError("twse error"))
-    @patch("backend.app.stocks.service._fetch_quote_from_finmind", side_effect=RuntimeError("finmind error"))
+    @patch("backend.app.stocks.service._fetch_quote_from_twse", return_value=None)
+    @patch("backend.app.stocks.service._fetch_quote_from_finmind", return_value=None)
     def test_get_quote_symbol_not_found(self, _mock_finmind, _mock_twse):
         with self.assertRaises(SymbolNotFoundError):
             get_quote("9999")
@@ -101,21 +103,18 @@ class StockServiceTest(unittest.TestCase):
         }
         result = get_history("2330", 5)
         self.assertEqual(result["source"], "finmind")
+        self.assertIn("freshness", result)
+        self.assertIn("is_fresh", result["freshness"])
         mock_twse.assert_not_called()
 
     @patch("backend.app.stocks.service._fetch_history_from_twse", side_effect=RuntimeError("twse error"))
     @patch("backend.app.stocks.service._fetch_history_from_finmind", side_effect=RuntimeError("finmind error"))
-    def test_get_history_fallback_demo(self, _mock_finmind, _mock_twse):
-        result = get_history("2330", 20)
-        self.assertEqual(result["symbol"], "2330")
-        self.assertEqual(result["days"], 20)
-        self.assertEqual(result["source"], "demo")
-        self.assertEqual(len(result["series"]), 20)
-        self.assertEqual(len(result["ohlc"]), 20)
-        self.assertEqual(len(result["ohlc"][0]), 6)
+    def test_get_history_raises_data_unavailable_when_all_sources_fail(self, _mock_finmind, _mock_twse):
+        with self.assertRaises(DataUnavailableError):
+            get_history("2330", 20)
 
-    @patch("backend.app.stocks.service._fetch_history_from_twse", side_effect=RuntimeError("twse error"))
-    @patch("backend.app.stocks.service._fetch_history_from_finmind", side_effect=RuntimeError("finmind error"))
+    @patch("backend.app.stocks.service._fetch_history_from_twse", return_value=None)
+    @patch("backend.app.stocks.service._fetch_history_from_finmind", return_value=None)
     def test_get_history_symbol_not_found(self, _mock_finmind, _mock_twse):
         with self.assertRaises(SymbolNotFoundError):
             get_history("9999", 5)
@@ -147,6 +146,8 @@ class StockServiceTest(unittest.TestCase):
         self.assertEqual(result["history_source"], "postgres")
         self.assertEqual(result["days"], 30)
         self.assertEqual(len(result["series"]), 30)
+        self.assertIn("freshness", result)
+        self.assertIn("is_fresh", result["freshness"])
         self.assertIn(result["indicator_engine"], {"talib", "python"})
         self.assertIn("sma5", result["latest"])
         self.assertIn("rsi14", result["latest"])

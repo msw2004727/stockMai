@@ -20,7 +20,7 @@ router = APIRouter(prefix="/ai", tags=["ai"])
 
 
 class AnalyzeRequest(BaseModel):
-    symbol: str = Field(..., pattern=r"^\d{4}$")
+    symbol: str = Field(..., pattern=r"^\d{4,6}$")
     user_prompt: str = Field("", max_length=500)
     providers: list[str] | None = None
 

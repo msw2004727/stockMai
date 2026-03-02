@@ -188,7 +188,11 @@ Backfill recent history from FinMind into PostgreSQL:
 .venv\Scripts\python.exe .\scripts\backfill_prices.py --symbols 2330,2317,0050 --days 180
 ```
 
-After this, `/stocks/quote` and `/stocks/history` will read from PostgreSQL cache first, then fallback to FinMind/TWSE/demo.
+After this, `/stocks/quote` and `/stocks/history` read from PostgreSQL cache first, then fallback to FinMind/TWSE.
+If upstream providers are temporarily unavailable, API returns `503` (no local demo quote fallback in production mode).
+
+Symbol format:
+- Stocks / ETFs now support `4~6` digit symbols (for example `2330`, `2485`, `00878`).
 
 ## Stock indicators endpoint
 Protected endpoint: `GET /stocks/indicators?symbol=2330&days=60`
@@ -196,8 +200,9 @@ Protected endpoint: `GET /stocks/indicators?symbol=2330&days=60`
 Response includes:
 - `latest`: `sma5`, `sma20`, `rsi14`, `macd`, `macd_signal`, `macd_hist`
 - `series`: indicator time series aligned by date
-- `history_source`: where source history was loaded from (`postgres/finmind/twse/demo`)
+- `history_source`: where source history was loaded from (`postgres/finmind/twse`)
 - `indicator_engine`: indicator calculator engine (`talib` or `python` fallback)
+- `freshness`: as-of freshness metadata (`as_of_date`, `age_days`, `is_fresh`, `max_age_days`)
 
 ## CI checks
 GitHub Actions workflow: `.github/workflows/ci.yml`

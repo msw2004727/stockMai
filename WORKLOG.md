@@ -69,3 +69,15 @@
 - 狀態：Done
 - 驗收：新增 `test_sentiment_analysis`，並更新 `test_prompt_builder`、`test_api_integration`；全量 backend tests `80/80` 通過。
 - 補充：目前情緒來源為行情推導，後續可無痛替換為新聞/社群來源並沿用同一 context schema。
+
+## [2026-03-02 17:19] 雲端優先規則補充與即時報價差距評估
+- 完成事項：`AGENTS.md` 新增「作業模式規則（雲端優先）」；確認後續流程預設以 Render/GitHub 雲端作業為主。
+- 目前進度：Done
+- 下一步：針對台股代號格式（含 5 碼 ETF）與即時報價來源規格，實作正式版路線圖第 1 批修正。
+- 備註（可選）：目前行情查詢仍以日線來源為主，尚未達成盤中即時報價。
+
+## [2026-03-02 17:28] 正式化第 1 批：4~6 碼代號 + 關閉 demo fallback + freshness
+- 完成事項：`/stocks/*` 與 `/ai/analyze` symbol 驗證放寬為 4~6 碼；行情流程移除 demo fallback，改為來源不可用回傳 503；quote/history/indicators 新增 `freshness` 欄位；前端查詢提示改為支援 `00878`。
+- 目前進度：Done
+- 下一步：接續正式化第 2 批（盤中即時來源接入與回傳欄位標準化，例如 quote_time / market_state）。
+- 備註（可選）：驗收已通過：backend unittest `82/82`、frontend build pass。

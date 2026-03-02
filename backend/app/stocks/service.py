@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import date, timedelta
+from datetime import date
 
 from backend.modules.data_pipeline import (
     fetch_finmind_history,
@@ -16,12 +16,15 @@ from backend.modules.feature_engineering import (
 )
 
 from ..config import get_settings
-from .constants import DEMO_QUOTES
 from .parsers import parse_daily_row, to_ohlc_series
 from .provider import fetch_twse_month, month_candidates
 
 
 class SymbolNotFoundError(Exception):
+    pass
+
+
+class DataUnavailableError(Exception):
     pass
 
 
@@ -64,13 +67,13 @@ def _fetch_history_from_finmind(symbol: str, days: int) -> dict | None:
     return fetch_finmind_history(symbol, days=days, token=token)
 
 
-def _fetch_quote_from_twse(symbol: str) -> dict:
-    last_error = None
+def _fetch_quote_from_twse(symbol: str) -> dict | None:
+    has_fetch_error = False
     for month in month_candidates(date.today(), count=2):
         try:
             name, rows = fetch_twse_month(symbol, month)
         except Exception as exc:
-            last_error = exc
+            has_fetch_error = True
             continue
 
         if not rows:
@@ -96,19 +99,21 @@ def _fetch_quote_from_twse(symbol: str) -> dict:
             "note": "",
         }
 
-    raise RuntimeError(f"Failed to fetch TWSE quote for {symbol}") from last_error
+    if has_fetch_error:
+        raise RuntimeError(f"Failed to fetch TWSE quote for {symbol}")
+    return None
 
 
-def _fetch_history_from_twse(symbol: str, days: int) -> dict:
+def _fetch_history_from_twse(symbol: str, days: int) -> dict | None:
     series_by_date = {}
     name = symbol
-    last_error = None
+    has_fetch_error = False
 
     for month in month_candidates(date.today(), count=6):
         try:
             twse_name, rows = fetch_twse_month(symbol, month)
         except Exception as exc:
-            last_error = exc
+            has_fetch_error = True
             continue
 
         if not rows:
@@ -124,7 +129,9 @@ def _fetch_history_from_twse(symbol: str, days: int) -> dict:
             break
 
     if not series_by_date:
-        raise RuntimeError(f"Failed to fetch TWSE history for {symbol}") from last_error
+        if has_fetch_error:
+            raise RuntimeError(f"Failed to fetch TWSE history for {symbol}")
+        return None
 
     series = [series_by_date[d] for d in sorted(series_by_date.keys())][-days:]
     return {
@@ -139,39 +146,46 @@ def _fetch_history_from_twse(symbol: str, days: int) -> dict:
     }
 
 
-def _build_demo_history(symbol: str, days: int) -> list[dict]:
-    base = DEMO_QUOTES[symbol]
-    today = date.today()
-    delta_pattern = [-0.017, -0.011, -0.006, 0.002, 0.007, 0.013, 0.008, -0.003, 0.004, 0.009]
-    series = []
+def _build_freshness(as_of_date: str, max_age_days: int) -> dict:
+    parsed: date | None = None
+    try:
+        parsed = date.fromisoformat(str(as_of_date))
+    except Exception:
+        parsed = None
 
-    for idx in range(days):
-        d = today - timedelta(days=days - 1 - idx)
-        ratio = delta_pattern[idx % len(delta_pattern)]
-        close = round(base["close"] * (1 + ratio), 2)
-        open_price = round(close * (1 - 0.003 + (idx % 3) * 0.001), 2)
-        high = round(max(open_price, close) * 1.004, 2)
-        low = round(min(open_price, close) * 0.996, 2)
-        series.append(
-            {
-                "date": d.isoformat(),
-                "open": open_price,
-                "high": high,
-                "low": low,
-                "close": close,
-                "change": round(close - open_price, 2),
-                "volume": int(base["volume"] * (0.82 + (idx % 5) * 0.045)),
-            }
-        )
+    if parsed is None:
+        return {
+            "as_of_date": str(as_of_date),
+            "age_days": None,
+            "is_fresh": False,
+            "max_age_days": int(max_age_days),
+        }
 
-    return series
+    age_days = (date.today() - parsed).days
+    return {
+        "as_of_date": parsed.isoformat(),
+        "age_days": int(age_days),
+        "is_fresh": age_days <= max(max_age_days, 0),
+        "max_age_days": int(max_age_days),
+    }
+
+
+def _with_freshness(payload: dict, max_age_days: int) -> dict:
+    out = dict(payload)
+    as_of_date = str(out.get("as_of_date", ""))
+    out["freshness"] = _build_freshness(as_of_date, max_age_days=max_age_days)
+    return out
 
 
 def get_quote(symbol: str) -> dict:
+    finmind_failed = False
+    twse_failed = False
+    twse_no_data = False
+
     try:
         cached = _load_quote_from_postgres(symbol)
         if cached:
-            return cached
+            return _with_freshness(cached, max_age_days=5)
     except Exception:
         pass
 
@@ -193,54 +207,52 @@ def get_quote(symbol: str) -> dict:
                 ],
                 source="finmind",
             )
-            return finmind_quote
+            return _with_freshness(finmind_quote, max_age_days=5)
     except Exception:
-        pass
+        finmind_failed = True
 
     try:
         twse_quote = _fetch_quote_from_twse(symbol)
-        _persist_series_to_postgres(
-            symbol=symbol,
-            series=[
-                {
-                    "date": twse_quote["as_of_date"],
-                    "open": twse_quote["open"],
-                    "high": twse_quote["high"],
-                    "low": twse_quote["low"],
-                    "close": twse_quote["close"],
-                    "change": twse_quote["change"],
-                    "volume": twse_quote["volume"],
-                }
-            ],
-            source="twse",
-        )
-        return twse_quote
+        if twse_quote is None:
+            twse_no_data = True
+        else:
+            _persist_series_to_postgres(
+                symbol=symbol,
+                series=[
+                    {
+                        "date": twse_quote["as_of_date"],
+                        "open": twse_quote["open"],
+                        "high": twse_quote["high"],
+                        "low": twse_quote["low"],
+                        "close": twse_quote["close"],
+                        "change": twse_quote["change"],
+                        "volume": twse_quote["volume"],
+                    }
+                ],
+                source="twse",
+            )
+            return _with_freshness(twse_quote, max_age_days=5)
     except Exception:
-        demo = DEMO_QUOTES.get(symbol)
-        if not demo:
-            raise SymbolNotFoundError(f"No quote data found for symbol={symbol}")
+        twse_failed = True
 
-        return {
-            "symbol": symbol,
-            "name": demo["name"],
-            "as_of_date": date.today().isoformat(),
-            "open": demo["open"],
-            "high": demo["high"],
-            "low": demo["low"],
-            "close": demo["close"],
-            "change": demo["change"],
-            "volume": demo["volume"],
-            "source": "demo",
-            "is_fallback": True,
-            "note": "TWSE data fetch failed; returned local demo data.",
-        }
+    if finmind_failed and twse_failed:
+        raise DataUnavailableError("Market data providers are temporarily unavailable.")
+
+    if twse_no_data:
+        raise SymbolNotFoundError(f"No quote data found for symbol={symbol}")
+
+    raise SymbolNotFoundError(f"No quote data found for symbol={symbol}")
 
 
 def get_history(symbol: str, days: int) -> dict:
+    finmind_failed = False
+    twse_failed = False
+    twse_no_data = False
+
     try:
         cached = _load_history_from_postgres(symbol, days=days)
         if cached:
-            return cached
+            return _with_history_freshness(cached, max_age_days=7)
     except Exception:
         pass
 
@@ -252,34 +264,42 @@ def get_history(symbol: str, days: int) -> dict:
                 series=finmind_history["series"],
                 source="finmind",
             )
-            return finmind_history
+            return _with_history_freshness(finmind_history, max_age_days=7)
     except Exception:
-        pass
+        finmind_failed = True
 
     try:
         twse_history = _fetch_history_from_twse(symbol, days=days)
-        _persist_series_to_postgres(
-            symbol=symbol,
-            series=twse_history["series"],
-            source="twse",
-        )
-        return twse_history
+        if twse_history is None:
+            twse_no_data = True
+        else:
+            _persist_series_to_postgres(
+                symbol=symbol,
+                series=twse_history["series"],
+                source="twse",
+            )
+            return _with_history_freshness(twse_history, max_age_days=7)
     except Exception:
-        demo = DEMO_QUOTES.get(symbol)
-        if not demo:
-            raise SymbolNotFoundError(f"No history data found for symbol={symbol}")
+        twse_failed = True
 
-        series = _build_demo_history(symbol, days)
-        return {
-            "symbol": symbol,
-            "name": demo["name"],
-            "days": days,
-            "series": series,
-            "ohlc": to_ohlc_series(series),
-            "source": "demo",
-            "is_fallback": True,
-            "note": "TWSE data fetch failed; returned local demo history data.",
-        }
+    if finmind_failed and twse_failed:
+        raise DataUnavailableError("Market data providers are temporarily unavailable.")
+
+    if twse_no_data:
+        raise SymbolNotFoundError(f"No history data found for symbol={symbol}")
+
+    raise SymbolNotFoundError(f"No history data found for symbol={symbol}")
+
+
+def _with_history_freshness(payload: dict, max_age_days: int) -> dict:
+    out = dict(payload)
+    series = out.get("series") or []
+    latest_date = ""
+    if series:
+        latest_date = str(series[-1].get("date", ""))
+    out["as_of_date"] = latest_date
+    out["freshness"] = _build_freshness(latest_date, max_age_days=max_age_days)
+    return out
 
 
 def get_indicators(symbol: str, days: int) -> dict:
@@ -295,6 +315,7 @@ def get_indicators(symbol: str, days: int) -> dict:
         "symbol": symbol,
         "days": int(history.get("days", days)),
         "as_of_date": latest_date,
+        "freshness": history.get("freshness") or _build_freshness(latest_date, max_age_days=7),
         "history_source": history.get("source", "unknown"),
         "indicator_engine": get_indicator_engine(),
         "is_fallback": bool(history.get("is_fallback", False)),

@@ -40,7 +40,7 @@ class AICostTrackerTest(unittest.TestCase):
         tracker.check_budget_before_request(user_id="user-free", daily_budget_usd=0.0)
         usage = tracker.record_usage(
             user_id="user-free",
-            provider="gemini",
+            provider="deepseek",
             input_tokens=1000,
             output_tokens=1000,
             daily_budget_usd=0.0,
@@ -50,3 +50,4 @@ class AICostTrackerTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

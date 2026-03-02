@@ -260,3 +260,15 @@
 - 目前進度：Done
 - 下一步：在 Render 設定至少一組後端金鑰（例如 `OPENAI_API_KEY`）後，重新部署並驗收 `/ai/analyze` 回應不再出現 `Mock analysis`。
 - 備註（可選）：本回合無新增功能碼，重點為部署安全與操作流程。
+
+## [2026-03-02 21:07] 全專案 AI provider：Gemini 改為 DeepSeek
+- 完成事項：後端 provider 鏈、設定鍵、模型鍵、預設 provider、權重、Render/.env/README、測試與前端按鈕選項已由 `gemini` 全面改為 `deepseek`；並新增 `deepseek_client`、移除 `gemini_client` 與對應測試檔，改為 `test_deepseek_client`。
+- 目前進度：Done
+- 下一步：執行 commit + push，並在部署環境設定 `DEEPSEEK_API_KEY`、`DEEPSEEK_MODEL` 後驗收 `/ai/analyze` 與前端模型切換。
+- 備註（可選）：frontend build 已通過；backend 全量測試在此機器因缺少 `fastapi/redis/psycopg` 套件無法完整執行，已改以 `py_compile` 檢查本次變更檔語法通過。
+
+## [2026-03-02 21:12] DeepSeek 全量替換提交與推送
+- 完成事項：將專案內 AI provider `gemini` 全面替換為 `deepseek`（後端 provider/client、設定鍵、環境變數、Render 設定、前端按鈕與選項、測試檔與文件），並完成提交與推送。
+- 目前進度：Done
+- 下一步：在部署環境設定 `DEEPSEEK_API_KEY` 後做一次 `/ai/analyze` 真實推論驗收。
+- 備註（可選）：frontend build 已通過；本機 backend 全量測試受缺少套件限制，已以 py_compile 檢查本次變更檔語法。

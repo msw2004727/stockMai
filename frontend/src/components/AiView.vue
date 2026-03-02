@@ -10,7 +10,7 @@ defineProps({
   aiCheckedAt: { type: String, default: "" },
   userPrompt: { type: String, default: "" },
   selectedProvider: { type: String, default: "claude" },
-  providerOptions: { type: Array, default: () => ["claude", "gpt5", "grok", "gemini"] },
+  providerOptions: { type: Array, default: () => ["claude", "gpt5", "grok", "deepseek"] },
   strategyResult: { type: Object, default: null },
   strategyLoading: { type: Boolean, default: false },
   strategyError: { type: String, default: "" },
@@ -51,3 +51,4 @@ const emit = defineEmits(["refresh", "update:prompt", "change-provider"]);
     </div>
   </div>
 </template>
+

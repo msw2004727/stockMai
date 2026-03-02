@@ -5,7 +5,7 @@ from backend.modules.ai_gateway.consensus import build_weighted_consensus, parse
 
 class AIConsensusTest(unittest.TestCase):
     def test_parse_provider_weights_ignores_invalid_tokens(self):
-        parsed = parse_provider_weights("claude=1.2, GPT5 =2,broken,nope=-1,gemini=abc")
+        parsed = parse_provider_weights("claude=1.2, GPT5 =2,broken,nope=-1,deepseek=abc")
         self.assertEqual(parsed, {"claude": 1.2, "gpt5": 2.0})
 
     def test_build_weighted_consensus_handles_empty_input(self):
@@ -27,3 +27,4 @@ class AIConsensusTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

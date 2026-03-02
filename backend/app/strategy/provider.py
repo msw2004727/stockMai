@@ -16,8 +16,8 @@ def get_strategy_gateway_router(
     gpt_model: str,
     grok_api_key: str,
     grok_model: str,
-    gemini_api_key: str,
-    gemini_model: str,
+    deepseek_api_key: str,
+    deepseek_model: str,
 ):
     return build_default_router(
         claude_api_key=claude_api_key,
@@ -26,8 +26,8 @@ def get_strategy_gateway_router(
         gpt_model=gpt_model,
         grok_api_key=grok_api_key,
         grok_model=grok_model,
-        gemini_api_key=gemini_api_key,
-        gemini_model=gemini_model,
+        deepseek_api_key=deepseek_api_key,
+        deepseek_model=deepseek_model,
     )
 
 
@@ -56,8 +56,8 @@ async def run_ai_consensus(
     gpt_model: str,
     grok_api_key: str,
     grok_model: str,
-    gemini_api_key: str,
-    gemini_model: str,
+    deepseek_api_key: str,
+    deepseek_model: str,
 ) -> dict:
     prompt = build_analysis_prompt(
         symbol=symbol,
@@ -92,8 +92,8 @@ async def run_ai_consensus(
         gpt_model=gpt_model,
         grok_api_key=grok_api_key,
         grok_model=grok_model,
-        gemini_api_key=gemini_api_key,
-        gemini_model=gemini_model,
+        deepseek_api_key=deepseek_api_key,
+        deepseek_model=deepseek_model,
     )
     result = await router.run(request)
     return {
@@ -104,4 +104,5 @@ async def run_ai_consensus(
         "fallback_used": result["fallback_used"],
         "cost": result["cost"],
     }
+
 

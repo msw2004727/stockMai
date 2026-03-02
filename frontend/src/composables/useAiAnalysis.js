@@ -11,7 +11,7 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
 
   const userPrompt = ref("請著重短線趨勢、風險與可能的進出場節奏。");
   const selectedProvider = ref(initialProvider);
-  const providerOptions = ["claude", "gpt5", "grok", "gemini"];
+  const providerOptions = ["claude", "gpt5", "grok", "deepseek"];
 
   let controller = null;
 
@@ -62,4 +62,3 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     setProvider,
   };
 }
-

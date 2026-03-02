@@ -36,8 +36,8 @@ def _sample_history(days: int = 60) -> dict:
 
 def _settings() -> SimpleNamespace:
     return SimpleNamespace(
-        ai_default_providers="claude,gpt5,grok,gemini",
-        ai_provider_weights="claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0",
+        ai_default_providers="claude,gpt5,grok,deepseek",
+        ai_provider_weights="claude=1.0,gpt5=1.0,grok=1.0,deepseek=1.0",
         ai_timeout_seconds=15,
         ai_retry_count=1,
         ai_retry_backoff_seconds=0.1,
@@ -49,8 +49,8 @@ def _settings() -> SimpleNamespace:
         gpt_model="gpt-5.2",
         grok_api_key="",
         grok_model="grok-4.1-fast",
-        gemini_api_key="",
-        gemini_model="gemini-3.1-pro-preview",
+        deepseek_api_key="",
+        deepseek_model="deepseek-chat",
     )
 
 
@@ -116,3 +116,4 @@ class StrategyServiceTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

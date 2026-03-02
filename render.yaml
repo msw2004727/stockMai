@@ -46,17 +46,17 @@ services:
       - key: AI_RETRY_BACKOFF_SECONDS
         value: "0.35"
       - key: AI_DEFAULT_PROVIDERS
-        value: "claude,gpt5,grok,gemini"
+        value: "claude,gpt5,grok,deepseek"
       - key: AI_PROVIDER_WEIGHTS
-        value: "claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0"
+        value: "claude=1.0,gpt5=1.0,grok=1.0,deepseek=1.0"
       - key: CLAUDE_MODEL
         value: "claude-opus-4-6"
       - key: GPT_MODEL
         value: "gpt-5.2"
       - key: GROK_MODEL
         value: "grok-4.1-fast"
-      - key: GEMINI_MODEL
-        value: "gemini-3.1-pro-preview"
+      - key: DEEPSEEK_MODEL
+        value: "deepseek-chat"
       - key: CORS_ALLOW_ORIGINS
         value: "https://stockmai-frontend.onrender.com"
       - key: ANTHROPIC_API_KEY
@@ -65,7 +65,7 @@ services:
         sync: false
       - key: GROK_API_KEY
         sync: false
-      - key: GEMINI_API_KEY
+      - key: DEEPSEEK_API_KEY
         sync: false
       - key: FINMIND_TOKEN
         sync: false
@@ -89,3 +89,4 @@ services:
         value: h5-demo-user
       - key: VITE_API_TOKEN_EXPIRES_MINUTES
         value: "60"
+

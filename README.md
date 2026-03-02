@@ -196,12 +196,12 @@ Real provider clients now available:
 - Claude: `ANTHROPIC_API_KEY` + `CLAUDE_MODEL`
 - OpenAI (gpt5): `OPENAI_API_KEY` + `GPT_MODEL`
 - Grok: `GROK_API_KEY` + `GROK_MODEL`
-- Gemini: `GEMINI_API_KEY` + `GEMINI_MODEL`
+- DeepSeek: `DEEPSEEK_API_KEY` + `DEEPSEEK_MODEL`
 
 If a key is missing, that provider automatically falls back to mock.
 
 Step 4 additions:
-- Weighted consensus: set `AI_PROVIDER_WEIGHTS` (example: `claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0`).
+- Weighted consensus: set `AI_PROVIDER_WEIGHTS` (example: `claude=1.0,gpt5=1.0,grok=1.0,deepseek=1.0`).
 - Cost tracking + budget: set `AI_DAILY_BUDGET_USD` (defaults to `5.0`).
 - `/ai/analyze` response now includes `provider_weights` and `cost` summary.
 - `/ai/analyze` now also includes `indicator_context` (from PostgreSQL cache when available), and prompt will append technical indicators for better AI analysis.

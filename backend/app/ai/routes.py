@@ -27,7 +27,7 @@ class AnalyzeRequest(BaseModel):
 
 def _parse_default_providers(raw: str) -> list[str]:
     providers = [item.strip() for item in raw.split(",") if item.strip()]
-    return providers or ["claude", "gpt5", "grok", "gemini"]
+    return providers or ["claude", "gpt5", "grok", "deepseek"]
 
 
 @lru_cache(maxsize=8)
@@ -38,8 +38,8 @@ def _get_gateway_router(
     gpt_model: str,
     grok_api_key: str,
     grok_model: str,
-    gemini_api_key: str,
-    gemini_model: str,
+    deepseek_api_key: str,
+    deepseek_model: str,
 ):
     return build_default_router(
         claude_api_key=claude_api_key,
@@ -48,8 +48,8 @@ def _get_gateway_router(
         gpt_model=gpt_model,
         grok_api_key=grok_api_key,
         grok_model=grok_model,
-        gemini_api_key=gemini_api_key,
-        gemini_model=gemini_model,
+        deepseek_api_key=deepseek_api_key,
+        deepseek_model=deepseek_model,
     )
 
 
@@ -156,8 +156,8 @@ async def analyze_stock(
         gpt_model=settings.gpt_model,
         grok_api_key=settings.grok_api_key,
         grok_model=settings.grok_model,
-        gemini_api_key=settings.gemini_api_key,
-        gemini_model=settings.gemini_model,
+        deepseek_api_key=settings.deepseek_api_key,
+        deepseek_model=settings.deepseek_model,
     )
     gateway_result = await router.run(request)
 
@@ -174,3 +174,4 @@ async def analyze_stock(
         "fallback_used": gateway_result["fallback_used"],
         "cost": gateway_result["cost"],
     }
+

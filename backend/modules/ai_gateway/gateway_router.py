@@ -6,7 +6,7 @@ from dataclasses import dataclass, field
 from .claude_client import ClaudeClient
 from .consensus import build_weighted_consensus
 from .cost_tracker import CostTracker
-from .gemini_client import GeminiClient
+from .deepseek_client import DeepSeekClient
 from .grok_client import GrokClient
 from .mock_clients import MockAIClient
 from .openai_client import OpenAIClient
@@ -234,8 +234,8 @@ def build_default_router(
     gpt_model: str,
     grok_api_key: str,
     grok_model: str,
-    gemini_api_key: str,
-    gemini_model: str,
+    deepseek_api_key: str,
+    deepseek_model: str,
 ) -> GatewayRouter:
     claude_client: AIProviderClient
     if claude_api_key.strip():
@@ -255,16 +255,17 @@ def build_default_router(
     else:
         grok_client = MockAIClient("grok")
 
-    gemini_client: AIProviderClient
-    if gemini_api_key.strip():
-        gemini_client = GeminiClient(api_key=gemini_api_key, model=gemini_model)
+    deepseek_client: AIProviderClient
+    if deepseek_api_key.strip():
+        deepseek_client = DeepSeekClient(api_key=deepseek_api_key, model=deepseek_model)
     else:
-        gemini_client = MockAIClient("gemini")
+        deepseek_client = MockAIClient("deepseek")
 
     providers = {
         "claude": claude_client,
         "gpt5": gpt_client,
         "grok": grok_client,
-        "gemini": gemini_client,
+        "deepseek": deepseek_client,
     }
     return GatewayRouter(clients=providers)
+

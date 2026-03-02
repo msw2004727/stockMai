@@ -6,7 +6,7 @@ PROVIDER_ALIASES = {
     "gpt-5": "gpt5",
     "anthropic": "claude",
     "xai": "grok",
-    "google": "gemini",
+    "google": "deepseek",
 }
 
 PROVIDER_ROLE_INSTRUCTIONS = {
@@ -22,7 +22,7 @@ PROVIDER_ROLE_INSTRUCTIONS = {
         "Provider role: Real-time intelligence scout. "
         "Prioritize event-driven catalysts, social sentiment shifts, and near-term headline risk."
     ),
-    "gemini": (
+    "deepseek": (
         "Provider role: Capital-flow and data auditor. "
         "Prioritize abnormal volume/price behavior, consistency checks, and fast anomaly spotting."
     ),
@@ -163,3 +163,4 @@ def _fmt(raw: object) -> str:
         return str(round(float(raw), 6))
     except Exception:
         return "NA"
+

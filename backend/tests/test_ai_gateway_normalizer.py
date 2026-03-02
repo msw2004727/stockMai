@@ -26,7 +26,7 @@ class AIGatewayNormalizerTest(unittest.TestCase):
 
     def test_normalize_fallback_text(self):
         raw = "not a json payload"
-        result = normalize_ai_response("gemini", raw)
+        result = normalize_ai_response("deepseek", raw)
         self.assertEqual(result["signal"], "neutral")
         self.assertEqual(result["confidence"], 0.5)
         self.assertEqual(result["normalized_by"], "fallback_text")
@@ -34,4 +34,5 @@ class AIGatewayNormalizerTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
 

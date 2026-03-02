@@ -30,7 +30,7 @@ defineProps({
   },
   providerOptions: {
     type: Array,
-    default: () => ["claude", "gpt5", "grok", "gemini"],
+    default: () => ["claude", "gpt5", "grok", "deepseek"],
   },
 });
 
@@ -62,8 +62,8 @@ function providerLabel(provider) {
   if (parsed === "grok") {
     return "Grok";
   }
-  if (parsed === "gemini") {
-    return "Gemini";
+  if (parsed === "deepseek") {
+    return "DeepSeek";
   }
   return provider;
 }

@@ -78,8 +78,8 @@ async def build_strategy_decision(
         gpt_model=settings.gpt_model,
         grok_api_key=settings.grok_api_key,
         grok_model=settings.grok_model,
-        gemini_api_key=settings.gemini_api_key,
-        gemini_model=settings.gemini_model,
+        deepseek_api_key=settings.deepseek_api_key,
+        deepseek_model=settings.deepseek_model,
     )
 
     indicator_signal = evaluate_indicator_signal(indicator_context)
@@ -146,4 +146,5 @@ def _build_sentiment_context(symbol: str, history: dict, window_days: int) -> di
         price_series=series,
         window_days=max(window_days, 1),
     )
+
 

@@ -95,8 +95,8 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
             gpt_model="gpt-5.2",
             grok_api_key="",
             grok_model="grok-4.1-fast",
-            gemini_api_key="",
-            gemini_model="gemini-3.1-pro-preview",
+            deepseek_api_key="",
+            deepseek_model="deepseek-chat",
         )
         request = GatewayRequest(
             symbol="2330",
@@ -120,8 +120,8 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
             gpt_model="gpt-5.2",
             grok_api_key="",
             grok_model="grok-4.1-fast",
-            gemini_api_key="",
-            gemini_model="gemini-3.1-pro-preview",
+            deepseek_api_key="",
+            deepseek_model="deepseek-chat",
         )
         request = GatewayRequest(
             symbol="2330",
@@ -278,3 +278,4 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

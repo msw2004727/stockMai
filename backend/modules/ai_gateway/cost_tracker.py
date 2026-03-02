@@ -10,7 +10,7 @@ PRICING_PER_M_TOKENS = {
     "claude": {"input": 5.0, "output": 25.0},
     "gpt5": {"input": 1.75, "output": 14.0},
     "grok": {"input": 0.2, "output": 0.5},
-    "gemini": {"input": 2.0, "output": 12.0},
+    "deepseek": {"input": 2.0, "output": 12.0},
 }
 
 
@@ -114,3 +114,4 @@ class CostTracker:
         tomorrow = now.date() + timedelta(days=1)
         next_midnight = datetime.combine(tomorrow, time.min, tzinfo=timezone.utc)
         return max(int((next_midnight - now).total_seconds()), 1)
+

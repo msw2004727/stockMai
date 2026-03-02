@@ -4,3 +4,5 @@ pydantic-settings
 psycopg[binary]
 redis
 httpx
+sqlalchemy
+alembic

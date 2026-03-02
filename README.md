@@ -171,3 +171,19 @@ Step 4 additions:
 - Weighted consensus: set `AI_PROVIDER_WEIGHTS` (example: `claude=1.0,gpt5=1.0,grok=1.0,gemini=1.0`).
 - Cost tracking + budget: set `AI_DAILY_BUDGET_USD` (defaults to `5.0`).
 - `/ai/analyze` response now includes `provider_weights` and `cost` summary.
+
+## Phase 1 data persistence (PostgreSQL + Alembic)
+Run DB migration:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r backend\requirements.txt
+.venv\Scripts\alembic.exe -c alembic.ini upgrade head
+```
+
+Backfill recent history from FinMind into PostgreSQL:
+
+```powershell
+.venv\Scripts\python.exe .\scripts\backfill_prices.py --symbols 2330,2317,0050 --days 180
+```
+
+After this, `/stocks/quote` and `/stocks/history` will read from PostgreSQL cache first, then fallback to FinMind/TWSE/demo.

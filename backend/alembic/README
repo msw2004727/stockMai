@@ -1,0 +1,5 @@
+Single-database Alembic configuration.
+
+Run from repository root:
+1) alembic -c alembic.ini upgrade head
+2) alembic -c alembic.ini downgrade -1

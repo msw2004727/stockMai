@@ -5,6 +5,19 @@ from backend.app.stocks.service import SymbolNotFoundError, get_history, get_quo
 
 
 class StockServiceTest(unittest.TestCase):
+    def setUp(self):
+        self._patch_load_quote = patch("backend.app.stocks.service._load_quote_from_postgres", return_value=None)
+        self._patch_load_history = patch("backend.app.stocks.service._load_history_from_postgres", return_value=None)
+        self._patch_persist = patch("backend.app.stocks.service._persist_series_to_postgres", return_value=None)
+        self._patch_load_quote.start()
+        self._patch_load_history.start()
+        self._patch_persist.start()
+
+    def tearDown(self):
+        self._patch_load_quote.stop()
+        self._patch_load_history.stop()
+        self._patch_persist.stop()
+
     @patch("backend.app.stocks.service._fetch_quote_from_twse")
     @patch("backend.app.stocks.service._fetch_quote_from_finmind")
     def test_get_quote_prefers_finmind(self, mock_finmind, mock_twse):

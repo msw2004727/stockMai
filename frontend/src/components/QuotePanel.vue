@@ -1,4 +1,4 @@
-<script setup>
+﻿<script setup>
 import KLineChart from "./KLineChart.vue";
 import { useStockSymbolSearch } from "../composables/useStockSymbolSearch";
 
@@ -25,8 +25,8 @@ const SHORTCUTS = [
   { symbol: "2317", name: "鴻海" },
   { symbol: "2454", name: "聯發科" },
   { symbol: "2884", name: "玉山金" },
-  { symbol: "0050", name: "元大 0050" },
-  { symbol: "00878", name: "國泰永續" },
+  { symbol: "0050", name: "元大台灣50" },
+  { symbol: "00878", name: "國泰永續高股息" },
 ];
 
 function onSymbolInput(event) {
@@ -53,12 +53,12 @@ function onShortcut(item) {
 }
 
 function fmt(value, digits = 2) {
-  if (value === null || value === undefined || Number.isNaN(Number(value))) return "－";
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
   return Number(value).toFixed(digits);
 }
 
 function fmtVol(value) {
-  if (!value && value !== 0) return "－";
+  if (!value && value !== 0) return "--";
   return new Intl.NumberFormat("zh-TW").format(value);
 }
 
@@ -68,7 +68,7 @@ function fmtPct(change, close) {
   if (!Number.isFinite(c) || !Number.isFinite(p) || p <= 0) return "";
   const prev = p - c;
   if (prev <= 0) return "";
-  return ((c / prev) * 100).toFixed(2) + "%";
+  return `${((c / prev) * 100).toFixed(2)}%`;
 }
 
 function marketStateLabel(raw) {
@@ -81,54 +81,91 @@ function marketStateLabel(raw) {
 }
 
 function marketStateBadgeClass(raw) {
-  const value = String(raw || "").toLowerCase();
-  if (value === "trading") return "badge-live";
-  return "badge-close";
+  return String(raw || "").toLowerCase() === "trading" ? "badge-live" : "badge-close";
 }
 
-// ── 技術指標判讀 ──────────────────────────────────────────────
+function toNumber(value) {
+  const parsed = Number(value);
+  return Number.isFinite(parsed) ? parsed : null;
+}
+
+function pickLatestAndPrev(indicatorPayload) {
+  const series = Array.isArray(indicatorPayload?.series) ? indicatorPayload.series : [];
+  if (series.length >= 2) {
+    return {
+      prev: series[series.length - 2] || null,
+      latest: series[series.length - 1] || null,
+    };
+  }
+
+  return {
+    prev: null,
+    latest: indicatorPayload?.latest || null,
+  };
+}
+
 function rsiLabel(rsi) {
-  const v = parseFloat(rsi);
-  if (isNaN(v)) return "";
-  if (v >= 70) return "超買";
-  if (v <= 30) return "超賣";
-  return "中性";
+  const v = toNumber(rsi);
+  if (v === null) return "資料不足";
+  if (v >= 70) return "過熱";
+  if (v >= 55) return "偏強";
+  if (v > 45) return "中性";
+  if (v > 30) return "偏弱";
+  return "超賣";
 }
 
 function rsiClass(rsi) {
-  const v = parseFloat(rsi);
-  if (isNaN(v)) return "";
+  const v = toNumber(rsi);
+  if (v === null) return "tag-muted";
   if (v >= 70) return "warn-text";
-  if (v <= 30) return "tag-ok";
+  if (v >= 55) return "tag-rise";
+  if (v > 45) return "tag-muted";
+  if (v > 30) return "tag-fall";
+  return "tag-ok";
+}
+
+function maLabel(indicatorPayload) {
+  const { prev, latest } = pickLatestAndPrev(indicatorPayload);
+  const sma5 = toNumber(latest?.sma5);
+  const sma20 = toNumber(latest?.sma20);
+  if (sma5 === null || sma20 === null) return "資料不足";
+
+  const prevSma5 = toNumber(prev?.sma5);
+  const prevSma20 = toNumber(prev?.sma20);
+  if (prevSma5 !== null && prevSma20 !== null && prevSma5 <= prevSma20 && sma5 > sma20) return "黃金交叉";
+  if (prevSma5 !== null && prevSma20 !== null && prevSma5 >= prevSma20 && sma5 < sma20) return "死亡交叉";
+  if (sma5 > sma20) return "偏多排列";
+  if (sma5 < sma20) return "偏空排列";
+  return "中性";
+}
+
+function maLabelClass(indicatorPayload) {
+  const label = maLabel(indicatorPayload);
+  if (label === "黃金交叉" || label === "偏多排列") return "tag-rise";
+  if (label === "死亡交叉" || label === "偏空排列") return "tag-fall";
   return "tag-muted";
 }
 
-function macdDirection(macd, signal) {
-  const m = parseFloat(macd);
-  const s = parseFloat(signal);
-  if (isNaN(m) || isNaN(s)) return "";
-  return m > s ? "偏多" : "偏空";
+function macdDirection(indicatorPayload) {
+  const { prev, latest } = pickLatestAndPrev(indicatorPayload);
+  const macd = toNumber(latest?.macd);
+  const signal = toNumber(latest?.macd_signal);
+  if (macd === null || signal === null) return "資料不足";
+
+  const prevMacd = toNumber(prev?.macd);
+  const prevSignal = toNumber(prev?.macd_signal);
+  if (prevMacd !== null && prevSignal !== null && prevMacd <= prevSignal && macd > signal) return "黃金交叉";
+  if (prevMacd !== null && prevSignal !== null && prevMacd >= prevSignal && macd < signal) return "死亡交叉";
+  if (macd > signal) return "偏多";
+  if (macd < signal) return "偏空";
+  return "中性";
 }
 
-function macdDirectionClass(macd, signal) {
-  const m = parseFloat(macd);
-  const s = parseFloat(signal);
-  if (isNaN(m) || isNaN(s)) return "";
-  return m > s ? "tag-rise" : "tag-fall";
-}
-
-function maLabel(ma5, ma20) {
-  const a = parseFloat(ma5);
-  const b = parseFloat(ma20);
-  if (isNaN(a) || isNaN(b)) return "";
-  return a > b ? "黃金交叉" : "死亡交叉";
-}
-
-function maLabelClass(ma5, ma20) {
-  const a = parseFloat(ma5);
-  const b = parseFloat(ma20);
-  if (isNaN(a) || isNaN(b)) return "";
-  return a > b ? "tag-rise" : "tag-fall";
+function macdDirectionClass(indicatorPayload) {
+  const direction = macdDirection(indicatorPayload);
+  if (direction === "黃金交叉" || direction === "偏多") return "tag-rise";
+  if (direction === "死亡交叉" || direction === "偏空") return "tag-fall";
+  return "tag-muted";
 }
 </script>
 
@@ -152,7 +189,7 @@ function maLabelClass(ma5, ma20) {
       <button type="button" class="btn" :disabled="quoteLoading" @click="onRefreshClick">
         {{ quoteLoading ? "查詢中..." : "查詢股價" }}
       </button>
-      <span v-if="quoteCheckedAt" class="checked-at no-wrap">更新：{{ quoteCheckedAt }}</span>
+      <span v-if="quoteCheckedAt" class="checked-at no-wrap">更新時間：{{ quoteCheckedAt }}</span>
     </div>
 
     <p v-if="searchLoading" class="sub">正在搜尋代號...</p>
@@ -172,9 +209,8 @@ function maLabelClass(ma5, ma20) {
     </ul>
   </div>
 
-  <!-- 空狀態：熱門快捷入口 -->
   <div v-if="!quote && !quoteLoading && !quoteError" class="shortcut-section">
-    <p class="field-title">熱門</p>
+    <p class="field-title">快速查詢</p>
     <div class="shortcut-row">
       <button
         v-for="item in SHORTCUTS"
@@ -209,8 +245,6 @@ function maLabelClass(ma5, ma20) {
   <div v-if="quoteError" class="card error">{{ quoteError }}</div>
 
   <div v-else-if="quote" class="grid quote-grid">
-
-    <!-- Hero 報價卡 -->
     <article class="card hero-quote-card full-span">
       <div class="quote-title-row">
         <span class="quote-symbol">{{ quote.symbol }}</span>
@@ -227,36 +261,35 @@ function maLabelClass(ma5, ma20) {
         <div class="quote-change-block" :class="Number(quote.change) >= 0 ? 'rise' : 'fall'">
           <span class="quote-change-arrow">{{ Number(quote.change) >= 0 ? '▲' : '▼' }}</span>
           <span class="quote-change-value">{{ fmt(Math.abs(quote.change)) }}</span>
-          <span class="quote-change-pct">（{{ fmtPct(quote.change, quote.close) }}）</span>
+          <span class="quote-change-pct">({{ fmtPct(quote.change, quote.close) }})</span>
         </div>
       </div>
 
       <div class="quote-ohlv-row">
         <span>開 {{ fmt(quote.open) }}</span>
-        <span class="ohlv-divider">·</span>
+        <span class="ohlv-divider">•</span>
         <span>高 {{ fmt(quote.high) }}</span>
-        <span class="ohlv-divider">·</span>
+        <span class="ohlv-divider">•</span>
         <span>低 {{ fmt(quote.low) }}</span>
-        <span class="ohlv-divider">·</span>
+        <span class="ohlv-divider">•</span>
         <span>量 {{ fmtVol(quote.volume) }} 張</span>
       </div>
 
       <p class="quote-meta-line">
         {{ quote.as_of_date }}
-        · {{ quote.is_realtime ? "即時報價" : "日線報價" }}
-        · 來源：{{ quote.source || "－" }}
+        • {{ quote.is_realtime ? "即時報價" : "日線報價" }}
+        • 來源：{{ quote.source || "--" }}
       </p>
     </article>
 
-    <!-- 技術指標 -->
     <article class="card full-span">
       <p class="label">技術指標</p>
       <template v-if="indicators?.latest">
         <div class="indicator-row">
           <span class="indicator-name">MA5 / MA20</span>
           <span class="indicator-value">{{ fmt(indicators.latest.sma5) }} / {{ fmt(indicators.latest.sma20) }}</span>
-          <span class="indicator-tag" :class="maLabelClass(indicators.latest.sma5, indicators.latest.sma20)">
-            {{ maLabel(indicators.latest.sma5, indicators.latest.sma20) }}
+          <span class="indicator-tag" :class="maLabelClass(indicators)">
+            {{ maLabel(indicators) }}
           </span>
         </div>
         <div class="indicator-row">
@@ -269,8 +302,8 @@ function maLabelClass(ma5, ma20) {
         <div class="indicator-row">
           <span class="indicator-name">MACD / Signal</span>
           <span class="indicator-value">{{ fmt(indicators.latest.macd) }} / {{ fmt(indicators.latest.macd_signal) }}</span>
-          <span class="indicator-tag" :class="macdDirectionClass(indicators.latest.macd, indicators.latest.macd_signal)">
-            {{ macdDirection(indicators.latest.macd, indicators.latest.macd_signal) }}
+          <span class="indicator-tag" :class="macdDirectionClass(indicators)">
+            {{ macdDirection(indicators) }}
           </span>
         </div>
         <div class="indicator-row">
@@ -283,13 +316,11 @@ function maLabelClass(ma5, ma20) {
       <p v-if="indicatorsError" class="sub warn-text">{{ indicatorsError }}</p>
     </article>
 
-    <!-- K 線圖 -->
     <article class="card full-span">
-      <p class="label">最近 {{ history?.days || selectedDays }} 日 K 線</p>
+      <p class="label">最近 {{ history?.days || selectedDays }} 天 K 線</p>
       <KLineChart v-if="history?.ohlc?.length" :ohlc="history.ohlc" />
       <p v-else class="sub">暫無 K 線資料</p>
       <p v-if="historyError" class="sub warn-text">{{ historyError }}</p>
     </article>
-
   </div>
 </template>

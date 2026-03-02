@@ -12,7 +12,7 @@ defineProps({
   indicators: { type: Object, default: null },
   indicatorsError: { type: String, default: "" },
   selectedDays: { type: Number, default: 5 },
-  dayOptions: { type: Array, default: () => [5, 20] },
+  dayOptions: { type: Array, default: () => [5, 20, 90, 180] },
 });
 
 const emit = defineEmits(["update:symbol", "refresh", "change-day"]);

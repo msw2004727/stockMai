@@ -450,3 +450,21 @@
 - 目前進度：Done
 - 下一步：請前端驗收不同股票代號，確認 MA/MACD 標籤不再固定為同一結果。
 - 備註（可選）：本回合未變更後端指標計算公式，僅修正前端顯示判讀與檔案編碼。 
+## [2026-03-03 00:26] 四項 UX 計畫實作完成（AI舊資料提醒/歷史區間/橫幅鎖定/Logo）
+- 完成事項：
+  - `App.vue` 新增 AI 舊資料提醒邏輯：行情重查後切回 AI 分頁，若尚未重跑 AI 會彈窗提示「目前資料是上次最後 AI 分析的股票資料」。
+  - 行情歷史區間擴充為 `5/20/90/180`（前端按鈕與資料代入已同步）。
+  - 後端 `/stocks/history` 參數上限由 30 提升到 180，並將 TWSE 抓取月數改為隨 days 動態擴張。
+  - 頂部/底部橫幅固定：`app-header` 改為 fixed，內容區補 top padding；tab bar 維持 fixed。
+  - 標題改為 `StockMai (測試版)`，測試版字樣小字紅色。
+  - 補測試：`test_stock_service` 新增 `_resolve_twse_month_count` 覆蓋。
+- 目前進度：Done
+- 下一步：請在前端驗收四項需求（尤其 AI stale 彈窗觸發與 90/180 日 K 線），若 OK 我可直接幫你 commit + push。
+- 備註（可選）：frontend `npm run build` 通過；backend 以 `py_compile` 驗證 `routes/service/test_stock_service` 語法通過（本機缺少 fastapi，未跑全量 unittest）。
+## [2026-03-03 00:27] 使用者要求：全部修改檔一次提交與推送
+- 完成事項：
+  - 彙整目前工作樹全部已修改檔案（含本回合 UX 實作與使用者先前修改檔）。
+  - 依需求執行一次性 commit + push 到 `origin/main`。
+- 目前進度：In Progress
+- 下一步：完成推送後回報 commit hash 與同步狀態。
+- 備註（可選）：本回合同步範圍包含前端與後端既有未提交變更。

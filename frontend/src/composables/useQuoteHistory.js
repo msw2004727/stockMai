@@ -19,7 +19,7 @@ export function useQuoteHistory(initialSymbol = "") {
   const indicatorsError = ref("");
 
   const selectedDays = ref(5);
-  const dayOptions = [5, 20];
+  const dayOptions = [5, 20, 90, 180];
 
   let controller = null;
 

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import math
 import time
 
 from backend.modules.data_pipeline import (
@@ -88,7 +89,8 @@ def _fetch_history_from_twse(symbol: str, days: int) -> dict | None:
     name = symbol
     has_fetch_error = False
 
-    for month in month_candidates(date.today(), count=6):
+    month_count = _resolve_twse_month_count(days)
+    for month in month_candidates(date.today(), count=month_count):
         try:
             twse_name, rows = fetch_twse_month(symbol, month)
         except Exception as exc:
@@ -123,6 +125,13 @@ def _fetch_history_from_twse(symbol: str, days: int) -> dict | None:
         "is_fallback": False,
         "note": "",
     }
+
+
+def _resolve_twse_month_count(days: int) -> int:
+    safe_days = max(int(days), 1)
+    # TWSE daily history is month-scoped; add a small buffer for holidays.
+    estimated = math.ceil(safe_days / 20) + 2
+    return max(6, min(estimated, 18))
 
 
 def _build_freshness(as_of_date: str, max_age_days: int) -> dict:

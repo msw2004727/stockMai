@@ -66,10 +66,9 @@ function confidencePct(confidence) {
 }
 
 function componentScorePct(item) {
-  // score 在 -1~1，轉為 0~100%
   const v = parseFloat(item?.score ?? 0);
-  if (isNaN(v)) return 50;
-  return Math.round(Math.min(Math.max((v + 1) / 2, 0), 1) * 100);
+  if (isNaN(v)) return 0;
+  return Math.round(Math.min(Math.abs(v), 1) * 100);
 }
 
 function fmt(value, digits = 2) {

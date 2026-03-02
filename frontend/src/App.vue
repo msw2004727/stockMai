@@ -1,5 +1,5 @@
-<script setup>
-import { computed, onMounted, shallowRef } from "vue";
+﻿<script setup>
+import { computed, onMounted, ref, shallowRef } from "vue";
 
 import AiView from "./components/AiView.vue";
 import MarketView from "./components/MarketView.vue";
@@ -11,6 +11,8 @@ import { useQuoteHistory } from "./composables/useQuoteHistory";
 import { useStrategyDecision } from "./composables/useStrategyDecision";
 
 const activeTab = shallowRef("market");
+const showAiStalePrompt = ref(false);
+const lastAiAnalyzedSnapshot = shallowRef(null);
 
 const { health, healthLoading, healthError, healthCheckedAt, refreshHealth } = useHealthStatus();
 const {
@@ -51,9 +53,36 @@ const {
   showStrategyPrerequisiteError,
 } = useStrategyDecision(symbol, userPrompt, selectedProvider);
 
+const currentQuoteSymbol = computed(() => String(quote.value?.symbol || "").trim());
+const currentQuoteName = computed(() => String(quote.value?.name || currentQuoteSymbol.value || "").trim());
+
+const isAiDataStale = computed(() => {
+  const latestAiSymbol = String(lastAiAnalyzedSnapshot.value?.symbol || "").trim();
+  if (!latestAiSymbol) {
+    return false;
+  }
+  const latestMarketSymbol = currentQuoteSymbol.value;
+  if (!latestMarketSymbol) {
+    return false;
+  }
+  return latestAiSymbol !== latestMarketSymbol;
+});
+
+const staleAiStockName = computed(() => {
+  const rawName = String(lastAiAnalyzedSnapshot.value?.name || "").trim();
+  if (rawName) {
+    return rawName;
+  }
+  return String(lastAiAnalyzedSnapshot.value?.symbol || "--").trim() || "--";
+});
+
 const loadingMessage = computed(() => {
-  if (aiLoading.value || strategyLoading.value) return "AI 分析中，請稍候...";
-  if (quoteLoading.value) return "行情查詢中，請稍候...";
+  if (aiLoading.value || strategyLoading.value) {
+    return "AI 分析中，請稍候...";
+  }
+  if (quoteLoading.value) {
+    return "行情查詢中，請稍候...";
+  }
   return "";
 });
 
@@ -67,16 +96,41 @@ function updateUserPrompt(value) {
   userPrompt.value = value;
 }
 
-function refreshAiAndStrategy() {
+function closeAiStalePrompt() {
+  showAiStalePrompt.value = false;
+}
+
+function handleTabChange(nextTab) {
+  activeTab.value = nextTab;
+
+  if (nextTab === "ai" && isAiDataStale.value) {
+    showAiStalePrompt.value = true;
+    return;
+  }
+
+  showAiStalePrompt.value = false;
+}
+
+async function refreshAiAndStrategy() {
   const sym = String(symbol.value || "").trim();
   if (!sym) {
-    const message = "請先輸入股票代號";
+    const message = "請先在行情頁查詢股價，再執行 AI 分析";
     showAiPrerequisiteError(message);
     showStrategyPrerequisiteError(message);
     return;
   }
-  refreshAi();
-  refreshStrategy();
+
+  await Promise.all([refreshAi(), refreshStrategy()]);
+
+  if (aiResult.value) {
+    const analyzedSymbol = currentQuoteSymbol.value || sym;
+    lastAiAnalyzedSnapshot.value = {
+      symbol: analyzedSymbol,
+      name: currentQuoteName.value || analyzedSymbol,
+      checkedAt: String(aiCheckedAt.value || ""),
+    };
+    showAiStalePrompt.value = false;
+  }
 }
 
 onMounted(() => {
@@ -86,7 +140,10 @@ onMounted(() => {
 
 <template>
   <header class="app-header">
-    <h1 class="app-title">stockMai</h1>
+    <h1 class="app-title">
+      <span>StockMai</span>
+      <small class="app-title-beta">(測試版)</small>
+    </h1>
   </header>
 
   <main class="app-content">
@@ -147,5 +204,26 @@ onMounted(() => {
     </div>
   </transition>
 
-  <TabBar :active-tab="activeTab" @change="activeTab = $event" />
+  <transition name="loading-fade">
+    <div
+      v-if="showAiStalePrompt"
+      class="stale-notice-overlay"
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby="stale-ai-title"
+    >
+      <div class="stale-notice-modal">
+        <h2 id="stale-ai-title" class="stale-notice-title">提醒</h2>
+        <p class="stale-notice-text">
+          目前資料是上次最後 AI 分析的「{{ staleAiStockName }}」資料。<br />
+          請按「執行 AI 分析」更新為最新查詢股票。
+        </p>
+        <div class="stale-notice-actions">
+          <button type="button" class="btn" @click="closeAiStalePrompt">我知道了</button>
+        </div>
+      </div>
+    </div>
+  </transition>
+
+  <TabBar :active-tab="activeTab" @change="handleTabChange" />
 </template>

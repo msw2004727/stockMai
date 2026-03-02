@@ -32,7 +32,7 @@ def get_stock_quote(
 @router.get("/history")
 def get_stock_history(
     symbol: str = Query(..., pattern=r"^\d{4,6}$"),
-    days: int = Query(5, ge=3, le=30),
+    days: int = Query(5, ge=3, le=180),
     _quota: dict = Depends(enforce_rate_limit("stocks_history")),
 ) -> dict:
     try:

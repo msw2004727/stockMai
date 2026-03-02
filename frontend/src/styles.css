@@ -94,8 +94,10 @@ body {
 
 /* ── App Shell ── */
 .app-header {
-  position: sticky;
+  position: fixed;
   top: 0;
+  left: 0;
+  right: 0;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -108,14 +110,23 @@ body {
 
 .app-title {
   margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 6px;
   font-size: 1.15rem;
   font-weight: 800;
   color: var(--brand);
 }
 
+.app-title-beta {
+  font-size: 0.62em;
+  font-weight: 700;
+  color: #dc2626;
+}
+
 
 .app-content {
-  padding: 0 0 calc(64px + env(safe-area-inset-bottom, 0px));
+  padding: calc(56px + env(safe-area-inset-top, 0px)) 0 calc(64px + env(safe-area-inset-bottom, 0px));
 }
 
 .view-container {
@@ -578,6 +589,46 @@ h2 {
 .loading-fade-enter-from,
 .loading-fade-leave-to {
   opacity: 0;
+}
+
+.stale-notice-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 255;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.stale-notice-modal {
+  width: min(90vw, 360px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.24);
+  padding: 18px 16px;
+}
+
+.stale-notice-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.stale-notice-text {
+  margin: 10px 0 0;
+  color: var(--muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.stale-notice-actions {
+  margin-top: 14px;
+  display: flex;
+  justify-content: flex-end;
 }
 
 /* ── Settings page ── */

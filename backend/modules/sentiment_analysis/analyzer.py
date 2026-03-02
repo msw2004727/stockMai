@@ -110,14 +110,14 @@ def _sentiment_score(
     volume_boost = _clamp((volume_ratio - 1.0) if volume_ratio is not None else 0.0, -1.0, 1.0)
     volatility_penalty = _clamp((volatility_pct - 2.5) / 5.0, 0.0, 1.0)
 
-    weighted = (0.55 * trend) + (0.25 * momentum) + (0.20 * volume_boost) - (0.15 * volatility_penalty)
+    weighted = (0.40 * trend) + (0.25 * momentum) + (0.20 * volume_boost) - (0.20 * volatility_penalty)
     return _clamp(weighted, -1.0, 1.0)
 
 
 def _sentiment_label(score: float) -> str:
-    if score >= 0.25:
+    if score >= 0.30:
         return "bullish"
-    if score <= -0.25:
+    if score <= -0.30:
         return "bearish"
     return "neutral"
 

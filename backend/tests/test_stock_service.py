@@ -7,6 +7,7 @@ from backend.app.stocks.service import (
     DataUnavailableError,
     QuoteRateLimitedError,
     SymbolNotFoundError,
+    _resolve_twse_month_count,
     get_history,
     get_indicators,
     get_quote,
@@ -257,6 +258,13 @@ class StockServiceTest(unittest.TestCase):
     def test_get_indicators_raises_symbol_not_found(self, _mock_get_history):
         with self.assertRaises(SymbolNotFoundError):
             get_indicators("9999", 30)
+
+    def test_resolve_twse_month_count_scales_with_days(self):
+        self.assertEqual(_resolve_twse_month_count(5), 6)
+        self.assertEqual(_resolve_twse_month_count(20), 6)
+        self.assertEqual(_resolve_twse_month_count(90), 7)
+        self.assertEqual(_resolve_twse_month_count(180), 11)
+        self.assertEqual(_resolve_twse_month_count(999), 18)
 
 
 if __name__ == "__main__":

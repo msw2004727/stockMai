@@ -275,3 +275,8 @@
 - 狀態：Done
 - 驗收：`python -m unittest discover` 62/62 pass；`scripts/smoke-check.ps1` pass；frontend build pass。
 - 待手動：若要回填真實歷史資料，需提供 `FINMIND_TOKEN` 後執行 `python scripts/backfill_prices.py --symbols 2330,2317,0050 --days 180`。
+## [2026-03-02 15:22] 真實資料回填完成（FinMind -> PostgreSQL）
+- 完成內容：使用已設定的 FINMIND_TOKEN 執行回填，2330/2317/0050 各回填 180 筆；其中第一次因 PowerShell 參數把 0050 解析為 50，已補跑 0050 成功。
+- 狀態：Done
+- 驗收：DB 查詢結果 `2330=180, 2317=180, 0050=180`；`get_quote/get_history` 已回傳 `source=postgres`。
+- 備註：後續回填請將 symbols 參數加上引號，例如 `--symbols "2330,2317,0050"`。

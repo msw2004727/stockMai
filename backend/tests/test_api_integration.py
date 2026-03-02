@@ -276,6 +276,7 @@ class ApiIntegrationTest(unittest.TestCase):
                 self.assertGreaterEqual(len(analyze_payload["results"]), 1)
                 self.assertIn("signal", analyze_payload["consensus"])
                 self.assertIn("cost", analyze_payload)
+                self.assertIn("indicator_context", analyze_payload)
 
     def test_ai_analyze_returns_429_when_daily_limit_exceeded(self):
         fake_redis = _FakeRedis()

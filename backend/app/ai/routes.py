@@ -9,6 +9,8 @@ from backend.modules.ai_gateway import GatewayRequest, build_default_router
 from backend.modules.ai_gateway.consensus import parse_provider_weights
 from backend.modules.ai_gateway.cost_tracker import CostTracker
 from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt
+from backend.modules.data_pipeline import load_recent_history
+from backend.modules.feature_engineering import compute_latest_indicators
 
 from ..auth import enforce_rate_limit, get_current_user
 from ..config import get_settings
@@ -55,6 +57,35 @@ def _get_cost_tracker(redis_url: str) -> CostTracker:
     return CostTracker(redis_url=redis_url)
 
 
+def _build_indicator_context(symbol: str, database_url: str, days: int = 60) -> dict:
+    cached = load_recent_history(
+        database_url=database_url,
+        symbol=symbol,
+        days=days,
+        max_age_days=7,
+    )
+    if not cached:
+        return {
+            "symbol": symbol,
+            "days": days,
+            "history_source": "none",
+            "as_of_date": "",
+            "latest": {},
+        }
+
+    series = cached.get("series") or []
+    as_of_date = ""
+    if series:
+        as_of_date = str(series[-1].get("date", ""))
+    return {
+        "symbol": symbol,
+        "days": int(cached.get("days", days)),
+        "history_source": str(cached.get("source", "postgres")),
+        "as_of_date": as_of_date,
+        "latest": compute_latest_indicators(series),
+    }
+
+
 @router.post("/analyze")
 async def analyze_stock(
     payload: AnalyzeRequest,
@@ -64,7 +95,16 @@ async def analyze_stock(
     settings = get_settings()
     providers = payload.providers or _parse_default_providers(settings.ai_default_providers)
     provider_weights = parse_provider_weights(settings.ai_provider_weights)
-    prompt = build_analysis_prompt(payload.symbol, payload.user_prompt)
+    indicator_context = _build_indicator_context(
+        symbol=payload.symbol,
+        database_url=settings.database_url,
+        days=60,
+    )
+    prompt = build_analysis_prompt(
+        payload.symbol,
+        payload.user_prompt,
+        indicator_context=indicator_context,
+    )
     cost_tracker = _get_cost_tracker(settings.redis_url)
 
     request = GatewayRequest(
@@ -95,6 +135,7 @@ async def analyze_stock(
         "symbol": payload.symbol,
         "providers_requested": providers,
         "provider_weights": provider_weights,
+        "indicator_context": indicator_context,
         "prompt": prompt,
         "results": gateway_result["results"],
         "consensus": gateway_result["consensus"],

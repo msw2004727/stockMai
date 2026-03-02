@@ -100,6 +100,12 @@
 - 下一步：將 log/docx 類暫存檔加入 `.gitignore` 或移出 repo，保持工作樹乾淨。
 - 備註（可選）：驗收通過：`python -m unittest discover` 8/8、frontend build 成功、API 成功/失敗案例符合預期。
 
+## [2026-03-02 12:45] 清理工作樹 ignore 規則
+- 完成事項：`.gitignore` 新增 `*.log`、`*.docx`、`台股AI平台_*.md`，清理本地執行 log 與規格文件類未追蹤檔。
+- 目前進度：Done（工作樹清理中）
+- 下一步：提交 `.gitignore` 與 `WORKLOG.md`，確認 `git status` 為乾淨。
+- 備註（可選）：本回合未改動程式行為。
+
 ## [2026-03-02 12:36] 模組化波次確認
 - 完成事項：確認目前已完成第 1~3 波，整理剩餘波次規劃。
 - 目前進度：In Progress（收斂中）

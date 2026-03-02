@@ -326,3 +326,15 @@
 - 目前進度：Done
 - 下一步：等待 Render 部署完成後，在前端用 GPT-5 再做一次 AI 分析驗收。
 - 備註（可選）：本機 unittest 因缺少 `redis` 套件未完整執行，已以 `py_compile` 驗證語法。
+
+## [2026-03-02 22:14] GPT-5 再失敗修正：優先改走 /responses
+- 完成事項：針對 `gpt5 response missing message content` 再次修正 `openai_client`，`gpt5` 先呼叫 `/responses`（`input` + `max_output_tokens`），若空內容再 fallback `/chat/completions`；同時補上 fallback 路徑測試。
+- 目前進度：In Progress
+- 下一步：commit + push 後等待 Render 部署，前端再測 GPT-5 是否恢復成功。
+- 備註（可選）：已用 `py_compile` 檢查語法；本機 unittest 仍受缺少 `redis` 套件限制。
+
+## [2026-03-02 22:15] GPT-5 /responses 修正提交與推送
+- 完成事項：提交 `gpt5` 優先走 `/responses` 並保留 `/chat/completions` fallback 的修正，連同測試補強一起推送到 `origin/main`。
+- 目前進度：Done
+- 下一步：等待 Render 部署完成後，前端以 GPT-5 再測一次 AI 分析。
+- 備註（可選）：本機 `unittest` 受缺少 `redis` 套件限制，僅完成 `py_compile` 語法檢查。

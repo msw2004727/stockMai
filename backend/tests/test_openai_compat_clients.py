@@ -26,6 +26,10 @@ class OpenAICompatClientsTest(unittest.TestCase):
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
         text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
         self.assertIn("summary", text)
+        call = mock_post_json.call_args.kwargs
+        self.assertTrue(call["url"].endswith("/responses"))
+        self.assertEqual(call["payload"]["max_output_tokens"], 500)
+        self.assertEqual(call["payload"]["input"], "prompt")
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_grok_client_success(self, mock_post_json):
@@ -83,6 +87,36 @@ class OpenAICompatClientsTest(unittest.TestCase):
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
         text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
         self.assertIn("output content", text)
+
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_openai_client_falls_back_to_chat_completions_when_responses_empty(self, mock_post_json):
+        mock_post_json.side_effect = [
+            (200, {"id": "resp_789", "output": []}, ""),
+            (
+                200,
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"from fallback","signal":"neutral","confidence":0.6}'
+                            }
+                        }
+                    ]
+                },
+                "",
+            ),
+        ]
+        client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("from fallback", text)
+        self.assertEqual(mock_post_json.call_count, 2)
+
+        first_call = mock_post_json.call_args_list[0].kwargs
+        second_call = mock_post_json.call_args_list[1].kwargs
+        self.assertTrue(first_call["url"].endswith("/responses"))
+        self.assertEqual(first_call["payload"]["input"], "prompt")
+        self.assertTrue(second_call["url"].endswith("/chat/completions"))
+        self.assertEqual(second_call["payload"]["max_completion_tokens"], 500)
 
     def test_openai_client_rejects_missing_key(self):
         client = OpenAIClient(api_key="", model="gpt-5.2")

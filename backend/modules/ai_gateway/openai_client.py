@@ -21,19 +21,76 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         if not self.model:
             raise ProviderCallError(f"{self.provider} model is missing.", retryable=False)
 
-        max_token_field = "max_completion_tokens" if self.provider == "gpt5" else "max_tokens"
-        payload = {
-            "model": self.model,
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.2,
-            max_token_field: 500,
-        }
         headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
         }
+
+        if self.provider == "gpt5":
+            text, _ = await self._call_and_extract_text(
+                endpoint="/responses",
+                payload={
+                    "model": self.model,
+                    "input": prompt,
+                    "temperature": 0.2,
+                    "max_output_tokens": 500,
+                },
+                headers=headers,
+                timeout_seconds=timeout_seconds,
+            )
+            if text:
+                return text
+
+            # Fallback to chat/completions for compatibility if responses body is empty.
+            fallback_text, fallback_raw = await self._call_and_extract_text(
+                endpoint="/chat/completions",
+                payload={
+                    "model": self.model,
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.2,
+                    "max_completion_tokens": 500,
+                },
+                headers=headers,
+                timeout_seconds=timeout_seconds,
+            )
+            if fallback_text:
+                return fallback_text
+
+            detail = _build_missing_content_detail(fallback_raw)
+            raise ProviderCallError(
+                f"{self.provider} response missing message content.{detail}",
+                retryable=True,
+            )
+
+        text, raw_text = await self._call_and_extract_text(
+            endpoint="/chat/completions",
+            payload={
+                "model": self.model,
+                "messages": [{"role": "user", "content": prompt}],
+                "temperature": 0.2,
+                "max_tokens": 500,
+            },
+            headers=headers,
+            timeout_seconds=timeout_seconds,
+        )
+        if text:
+            return text
+
+        detail = _build_missing_content_detail(raw_text)
+        raise ProviderCallError(
+            f"{self.provider} response missing message content.{detail}",
+            retryable=True,
+        )
+
+    async def _call_and_extract_text(
+        self,
+        endpoint: str,
+        payload: dict[str, Any],
+        headers: dict[str, str],
+        timeout_seconds: int,
+    ) -> tuple[str, str]:
         status_code, data, raw_text = await self.post_json(
-            url=f"{self.base_url}/chat/completions",
+            url=f"{self.base_url}{endpoint}",
             payload=payload,
             headers=headers,
             timeout_seconds=timeout_seconds,
@@ -51,13 +108,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
                 retryable=False,
             )
 
-        text = _extract_openai_text(data)
-        if not text:
-            raise ProviderCallError(
-                f"{self.provider} response missing message content.",
-                retryable=True,
-            )
-        return text
+        return _extract_openai_text(data), raw_text
 
 
 class OpenAIClient(OpenAICompatClient):
@@ -106,6 +157,13 @@ def _extract_openai_text(payload: dict[str, Any]) -> str:
         return text
 
     return ""
+
+
+def _build_missing_content_detail(raw_text: str) -> str:
+    snippet = raw_text.strip()[:220]
+    if not snippet:
+        return ""
+    return f" raw={snippet}"
 
 
 def _extract_output_text(output: Any) -> str:

@@ -127,3 +127,28 @@
 - 目前進度：Done
 - 下一步：在 Render/GitHub Actions 執行一次 Cloud Smoke，確認雲端環境錯誤碼與 CORS 設定符合預期，再進入規格書下一階段（策略與回測）。
 - 備註（可選）：驗收通過：backend unittest `93/93`、frontend build pass。
+
+## [2026-03-02 18:47] 進度確認：目前所在步驟
+- 完成事項：讀取 WORKLOG 最新一筆並確認 git 狀態，判定目前停在第 5 批完成（正式上線收尾）。
+- 目前進度：Done
+- 下一步：在 Render 或 GitHub Actions 執行一次 Cloud Smoke，確認 CORS 與錯誤碼，之後再進入策略與回測（Phase 3/4）。
+- 備註（可選）：目前 git status 顯示工作樹乾淨（main...origin/main，無未提交變更）。
+
+## [2026-03-02 19:02] 雲端驗收啟動：本機通過、Cloud Smoke 卡住
+- 完成事項：執行 backend unittest（93/93 pass）、frontend build（pass）；執行 scripts/cloud-smoke.ps1 驗證 Render。/health 與 /auth/token 成功，但 /stocks/quote、/stocks/history 對 2330/00878 皆回 404 not_found（No quote/history data found）。
+- 目前進度：Blocked
+- 下一步：在 Render 檢查行情來源可用性（FinMind token / TWSE 連線）並補一次資料（或確認 provider fallback），之後重跑 cloud smoke 直到 PASSED。
+- 備註（可選）：本回合無程式碼變更，屬驗收與環境檢查；工作樹僅更新 WORKLOG。若要我可下一回合直接做「雲端資料可用性排查清單」。
+
+
+## [2026-03-02 19:14] 雲端資料可用性排查：定位 TWSE TLS 問題並完成修補
+- 完成事項：定位 Render 404 根因為 TWSE 上游在 Python urllib 出現 CERTIFICATE_VERIFY_FAILED (Missing Subject Key Identifier)，且 FINMIND_TOKEN 未設定時被誤判為 not_found。新增 backend/app/stocks/http_client.py（TWSE 專用 TLS fallback）、調整 quote_provider 依實際啟用 provider 計算失敗、調整 get_history 在 FinMind 未設定且 TWSE 失敗時回 503。補測試 test_stock_http_client、test_quote_provider、test_stock_service。
+- 目前進度：In Progress
+- 下一步：將本次修補部署到 Render（或 merge + 自動部署），再執行 scripts/cloud-smoke.ps1 -BackendBaseUrl https://stockmai-backend.onrender.com 驗證 /stocks/quote 與 /stocks/history 已恢復。
+- 備註（可選）：本地驗證：backend unittest 98/98 pass；以修補後程式直接探測可取得 2330（twse_realtime）與 TWSE history。工作樹仍有既有 .tmp 權限殘留警告，不影響本次修補。
+
+## [2026-03-02 19:16] 修補提交：TWSE TLS fallback 與錯誤碼修正
+- 完成事項：完成雲端資料可用性修補（TWSE TLS fallback、provider 失敗判定、history 在資料源不可用時回 503）並補齊測試，準備 commit + push 到 main。
+- 目前進度：Done
+- 下一步：等待 Render 自動部署完成後，重新執行 cloud smoke 驗證 2330/00878。
+- 備註（可選）：本地驗證 backend unittest 98/98 pass。

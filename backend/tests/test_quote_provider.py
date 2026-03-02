@@ -99,6 +99,19 @@ class QuoteProviderTest(unittest.TestCase):
         with self.assertRaises(QuoteProviderUnavailableError):
             fetch_quote_from_provider_chain(symbol="2330", finmind_token="token", timeout_seconds=5)
 
+    @patch("backend.app.stocks.quote_provider._fetch_finmind_daily_quote")
+    @patch("backend.app.stocks.quote_provider._fetch_twse_daily_quote", side_effect=RuntimeError("twse daily err"))
+    @patch("backend.app.stocks.quote_provider._fetch_twse_realtime_quote", side_effect=RuntimeError("twse realtime err"))
+    def test_chain_raises_when_twse_fail_and_finmind_not_configured(
+        self,
+        _mock_realtime,
+        _mock_twse_daily,
+        mock_finmind,
+    ):
+        with self.assertRaises(QuoteProviderUnavailableError):
+            fetch_quote_from_provider_chain(symbol="2330", finmind_token="", timeout_seconds=5)
+        mock_finmind.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

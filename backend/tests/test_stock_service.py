@@ -145,9 +145,15 @@ class StockServiceTest(unittest.TestCase):
         with self.assertRaises(QuoteRateLimitedError):
             get_quote("2330")
 
+    @patch("backend.app.stocks.service.get_settings")
     @patch("backend.app.stocks.service._fetch_history_from_twse")
     @patch("backend.app.stocks.service._fetch_history_from_finmind")
-    def test_get_history_prefers_finmind(self, mock_finmind, mock_twse):
+    def test_get_history_prefers_finmind(self, mock_finmind, mock_twse, mock_get_settings):
+        class _S:
+            finmind_token = "token"
+
+        mock_get_settings.return_value = _S()
+
         mock_finmind.return_value = {
             "symbol": "2330",
             "name": "2330",
@@ -175,9 +181,35 @@ class StockServiceTest(unittest.TestCase):
         self.assertIn("is_fresh", result["freshness"])
         mock_twse.assert_not_called()
 
+    @patch("backend.app.stocks.service.get_settings")
     @patch("backend.app.stocks.service._fetch_history_from_twse", side_effect=RuntimeError("twse error"))
     @patch("backend.app.stocks.service._fetch_history_from_finmind", side_effect=RuntimeError("finmind error"))
-    def test_get_history_raises_data_unavailable_when_all_sources_fail(self, _mock_finmind, _mock_twse):
+    def test_get_history_raises_data_unavailable_when_all_sources_fail(
+        self,
+        _mock_finmind,
+        _mock_twse,
+        mock_get_settings,
+    ):
+        class _S:
+            finmind_token = "token"
+
+        mock_get_settings.return_value = _S()
+
+        with self.assertRaises(DataUnavailableError):
+            get_history("2330", 20)
+
+    @patch("backend.app.stocks.service.get_settings")
+    @patch("backend.app.stocks.service._fetch_history_from_twse", side_effect=RuntimeError("twse error"))
+    def test_get_history_raises_data_unavailable_when_finmind_not_configured(
+        self,
+        _mock_twse,
+        mock_get_settings,
+    ):
+        class _S:
+            finmind_token = ""
+
+        mock_get_settings.return_value = _S()
+
         with self.assertRaises(DataUnavailableError):
             get_history("2330", 20)
 

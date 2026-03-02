@@ -1,12 +1,11 @@
 from __future__ import annotations
 
 from datetime import date, datetime
-import json
 from urllib.parse import urlencode
-from urllib.request import urlopen
 
 from backend.modules.data_pipeline import fetch_finmind_quote
 
+from .http_client import fetch_json
 from .parsers import parse_daily_row
 from .provider import TWSE_DAY_REPORT_URL, fetch_twse_month, month_candidates
 
@@ -19,8 +18,9 @@ class QuoteProviderUnavailableError(Exception):
 
 def fetch_quote_from_provider_chain(symbol: str, finmind_token: str, timeout_seconds: int = 8) -> dict | None:
     failed_count = 0
-    provider_count = 3
+    provider_count = 0
 
+    provider_count += 1
     try:
         realtime = _fetch_twse_realtime_quote(symbol=symbol, timeout=timeout_seconds)
         if realtime:
@@ -28,13 +28,16 @@ def fetch_quote_from_provider_chain(symbol: str, finmind_token: str, timeout_sec
     except Exception:
         failed_count += 1
 
-    try:
-        finmind_daily = _fetch_finmind_daily_quote(symbol=symbol, token=finmind_token)
-        if finmind_daily:
-            return finmind_daily
-    except Exception:
-        failed_count += 1
+    if finmind_token:
+        provider_count += 1
+        try:
+            finmind_daily = _fetch_finmind_daily_quote(symbol=symbol, token=finmind_token)
+            if finmind_daily:
+                return finmind_daily
+        except Exception:
+            failed_count += 1
 
+    provider_count += 1
     try:
         twse_daily = _fetch_twse_daily_quote(symbol=symbol, timeout=timeout_seconds)
         if twse_daily:
@@ -67,8 +70,11 @@ def _fetch_twse_realtime_payload(channel: str, timeout: int = 8) -> dict:
             "_": int(datetime.now().timestamp() * 1000),
         }
     )
-    with urlopen(f"{TWSE_REALTIME_URL}?{query}", timeout=timeout) as response:
-        return json.load(response)
+    return fetch_json(
+        f"{TWSE_REALTIME_URL}?{query}",
+        timeout=timeout,
+        allow_insecure_tls_fallback=True,
+    )
 
 
 def _parse_twse_realtime_payload(payload: dict, symbol: str) -> dict | None:

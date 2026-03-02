@@ -235,7 +235,9 @@ def get_quote(symbol: str) -> dict:
 
 
 def get_history(symbol: str, days: int) -> dict:
+    settings = get_settings()
     finmind_failed = False
+    finmind_skipped = False
     twse_failed = False
     twse_no_data = False
 
@@ -246,17 +248,20 @@ def get_history(symbol: str, days: int) -> dict:
     except Exception:
         pass
 
-    try:
-        finmind_history = _fetch_history_from_finmind(symbol, days=days)
-        if finmind_history:
-            _persist_series_to_postgres(
-                symbol=symbol,
-                series=finmind_history["series"],
-                source="finmind",
-            )
-            return _with_history_freshness(finmind_history, max_age_days=7)
-    except Exception:
-        finmind_failed = True
+    if settings.finmind_token:
+        try:
+            finmind_history = _fetch_history_from_finmind(symbol, days=days)
+            if finmind_history:
+                _persist_series_to_postgres(
+                    symbol=symbol,
+                    series=finmind_history["series"],
+                    source="finmind",
+                )
+                return _with_history_freshness(finmind_history, max_age_days=7)
+        except Exception:
+            finmind_failed = True
+    else:
+        finmind_skipped = True
 
     try:
         twse_history = _fetch_history_from_twse(symbol, days=days)
@@ -272,7 +277,7 @@ def get_history(symbol: str, days: int) -> dict:
     except Exception:
         twse_failed = True
 
-    if finmind_failed and twse_failed:
+    if twse_failed and (finmind_failed or finmind_skipped):
         raise DataUnavailableError("Market data providers are temporarily unavailable.")
 
     if twse_no_data:

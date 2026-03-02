@@ -6,8 +6,8 @@ function init() {
   const saved = localStorage.getItem("theme");
   if (saved === "light" || saved === "dark") {
     theme.value = saved;
-  } else if (window.matchMedia("(prefers-color-scheme: dark)").matches) {
-    theme.value = "dark";
+  } else {
+    theme.value = "light";
   }
 }
 

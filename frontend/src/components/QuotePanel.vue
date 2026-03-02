@@ -56,7 +56,7 @@ function onSymbolInput(event) {
 
 function fmt(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) {
-    return "N/A";
+    return "暫無資料";
   }
   return Number(value).toFixed(4);
 }
@@ -77,35 +77,40 @@ function marketStateLabel(raw) {
   <h2 class="section-title">行情查詢</h2>
   <p class="hint hint-inline">支援 4~6 碼台股代號，例如 2330、2485、00878</p>
 
-  <div class="query-row">
-    <input
-      :value="symbol"
-      class="input"
-      type="text"
-      maxlength="6"
-      inputmode="numeric"
-      placeholder="輸入台股代號"
-      @input="onSymbolInput"
-    />
-    <button type="button" class="btn" :disabled="quoteLoading" @click="emit('refresh')">
-      {{ quoteLoading ? "查詢中..." : "查詢報價" }}
-    </button>
-    <span v-if="quoteCheckedAt" class="checked-at no-wrap">更新時間：{{ quoteCheckedAt }}</span>
+  <div class="field-box">
+    <p class="field-title">查詢條件</p>
+    <div class="query-row">
+      <input
+        :value="symbol"
+        class="input"
+        type="text"
+        maxlength="6"
+        inputmode="numeric"
+        placeholder="輸入台股代號"
+        @input="onSymbolInput"
+      />
+      <button type="button" class="btn" :disabled="quoteLoading" @click="emit('refresh')">
+        {{ quoteLoading ? "查詢中..." : "查詢股價" }}
+      </button>
+      <span v-if="quoteCheckedAt" class="checked-at no-wrap">更新時間：{{ quoteCheckedAt }}</span>
+    </div>
   </div>
 
-  <div class="period-row">
-    <span class="period-label">歷史天數</span>
-    <button
-      v-for="d in dayOptions"
-      :key="d"
-      type="button"
-      class="period-btn"
-      :class="{ active: selectedDays === d }"
-      :disabled="quoteLoading"
-      @click="emit('change-day', d)"
-    >
-      {{ d }} 天
-    </button>
+  <div class="field-box">
+    <p class="field-title">歷史區間</p>
+    <div class="period-row">
+      <button
+        v-for="d in dayOptions"
+        :key="d"
+        type="button"
+        class="period-btn"
+        :class="{ active: selectedDays === d }"
+        :disabled="quoteLoading"
+        @click="emit('change-day', d)"
+      >
+        {{ d }} 天
+      </button>
+    </div>
   </div>
 
   <div v-if="quoteError" class="card error">{{ quoteError }}</div>
@@ -115,7 +120,7 @@ function marketStateLabel(raw) {
       <p class="label">股票資訊</p>
       <p class="value">{{ quote.symbol }} {{ quote.name }}</p>
       <p class="sub">資料日期：{{ quote.as_of_date }}</p>
-      <p class="sub">報價時間：{{ quote.quote_time || "N/A" }}</p>
+      <p class="sub">報價時間：{{ quote.quote_time || "暫無資料" }}</p>
       <p class="sub">市場狀態：{{ marketStateLabel(quote.market_state) }}</p>
       <p class="sub">資料類型：{{ quote.is_realtime ? "即時報價" : "日線報價" }}</p>
     </article>
@@ -136,7 +141,7 @@ function marketStateLabel(raw) {
 
     <article class="card">
       <p class="label">資料來源</p>
-      <p class="value">{{ quote.source }}</p>
+      <p class="value">{{ quote.source || "暫無資料" }}</p>
       <p class="sub" v-if="quote.note">{{ quote.note }}</p>
     </article>
 
@@ -163,4 +168,3 @@ function marketStateLabel(raw) {
     </article>
   </div>
 </template>
-

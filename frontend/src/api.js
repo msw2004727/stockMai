@@ -148,12 +148,12 @@ export async function getStockIndicators(symbol, days = 60, signal) {
   return response.json();
 }
 
-export async function analyzeStock(symbol, userPrompt = "", providers = ["claude"], signal) {
+export async function analyzeStock(symbol, userPrompt = "", providers = ["gpt5"], signal) {
   const quoteSymbol = (symbol || "").trim();
   const payload = {
     symbol: quoteSymbol,
     user_prompt: (userPrompt || "").trim(),
-    providers: providers.length > 0 ? providers : ["claude"],
+    providers: providers.length > 0 ? providers : ["gpt5"],
   };
 
   const analyzedResponse = await fetchProtected("/ai/analyze", {
@@ -171,12 +171,12 @@ export async function analyzeStock(symbol, userPrompt = "", providers = ["claude
   return analyzedResponse.json();
 }
 
-export async function getStrategyDecision(symbol, userPrompt = "", providers = ["claude"], signal) {
+export async function getStrategyDecision(symbol, userPrompt = "", providers = ["gpt5"], signal) {
   const quoteSymbol = (symbol || "").trim();
   const payload = {
     symbol: quoteSymbol,
     user_prompt: (userPrompt || "").trim(),
-    providers: providers.length > 0 ? providers : ["claude"],
+    providers: providers.length > 0 ? providers : ["gpt5"],
   };
 
   const response = await fetchProtected("/strategy/decision", {
@@ -194,3 +194,4 @@ export async function getStrategyDecision(symbol, userPrompt = "", providers = [
 
   return response.json();
 }
+

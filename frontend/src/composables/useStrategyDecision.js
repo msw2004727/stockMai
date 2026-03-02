@@ -11,13 +11,19 @@ export function useStrategyDecision(symbolRef, promptRef, selectedProviderRef) {
 
   let controller = null;
 
+  function showStrategyPrerequisiteError(message) {
+    strategyResult.value = null;
+    strategyCheckedAt.value = "";
+    strategyLoading.value = false;
+    strategyError.value = message;
+  }
+
   async function refreshStrategy() {
     if (controller) {
       controller.abort();
     }
     controller = new AbortController();
 
-    // 與 AI 分析同步清空，避免同頁顯示舊決策。
     strategyResult.value = null;
     strategyCheckedAt.value = "";
     strategyLoading.value = true;
@@ -51,6 +57,6 @@ export function useStrategyDecision(symbolRef, promptRef, selectedProviderRef) {
     strategyError,
     strategyCheckedAt,
     refreshStrategy,
+    showStrategyPrerequisiteError,
   };
 }
-

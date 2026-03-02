@@ -3,17 +3,24 @@
 import { analyzeStock } from "../api";
 import { formatTimeLabel } from "../utils/formatters";
 
-export function useAiAnalysis(symbolRef, initialProvider = "claude") {
+export function useAiAnalysis(symbolRef, initialProvider = "gpt5") {
   const aiResult = ref(null);
   const aiLoading = ref(false);
   const aiError = ref("");
   const aiCheckedAt = ref("");
 
-  const userPrompt = ref("請聚焦短中線趨勢，給我重點結論與風險提醒。");
+  const userPrompt = ref("");
   const selectedProvider = ref(initialProvider);
-  const providerOptions = ["claude", "gpt5", "grok", "deepseek"];
+  const providerOptions = ["gpt5", "claude", "grok", "deepseek"];
 
   let controller = null;
+
+  function showAiPrerequisiteError(message) {
+    aiResult.value = null;
+    aiCheckedAt.value = "";
+    aiLoading.value = false;
+    aiError.value = message;
+  }
 
   async function refreshAi() {
     if (controller) {
@@ -21,7 +28,6 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     }
     controller = new AbortController();
 
-    // 使用者點擊後先清空舊畫面，避免誤讀上一筆結果。
     aiResult.value = null;
     aiCheckedAt.value = "";
     aiLoading.value = true;
@@ -63,6 +69,6 @@ export function useAiAnalysis(symbolRef, initialProvider = "claude") {
     providerOptions,
     refreshAi,
     setProvider,
+    showAiPrerequisiteError,
   };
 }
-

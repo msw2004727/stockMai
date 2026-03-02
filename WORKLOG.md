@@ -151,3 +151,18 @@
 - 目前狀態：Done（待 Render 重新同步部署）。
 - 下一步：Render Dashboard 執行 Blueprint Sync/Manual Deploy，確認 stockmai-frontend 可正常開啟首頁。
 - 備註：此前 Not Found 高機率是 publish path 指向錯誤位置。
+## [2026-03-02 13:27] Render 部署狀態判讀（Deploy live）
+- 做了什麼：確認使用者回報 Deploy live for 3b26b2b 的意義與後續檢查步驟。
+- 目前狀態：In Progress（部署已生效，待驗證前端頁面是否可正常開啟）。
+- 下一步：若仍 Not Found，檢查 frontend 服務 Build/Publish 設定與重新部署。
+- 備註：Deploy live 代表該 commit 已上線，不代表一定無路由或發布目錄問題。
+## [2026-03-02 13:30] Phase 5 收尾：補 API 整合測試（401/429/token flow）
+- 做了什麼：新增 ackend/tests/test_api_integration.py，以純 ASGI request 驅動 FastAPI app，覆蓋三個情境：/stocks/quote 無 token 回 401、/auth/token 簽發後可正常存取 quote、超過每日額度回 429。
+- 目前狀態：Done（整合測試已落地）。
+- 下一步：可開始 Phase 4.5 的 i_gateway 最小骨架（router + provider 介面 + response_normalizer）。
+- 驗收結果：python -m unittest discover -s backend/tests -p "test_*.py" 共 25/25 通過。
+## [2026-03-02 13:35] Phase 4.5 起手：ai_gateway 最小骨架 + /ai/analyze
+- 做了什麼：新增 ackend/modules/ai_gateway/（provider_client.py, mock_clients.py, prompt_builder.py, esponse_normalizer.py, gateway_router.py）與 ackend/app/ai/routes.py，提供受 JWT + rate limit 保護的 POST /ai/analyze。主程式已掛載 AI router，設定新增 AI_TIMEOUT_SECONDS、AI_DEFAULT_PROVIDERS。
+- 目前狀態：Done（可端到端呼叫 AI Gateway MVP）。
+- 下一步：把 mock clients 逐步替換為真實 provider clients（Claude/OpenAI/Grok/Gemini），並補共識/成本追蹤模組。
+- 驗收結果：backend tests 35/35 通過；scripts/smoke-check.ps1 通過（backend + frontend build）。

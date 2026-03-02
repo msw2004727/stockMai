@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     openai_api_key: str = ""
     grok_api_key: str = ""
     gemini_api_key: str = ""
+    ai_timeout_seconds: int = 15
+    ai_default_providers: str = "claude,gpt5,grok,gemini"
     jwt_secret: str = "change_me"
     jwt_expire_minutes: int = 60
     api_daily_limit: int = 200

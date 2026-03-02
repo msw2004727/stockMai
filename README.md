@@ -138,3 +138,18 @@ Steps:
 Notes:
 - Backend service URL is injected into frontend `VITE_API_BASE` automatically.
 - Backend currently uses `CORS_ALLOW_ORIGINS=*` for easy deployment. You can tighten it later.
+
+## AI gateway MVP endpoint
+Protected endpoint: `POST /ai/analyze`
+
+```powershell
+# issue token
+$tokenResp = Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/auth/token" -ContentType "application/json" -Body '{"user_id":"demo-user","expires_minutes":60}'
+$token = $tokenResp.access_token
+
+# call AI analyze
+Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/ai/analyze" `
+  -Headers @{ Authorization = "Bearer $token" } `
+  -ContentType "application/json" `
+  -Body '{"symbol":"2330","user_prompt":"focus on short-term trend"}'
+```

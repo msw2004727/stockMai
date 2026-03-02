@@ -153,3 +153,16 @@ Invoke-RestMethod -Method Post -Uri "http://127.0.0.1:8000/ai/analyze" `
   -ContentType "application/json" `
   -Body '{"symbol":"2330","user_prompt":"focus on short-term trend"}'
 ```
+
+Claude real client is enabled when backend env `ANTHROPIC_API_KEY` is set.
+If key is empty, `claude` provider falls back to mock client.
+
+Frontend now includes an AI panel that calls `/ai/analyze` using the same JWT flow.
+
+Real provider clients now available:
+- Claude: `ANTHROPIC_API_KEY` + `CLAUDE_MODEL`
+- OpenAI (gpt5): `OPENAI_API_KEY` + `GPT_MODEL`
+- Grok: `GROK_API_KEY` + `GROK_MODEL`
+- Gemini: `GEMINI_API_KEY` + `GEMINI_MODEL`
+
+If a key is missing, that provider automatically falls back to mock.

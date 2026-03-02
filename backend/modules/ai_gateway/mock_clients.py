@@ -7,7 +7,7 @@ class MockAIClient:
     def __init__(self, provider: str):
         self.provider = provider
 
-    def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
         payload = {
             "provider": self.provider,
             "symbol": symbol,
@@ -26,4 +26,3 @@ class MockAIClient:
         if self.provider == "grok":
             return f"Analysis draft:\n{json.dumps(payload)}\nEOF"
         return json.dumps(payload)
-

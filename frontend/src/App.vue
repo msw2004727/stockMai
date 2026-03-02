@@ -1,8 +1,10 @@
 <script setup>
 import { onMounted } from "vue";
 
+import AIPanel from "./components/AIPanel.vue";
 import HealthPanel from "./components/HealthPanel.vue";
 import QuotePanel from "./components/QuotePanel.vue";
+import { useAiAnalysis } from "./composables/useAiAnalysis";
 import { useHealthStatus } from "./composables/useHealthStatus";
 import { useQuoteHistory } from "./composables/useQuoteHistory";
 
@@ -20,14 +22,30 @@ const {
   refreshQuote,
   setDayRange,
 } = useQuoteHistory("2330");
+const {
+  aiResult,
+  aiLoading,
+  aiError,
+  aiCheckedAt,
+  userPrompt,
+  selectedProvider,
+  providerOptions,
+  refreshAi,
+  setProvider,
+} = useAiAnalysis(symbol, "claude");
 
 function updateSymbol(value) {
   symbol.value = value;
 }
 
+function updateUserPrompt(value) {
+  userPrompt.value = value;
+}
+
 onMounted(() => {
   refreshHealth();
   refreshQuote();
+  refreshAi();
 });
 </script>
 
@@ -61,6 +79,22 @@ onMounted(() => {
         @update:symbol="updateSymbol"
         @refresh="refreshQuote"
         @change-day="setDayRange"
+      />
+
+      <div class="divider"></div>
+
+      <AIPanel
+        :symbol="symbol"
+        :ai-result="aiResult"
+        :ai-loading="aiLoading"
+        :ai-error="aiError"
+        :ai-checked-at="aiCheckedAt"
+        :user-prompt="userPrompt"
+        :selected-provider="selectedProvider"
+        :provider-options="providerOptions"
+        @refresh="refreshAi"
+        @update:prompt="updateUserPrompt"
+        @change-provider="setProvider"
       />
     </section>
   </main>

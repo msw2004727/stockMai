@@ -25,13 +25,31 @@ def _parse_default_providers(raw: str) -> list[str]:
     return providers or ["claude", "gpt5", "grok", "gemini"]
 
 
-@lru_cache(maxsize=1)
-def _get_gateway_router():
-    return build_default_router()
+@lru_cache(maxsize=8)
+def _get_gateway_router(
+    claude_api_key: str,
+    claude_model: str,
+    openai_api_key: str,
+    gpt_model: str,
+    grok_api_key: str,
+    grok_model: str,
+    gemini_api_key: str,
+    gemini_model: str,
+):
+    return build_default_router(
+        claude_api_key=claude_api_key,
+        claude_model=claude_model,
+        openai_api_key=openai_api_key,
+        gpt_model=gpt_model,
+        grok_api_key=grok_api_key,
+        grok_model=grok_model,
+        gemini_api_key=gemini_api_key,
+        gemini_model=gemini_model,
+    )
 
 
 @router.post("/analyze")
-def analyze_stock(
+async def analyze_stock(
     payload: AnalyzeRequest,
     _quota: dict = Depends(enforce_rate_limit("ai_analyze")),
 ) -> dict:
@@ -44,8 +62,20 @@ def analyze_stock(
         prompt=prompt,
         providers=providers,
         timeout_seconds=settings.ai_timeout_seconds,
+        retry_count=settings.ai_retry_count,
+        retry_backoff_seconds=settings.ai_retry_backoff_seconds,
     )
-    gateway_result = _get_gateway_router().run(request)
+    router = _get_gateway_router(
+        claude_api_key=settings.anthropic_api_key,
+        claude_model=settings.claude_model,
+        openai_api_key=settings.openai_api_key,
+        gpt_model=settings.gpt_model,
+        grok_api_key=settings.grok_api_key,
+        grok_model=settings.grok_model,
+        gemini_api_key=settings.gemini_api_key,
+        gemini_model=settings.gemini_model,
+    )
+    gateway_result = await router.run(request)
 
     return {
         "symbol": payload.symbol,
@@ -53,5 +83,5 @@ def analyze_stock(
         "prompt": prompt,
         "results": gateway_result["results"],
         "consensus": gateway_result["consensus"],
+        "fallback_used": gateway_result["fallback_used"],
     }
-

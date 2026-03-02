@@ -171,3 +171,59 @@
 - 目前狀態：Done（遠端已同步）。
 - 下一步：可開始把 mock AI clients 替換成真實 provider clients。
 - 驗收結果：推送成功，工作樹乾淨。
+## [2026-03-02 13:39] 重新評估規格書完成度與下一步計劃
+- 做了什麼：依規格書 Phase 0~7（總 45 天）重新做加權進度評估，並以目前已落地模組（data_pipeline、auth/rate-limit、ai_gateway MVP、Render 部署）對照缺口。
+- 目前狀態：In Progress（估算整體完成度約 40%，下一階段規劃已產出）。
+- 下一步：優先做 Phase 4.5 實作化（真實 AI clients + fallback + consensus + 成本追蹤最小版），再接前端 AI 面板串接。
+- 備註：Phase 2/3/4 仍是主要缺口，若先補 AI Gateway 真實連線，可最快把產品差異化能力拉起來。
+## [2026-03-02 13:46] 審查並同意修正版下一步計劃
+- 做了什麼：審查使用者提出的 5 步修正版順序，確認優先單一真實 provider、提前前端面板、分批擴 provider、再做成本追蹤與上線強化。
+- 目前狀態：Done（計劃確認）。
+- 下一步：按新順序開始第 1 步：先落地 Claude 真實 client（async/httpx + timeout + retry + fallback chain）。
+- 備註：consensus 先做加權投票，cost tracker 延後到多 provider 真實上線後。
+## [2026-03-02 13:54] 第 1 步完成：Claude 真實 client + async gateway + retry/fallback
+- 做了什麼：新增 ackend/modules/ai_gateway/claude_client.py，實作 Claude 真實呼叫；ai_gateway provider 介面改為 async；gateway_router 加入 retry（指數退避）與 fallback chain；/ai/analyze 改為 async 並讀取 AI_RETRY_* 設定。同步更新 ender.yaml（新增 ANTHROPIC_API_KEY/CLAUDE_MODEL/AI_RETRY_*）、ackend/requirements.txt、.env.example、README。
+- 目前狀態：Done（第 1 步可用）。
+- 下一步：依計劃進入第 2 步，前端新增 AI 面板並串接 /ai/analyze 端到端顯示。
+- 驗收結果：backend tests 41/41 通過，scripts/smoke-check.ps1 通過（backend + frontend build）。
+- 備註：本機網路限制導致無法即時安裝 httpx，已做相容設計：可用 httpx 時走 async http client，不可用時自動 fallback 到 urllib + asyncio.to_thread，不影響 Render 雲端部署。
+## [2026-03-02 13:57] 第 2 步完成：前端 AI 面板接入 /ai/analyze
+- 做了什麼：新增 rontend/src/components/AIPanel.vue 與 rontend/src/composables/useAiAnalysis.js，App.vue 接入 AI 面板區塊。rontend/src/api.js 新增 nalyzeStock() 並共用受保護 API 呼叫（Bearer token）。
+- 目前狀態：Done（前後端已可端到端展示 AI analyze）。
+- 下一步：開始第 3 步，分批接入 OpenAI/Grok/Gemini 真實 client（先共用 HTTP client 基底）。
+- 驗收結果：scripts/smoke-check.ps1 通過（backend 41/41 tests + frontend build success）。
+
+## [2026-03-02 14:10] 規格書瑕疵修正 + .env.example Firebase 清理
+- 做了什麼：對照 codebase 審查《台股AI平台_專案規格書_v3.0.md》，修正 5 項重大瑕疵：
+  1. **章節錯位修正（§3.3/§3.4/§5/§7/§9）**：
+     - §3.3「差異化 Prompt 策略」：移除誤置的數據源開源專案表，改為正確的 AI 角色 × Prompt 設計重點表，補充 prompt_builder.py 運作說明。
+     - §3.4「共識引擎設計」：移除誤置的回測框架表，改為正確的 v2.0 vs v3.0 共識機制對比表，補充 consensus.py 流程說明。
+     - §5.1「數據源」：填入原本誤置於 §3.3 的開源專案表（FinMind/twstock/yfinance/Fugle MCP Server）。
+     - §5.2「技術指標與回測框架」：填入原本誤置於 §3.4 的開源專案表（TA-Lib/Backtrader/VectorBT/Backtesting.py）。
+     - §7「完整目錄結構」：移除誤置的風險評估表，僅保留目錄樹。
+     - §9「風險評估與合規提示」：填入從 §7 歸位的風險評估表（5 項風險 + 因應對策）。
+  2. **Firebase 移除**：
+     - §1 技術架構表：`PostgreSQL + Firebase + Redis` → `PostgreSQL + Redis`，說明改為「歷史數據持久化 + 快取緩存」。
+     - §8 環境變數：移除 `FIREBASE_PROJECT_ID` 與 `FIREBASE_CREDENTIALS` 區段。
+     - `.env.example`：刪除 `# ---- Firebase ----` 區段（FIREBASE_PROJECT_ID、FIREBASE_CREDENTIALS）。
+  3. **Phase 1 時程修正**：
+     - Phase 1 描述從「FinMind 對接、資料清洗、缺失值處理」擴充為含「PostgreSQL schema 設計、Alembic migration、歷史資料持久化排程」。
+     - 天數 5 → 7 天；總天數 45 → 47 天（≈ 7 週）。
+     - 原因：Phase 2/3 都依賴歷史資料存在 DB 中，目前 repository.py 只做記憶體 fetch-and-return，不入庫。
+  4. **Phase 3 標註待決策**：
+     - Phase 3 描述加上 `⚠️ 待決策` 標籤，明列方案 A（Qlib ML 平台）與方案 B（AI API 取代 ML），註明工作量差 3 倍以上、尚未決定。
+  5. **暫擱置項目**（未修改，記錄決策）：
+     - 前端技術棧（ECharts vs 自製 SVG）：使用者暫不決定，待後續確認後更新規格書。
+- 目前狀態：Done（規格書 4 項修正已完成，2 項暫擱置已記錄）。
+- 下一步：可繼續第 3 步（分批接入 OpenAI/Grok/Gemini 真實 client），或優先處理 Phase 1 的 DB schema 實作。
+- 驗收結果：
+  - 規格書無空章節（§5.1/§5.2/§9 皆有內容）。
+  - 表格與標題吻合（§3.3 講 Prompt、§3.4 講共識、§5 講開源模組、§7 講目錄、§9 講風險）。
+  - `.env.example` 無 Firebase 欄位。
+  - Phase 1 描述包含 DB 相關工作，天數已調整。
+  - Phase 3 已標註為待決策項。
+## [2026-03-02 14:04] 第 3 步完成：接入 OpenAI / Grok / Gemini 真實 clients
+- 做了什麼：新增共用 HTTP 基底 ase_http_client.py，並落地 openai_client.py、grok_client.py、gemini_client.py。gateway_router 現在可依 API key 自動切換「真實 client / mock client」，並保持 async retry/fallback 流程。outes/config/render.yaml 已補齊相關 env 參數。
+- 目前狀態：Done（第 3 步可用）。
+- 下一步：可進入第 4 步（加權 consensus + cost tracker v1）。
+- 驗收結果：backend tests 48/48 通過；scripts/smoke-check.ps1 通過（backend + frontend build）。

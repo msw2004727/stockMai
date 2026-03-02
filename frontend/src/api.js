@@ -56,12 +56,18 @@ async function ensureAccessToken(signal) {
   return tokenRequestPromise;
 }
 
-async function fetchProtected(path, signal) {
+async function fetchProtected(
+  path,
+  { method = "GET", headers = {}, body = undefined, signal = undefined } = {},
+) {
   const token = await ensureAccessToken(signal);
   let response = await fetch(`${apiBase}${path}`, {
+    method,
     headers: {
       Authorization: `Bearer ${token}`,
+      ...headers,
     },
+    body,
     signal,
   });
 
@@ -69,9 +75,12 @@ async function fetchProtected(path, signal) {
     resetAccessToken();
     const refreshedToken = await ensureAccessToken(signal);
     response = await fetch(`${apiBase}${path}`, {
+      method,
       headers: {
         Authorization: `Bearer ${refreshedToken}`,
+        ...headers,
       },
+      body,
       signal,
     });
   }
@@ -102,7 +111,7 @@ export async function getHealth(signal) {
 
 export async function getStockQuote(symbol, signal) {
   const quoteSymbol = (symbol || "").trim();
-  const response = await fetchProtected(`/stocks/quote?symbol=${encodeURIComponent(quoteSymbol)}`, signal);
+  const response = await fetchProtected(`/stocks/quote?symbol=${encodeURIComponent(quoteSymbol)}`, { signal });
 
   if (!response.ok) {
     throwApiError("Stock quote", response.status, quoteSymbol);
@@ -115,7 +124,7 @@ export async function getStockHistory(symbol, days = 5, signal) {
   const quoteSymbol = (symbol || "").trim();
   const response = await fetchProtected(
     `/stocks/history?symbol=${encodeURIComponent(quoteSymbol)}&days=${encodeURIComponent(days)}`,
-    signal,
+    { signal },
   );
 
   if (!response.ok) {
@@ -123,4 +132,27 @@ export async function getStockHistory(symbol, days = 5, signal) {
   }
 
   return response.json();
+}
+
+export async function analyzeStock(symbol, userPrompt = "", providers = ["claude"], signal) {
+  const quoteSymbol = (symbol || "").trim();
+  const payload = {
+    symbol: quoteSymbol,
+    user_prompt: (userPrompt || "").trim(),
+    providers: providers.length > 0 ? providers : ["claude"],
+  };
+
+  const analyzedResponse = await fetchProtected("/ai/analyze", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+    signal,
+  });
+
+  if (!analyzedResponse.ok) {
+    throwApiError("AI analyze", analyzedResponse.status, quoteSymbol);
+  }
+  return analyzedResponse.json();
 }

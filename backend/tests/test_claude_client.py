@@ -1,0 +1,45 @@
+import asyncio
+import unittest
+from unittest.mock import patch
+
+from backend.modules.ai_gateway.claude_client import ClaudeClient
+from backend.modules.ai_gateway.provider_client import ProviderCallError
+
+
+class ClaudeClientTest(unittest.TestCase):
+    @patch("backend.modules.ai_gateway.claude_client.ClaudeClient.post_json")
+    def test_generate_success(self, mock_post_json):
+        mock_post_json.return_value = (
+            200,
+            {"content": [{"type": "text", "text": '{"summary":"OK","signal":"neutral","confidence":0.6}'}]},
+            "",
+        )
+        client = ClaudeClient(api_key="k-test", model="claude-opus-4-6")
+        result = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("summary", result)
+
+    def test_generate_rejects_missing_api_key(self):
+        client = ClaudeClient(api_key="", model="claude-opus-4-6")
+        with self.assertRaises(ProviderCallError) as ctx:
+            asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertFalse(ctx.exception.retryable)
+
+    @patch("backend.modules.ai_gateway.claude_client.ClaudeClient.post_json")
+    def test_generate_handles_timeout_as_retryable(self, mock_post_json):
+        mock_post_json.side_effect = ProviderCallError("Claude timeout", retryable=True)
+        client = ClaudeClient(api_key="k-test", model="claude-opus-4-6")
+        with self.assertRaises(ProviderCallError) as ctx:
+            asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertTrue(ctx.exception.retryable)
+
+    @patch("backend.modules.ai_gateway.claude_client.ClaudeClient.post_json")
+    def test_generate_handles_4xx_as_non_retryable(self, mock_post_json):
+        mock_post_json.return_value = (401, {}, "Unauthorized")
+        client = ClaudeClient(api_key="k-test", model="claude-opus-4-6")
+        with self.assertRaises(ProviderCallError) as ctx:
+            asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertFalse(ctx.exception.retryable)
+
+
+if __name__ == "__main__":
+    unittest.main()

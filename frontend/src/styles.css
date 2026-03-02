@@ -234,6 +234,23 @@ h1 {
   border-color: rgba(20, 108, 148, 0.56);
 }
 
+.textarea {
+  width: 100%;
+  margin-top: 12px;
+  border: 1px solid rgba(15, 23, 42, 0.2);
+  border-radius: 10px;
+  padding: 10px 12px;
+  font-size: 0.94rem;
+  resize: vertical;
+  min-height: 84px;
+  font-family: inherit;
+}
+
+.textarea:focus {
+  outline: 2px solid rgba(20, 108, 148, 0.28);
+  border-color: rgba(20, 108, 148, 0.56);
+}
+
 @keyframes panel-in {
   from {
     opacity: 0;

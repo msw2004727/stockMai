@@ -14,7 +14,13 @@ class Settings(BaseSettings):
     grok_api_key: str = ""
     gemini_api_key: str = ""
     ai_timeout_seconds: int = 15
+    ai_retry_count: int = 2
+    ai_retry_backoff_seconds: float = 0.35
     ai_default_providers: str = "claude,gpt5,grok,gemini"
+    claude_model: str = "claude-opus-4-6"
+    gpt_model: str = "gpt-5.2"
+    grok_model: str = "grok-4.1-fast"
+    gemini_model: str = "gemini-3.1-pro-preview"
     jwt_secret: str = "change_me"
     jwt_expire_minutes: int = 60
     api_daily_limit: int = 200

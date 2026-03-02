@@ -272,3 +272,45 @@
 - 目前進度：Done
 - 下一步：在部署環境設定 `DEEPSEEK_API_KEY` 後做一次 `/ai/analyze` 真實推論驗收。
 - 備註（可選）：frontend build 已通過；本機 backend 全量測試受缺少套件限制，已以 py_compile 檢查本次變更檔語法。
+
+## [2026-03-02 21:13] 真實 AI 金鑰安全接入指引（DeepSeek）
+- 完成事項：提供雲端優先（Render）金鑰接入步驟，確保 `DEEPSEEK_API_KEY` 不進 GitHub 且可啟用真實 LLM 推論。
+- 目前進度：Done
+- 下一步：依指引在 Render 設定 `DEEPSEEK_API_KEY` / `DEEPSEEK_MODEL`，重新部署後驗收 `/ai/analyze` 非 mock 回應。
+- 備註（可選）：本回合無程式碼變更，屬部署操作指引。
+
+## [2026-03-02 21:21] 金鑰設定完成確認，進入真實 DeepSeek 驗收
+- 完成事項：使用者回報已完成 Render 金鑰設定（DEEPSEEK_API_KEY / DEEPSEEK_MODEL）。
+- 目前進度：In Progress
+- 下一步：執行 `/auth/token` + `/ai/analyze` 驗證（providers 指定 deepseek），確認回應非 mock 且 provider=deepseek。
+- 備註（可選）：本回合無程式碼變更，屬部署驗收指引。
+
+## [2026-03-02 21:21] 擴充三個真實 LLM provider 接入指引
+- 完成事項：提供在 Render 安全接入 Claude / GPT-5 / Grok 的步驟，並規劃四 provider 一次驗收流程。
+- 目前進度：In Progress
+- 下一步：在 Render 新增三組 API key，完成部署後執行多 provider 驗收指令，確認回應非 mock。
+- 備註（可選）：本回合無程式碼變更，屬部署操作指引。
+
+## [2026-03-02 21:28] 四 provider 驗收方式說明
+- 完成事項：提供「一次驗收 claude/gpt5/grok/deepseek」的操作與判讀標準，說明如何判斷是否為真實 LLM 回應。
+- 目前進度：Done
+- 下一步：使用者執行驗收指令並回傳 `provider/ok/error/summary/fallback_used` 結果，進行逐項判讀。
+- 備註（可選）：本回合無程式碼變更，屬驗收引導。
+
+## [2026-03-02 21:31] 最簡化 AI 驗收指引（無指令版）
+- 完成事項：將四 provider 驗收流程改為前端操作版（切模型 + 按分析 + 看成功/非 mock 文案），降低使用門檻。
+- 目前進度：Done
+- 下一步：使用者在前端依序驗收 Claude / GPT-5 / Grok / DeepSeek，回報是否有任何一個顯示失敗或出現 Mock 文案。
+- 備註（可選）：本回合無程式碼變更，屬驗收引導。
+
+## [2026-03-02 21:33] GPT-5 真實推論失敗修正（max_completion_tokens）
+- 完成事項：修正 `backend/modules/ai_gateway/openai_client.py`，針對 `provider=gpt5` 改用 `max_completion_tokens`（其餘 OpenAI-compatible provider 維持 `max_tokens`），對應 OpenAI 回傳 400 的參數錯誤。
+- 目前進度：Done
+- 下一步：重新部署 backend 後，再次執行 GPT-5 模型驗收（AI 分析頁切 GPT-5 按執行）。
+- 備註（可選）：已執行 `py_compile` 語法檢查通過；本機缺少完整後端依賴，未跑全量 unittest。
+
+## [2026-03-02 21:40] GPT-5 參數修正提交與推送
+- 完成事項：提交 `openai_client` 對 `gpt5` 改用 `max_completion_tokens` 的修正，並推送至 main。
+- 目前進度：Done
+- 下一步：等待雲端部署完成後，在前端 GPT-5 再測一次 AI 分析是否成功。
+- 備註（可選）：本回合包含 commit + push。

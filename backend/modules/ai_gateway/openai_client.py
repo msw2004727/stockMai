@@ -21,11 +21,12 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         if not self.model:
             raise ProviderCallError(f"{self.provider} model is missing.", retryable=False)
 
+        max_token_field = "max_completion_tokens" if self.provider == "gpt5" else "max_tokens"
         payload = {
             "model": self.model,
             "messages": [{"role": "user", "content": prompt}],
             "temperature": 0.2,
-            "max_tokens": 500,
+            max_token_field: 500,
         }
         headers = {
             "Authorization": f"Bearer {self.api_key}",

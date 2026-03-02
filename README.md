@@ -117,7 +117,7 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/stocks/quote?symbol=23
 
 `/stocks/quote` response now includes quote mode metadata:
 - `quote_time`
-- `market_state` (`trading` / `daily_close` / `unknown`)
+- `market_state` (`trading` / `pre_open` / `daily_close` / `market_holiday`)
 - `is_realtime`
 - `source_priority` (`realtime_primary` / `daily_fallback` / `cache` / `short_cache`)
 - `provider_used`
@@ -129,6 +129,7 @@ Quote runtime tuning envs:
 - `QUOTE_SHORT_CACHE_TTL_SECONDS` (default `5`)
 - `QUOTE_FETCH_RATE_LIMIT` (default `20`)
 - `QUOTE_FETCH_RATE_WINDOW_SECONDS` (default `10`)
+- `TWSE_HOLIDAYS` (optional, comma-separated `YYYY-MM-DD`; these dates will be treated as `market_holiday`)
 
 ## Frontend auth behavior
 Frontend now auto-requests JWT from `/auth/token` and attaches `Authorization: Bearer <token>` for `/stocks/*` calls.

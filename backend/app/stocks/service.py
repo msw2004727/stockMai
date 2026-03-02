@@ -25,6 +25,7 @@ from .quote_runtime import (
     load_short_quote_cache,
     save_short_quote_cache,
 )
+from .market_clock import infer_market_state, parse_holiday_dates
 
 
 class SymbolNotFoundError(Exception):
@@ -155,12 +156,18 @@ def _with_freshness(payload: dict, max_age_days: int) -> dict:
     return out
 
 
-def _with_quote_runtime_meta(payload: dict, default_priority: str) -> dict:
+def _with_quote_runtime_meta(payload: dict, default_priority: str, twse_holidays_raw: str) -> dict:
     out = dict(payload)
     as_of_date = str(out.get("as_of_date", ""))
     out["quote_time"] = out.get("quote_time") or (f"{as_of_date} 14:00:00" if as_of_date else "")
-    out["market_state"] = str(out.get("market_state") or "unknown")
     out["is_realtime"] = bool(out.get("is_realtime", False))
+    out["market_state"] = infer_market_state(
+        market_state=str(out.get("market_state") or "unknown"),
+        as_of_date=as_of_date,
+        quote_time=str(out.get("quote_time") or ""),
+        is_realtime=bool(out.get("is_realtime", False)),
+        holiday_dates=parse_holiday_dates(twse_holidays_raw),
+    )
     out["delay_seconds"] = out.get("delay_seconds")
     out["source_priority"] = str(out.get("source_priority") or default_priority)
     out["provider_used"] = str(out.get("provider_used") or out.get("source") or "unknown")
@@ -173,14 +180,22 @@ def get_quote(symbol: str) -> dict:
     settings = get_settings()
     short_cache = load_short_quote_cache(settings.redis_url, symbol=symbol)
     if short_cache:
-        with_meta = _with_quote_runtime_meta(short_cache, default_priority="short_cache")
+        with_meta = _with_quote_runtime_meta(
+            short_cache,
+            default_priority="short_cache",
+            twse_holidays_raw=settings.twse_holidays,
+        )
         with_meta["cache_hit"] = True
         return _with_freshness(with_meta, max_age_days=5)
 
     try:
         cached = _load_quote_from_postgres(symbol)
         if cached:
-            with_meta = _with_quote_runtime_meta(cached, default_priority="cache")
+            with_meta = _with_quote_runtime_meta(
+                cached,
+                default_priority="cache",
+                twse_holidays_raw=settings.twse_holidays,
+            )
             with_meta["provider_used"] = "postgres"
             with_meta["cache_hit"] = False
             return _with_freshness(with_meta, max_age_days=5)
@@ -202,7 +217,11 @@ def get_quote(symbol: str) -> dict:
         quote = _fetch_quote_from_provider_chain(symbol)
         fetch_latency_ms = int((time.perf_counter() - started) * 1000)
         if quote:
-            with_meta = _with_quote_runtime_meta(quote, default_priority="daily_fallback")
+            with_meta = _with_quote_runtime_meta(
+                quote,
+                default_priority="daily_fallback",
+                twse_holidays_raw=settings.twse_holidays,
+            )
             with_meta["provider_used"] = with_meta.get("source", "unknown")
             with_meta["fetch_latency_ms"] = fetch_latency_ms
             with_meta["cache_hit"] = False

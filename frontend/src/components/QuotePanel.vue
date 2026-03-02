@@ -66,10 +66,16 @@ function marketStateLabel(raw) {
   if (value === "trading") {
     return "交易中";
   }
-  if (value === "daily_close" || value === "post_close") {
-    return "收盤後";
+  if (value === "pre_open") {
+    return "開盤前";
   }
-  return "未知";
+  if (value === "market_holiday") {
+    return "休市（假日）";
+  }
+  if (value === "daily_close" || value === "post_close") {
+    return "休市中";
+  }
+  return "休市中";
 }
 </script>
 

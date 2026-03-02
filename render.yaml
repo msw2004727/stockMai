@@ -37,6 +37,8 @@ services:
         value: "20"
       - key: QUOTE_FETCH_RATE_WINDOW_SECONDS
         value: "10"
+      - key: TWSE_HOLIDAYS
+        value: ""
       - key: AI_TIMEOUT_SECONDS
         value: "15"
       - key: AI_DAILY_BUDGET_USD

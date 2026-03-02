@@ -1,7 +1,14 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 
 from ..auth import enforce_rate_limit
-from .service import DataUnavailableError, SymbolNotFoundError, get_history, get_indicators, get_quote
+from .service import (
+    DataUnavailableError,
+    QuoteRateLimitedError,
+    SymbolNotFoundError,
+    get_history,
+    get_indicators,
+    get_quote,
+)
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -13,6 +20,8 @@ def get_stock_quote(
 ) -> dict:
     try:
         return get_quote(symbol)
+    except QuoteRateLimitedError as exc:
+        raise HTTPException(status_code=429, detail=str(exc)) from exc
     except DataUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SymbolNotFoundError as exc:

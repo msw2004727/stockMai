@@ -99,3 +99,29 @@
 - 目前進度：Done
 - 下一步：進入第 3 批（Redis 短快取 + rate guard + 雲端 smoke 自動化）。
 - 備註（可選）：此批本地驗收維持 backend `86/86` 通過、frontend build 通過。
+
+## [2026-03-02 17:50] 正式即時報價第 3 批完成（短快取 + rate guard）
+- 完成事項：新增 `quote_runtime`（Redis/記憶體短快取 + 速率防護）；`get_quote` 接入短快取與速率限制；quote 回傳新增 `provider_used`、`fetch_latency_ms`、`cache_hit`；補齊 `test_quote_runtime` 與整體測試。
+- 目前進度：Done
+- 下一步：執行第 4 批雲端 smoke 自動化與可觀測驗收（見下方詳細計劃）。
+- 備註（可選）：驗收通過：backend unittest `91/91`、frontend build pass。
+
+## [2026-03-02 17:50] 第 4 批計劃（雲端 smoke + 可觀測）
+- 完成事項：Plan only（尚未實作）。
+- 目前進度：Pending
+- 下一步：
+  1) 新增 `scripts/cloud-smoke.ps1`：自動測 `/health`、`/auth/token`、`/stocks/quote?symbol=2330`、`/stocks/quote?symbol=00878`，並驗證 `is_realtime/source_priority/freshness` 欄位存在。
+  2) 新增 CI 手動工作流（workflow_dispatch）：可輸入 backend URL 執行 smoke。
+  3) 在 README 補「換設備雲端驗收 1 分鐘流程」。
+  4) Render 端完成一次手動 smoke 截圖/結果寫入 WORKLOG。
+- 備註（可選）：完成標準：新設備不開 Docker 也能 1 分鐘驗證線上 API 狀態。
+
+## [2026-03-02 17:50] 第 5 批計劃（正式上線收尾）
+- 完成事項：Plan only（尚未實作）。
+- 目前進度：Pending
+- 下一步：
+  1) CORS 收斂：由 `*` 改為前端正式網域白名單。
+  2) 錯誤碼與訊息標準化：`404/429/503` 統一格式（含 error_code）。
+  3) 安全與成本檢查：確認 API key 僅用 Render Secret；AI 與行情速率限制生效。
+  4) 上線驗收清單：功能、效能、回歸測試結果整理進 README + WORKLOG。
+- 備註（可選）：完成標準：可連續穩定查詢、錯誤可觀測、部署可重現。

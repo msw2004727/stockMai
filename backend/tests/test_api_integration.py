@@ -5,7 +5,7 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.app.main import app
-from backend.app.stocks.service import DataUnavailableError
+from backend.app.stocks.service import DataUnavailableError, QuoteRateLimitedError
 
 
 class _FakeRedis:
@@ -265,6 +265,31 @@ class ApiIntegrationTest(unittest.TestCase):
                     )
                     self.assertEqual(status, 503)
                     self.assertEqual(payload["detail"], "Market data providers are temporarily unavailable.")
+
+    def test_quote_returns_429_when_quote_rate_guard_triggers(self):
+        fake_redis = _FakeRedis()
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch(
+                    "backend.app.stocks.routes.get_quote",
+                    side_effect=QuoteRateLimitedError("Quote rate limit exceeded (max 20/10s). Please retry shortly."),
+                ):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "quote-guard-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/quote",
+                        query="symbol=2330",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 429)
+                    self.assertIn("Quote rate limit exceeded", payload["detail"])
 
     def test_stocks_indicators_requires_token(self):
         status, payload = self._request_json("GET", "/stocks/indicators", query="symbol=2330&days=60")

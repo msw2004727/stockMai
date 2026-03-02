@@ -119,8 +119,16 @@ Invoke-WebRequest -UseBasicParsing "http://127.0.0.1:8000/stocks/quote?symbol=23
 - `quote_time`
 - `market_state` (`trading` / `daily_close` / `unknown`)
 - `is_realtime`
-- `source_priority` (`realtime_primary` / `daily_fallback` / `cache`)
+- `source_priority` (`realtime_primary` / `daily_fallback` / `cache` / `short_cache`)
+- `provider_used`
+- `fetch_latency_ms`
+- `cache_hit`
 - `freshness` (`as_of_date`, `age_days`, `is_fresh`, `max_age_days`)
+
+Quote runtime tuning envs:
+- `QUOTE_SHORT_CACHE_TTL_SECONDS` (default `5`)
+- `QUOTE_FETCH_RATE_LIMIT` (default `20`)
+- `QUOTE_FETCH_RATE_WINDOW_SECONDS` (default `10`)
 
 ## Frontend auth behavior
 Frontend now auto-requests JWT from `/auth/token` and attaches `Authorization: Bearer <token>` for `/stocks/*` calls.

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from datetime import date
+import time
 
 from backend.modules.data_pipeline import (
     fetch_finmind_history,
@@ -18,6 +19,12 @@ from ..config import get_settings
 from .parsers import parse_daily_row, to_ohlc_series
 from .provider import fetch_twse_month, month_candidates
 from .quote_provider import QuoteProviderUnavailableError, fetch_quote_from_provider_chain
+from .quote_runtime import (
+    QuoteRateLimitExceeded,
+    enforce_quote_rate_guard,
+    load_short_quote_cache,
+    save_short_quote_cache,
+)
 
 
 class SymbolNotFoundError(Exception):
@@ -25,6 +32,10 @@ class SymbolNotFoundError(Exception):
 
 
 class DataUnavailableError(Exception):
+    pass
+
+
+class QuoteRateLimitedError(Exception):
     pass
 
 
@@ -152,22 +163,49 @@ def _with_quote_runtime_meta(payload: dict, default_priority: str) -> dict:
     out["is_realtime"] = bool(out.get("is_realtime", False))
     out["delay_seconds"] = out.get("delay_seconds")
     out["source_priority"] = str(out.get("source_priority") or default_priority)
+    out["provider_used"] = str(out.get("provider_used") or out.get("source") or "unknown")
+    out["fetch_latency_ms"] = out.get("fetch_latency_ms")
+    out["cache_hit"] = bool(out.get("cache_hit", False))
     return out
 
 
 def get_quote(symbol: str) -> dict:
+    settings = get_settings()
+    short_cache = load_short_quote_cache(settings.redis_url, symbol=symbol)
+    if short_cache:
+        with_meta = _with_quote_runtime_meta(short_cache, default_priority="short_cache")
+        with_meta["cache_hit"] = True
+        return _with_freshness(with_meta, max_age_days=5)
+
     try:
         cached = _load_quote_from_postgres(symbol)
         if cached:
             with_meta = _with_quote_runtime_meta(cached, default_priority="cache")
+            with_meta["provider_used"] = "postgres"
+            with_meta["cache_hit"] = False
             return _with_freshness(with_meta, max_age_days=5)
     except Exception:
         pass
 
     try:
+        try:
+            enforce_quote_rate_guard(
+                redis_url=settings.redis_url,
+                symbol=symbol,
+                max_requests=settings.quote_fetch_rate_limit,
+                window_seconds=settings.quote_fetch_rate_window_seconds,
+            )
+        except QuoteRateLimitExceeded as exc:
+            raise QuoteRateLimitedError(str(exc)) from exc
+
+        started = time.perf_counter()
         quote = _fetch_quote_from_provider_chain(symbol)
+        fetch_latency_ms = int((time.perf_counter() - started) * 1000)
         if quote:
             with_meta = _with_quote_runtime_meta(quote, default_priority="daily_fallback")
+            with_meta["provider_used"] = with_meta.get("source", "unknown")
+            with_meta["fetch_latency_ms"] = fetch_latency_ms
+            with_meta["cache_hit"] = False
             _persist_series_to_postgres(
                 symbol=symbol,
                 series=[
@@ -182,6 +220,12 @@ def get_quote(symbol: str) -> dict:
                     }
                 ],
                 source=with_meta.get("source", "unknown"),
+            )
+            save_short_quote_cache(
+                redis_url=settings.redis_url,
+                symbol=symbol,
+                payload=with_meta,
+                ttl_seconds=settings.quote_short_cache_ttl_seconds,
             )
             return _with_freshness(with_meta, max_age_days=5)
     except QuoteProviderUnavailableError:

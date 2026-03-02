@@ -26,6 +26,9 @@ class Settings(BaseSettings):
     jwt_secret: str = "change_me"
     jwt_expire_minutes: int = 60
     api_daily_limit: int = 200
+    quote_short_cache_ttl_seconds: int = 5
+    quote_fetch_rate_limit: int = 20
+    quote_fetch_rate_window_seconds: int = 10
     cors_allow_origins: str = "*"
 
     model_config = SettingsConfigDict(

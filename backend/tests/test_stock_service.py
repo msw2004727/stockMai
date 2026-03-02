@@ -2,7 +2,15 @@ import unittest
 from unittest.mock import patch
 
 from backend.app.stocks.quote_provider import QuoteProviderUnavailableError
-from backend.app.stocks.service import DataUnavailableError, SymbolNotFoundError, get_history, get_indicators, get_quote
+from backend.app.stocks.quote_runtime import QuoteRateLimitExceeded
+from backend.app.stocks.service import (
+    DataUnavailableError,
+    QuoteRateLimitedError,
+    SymbolNotFoundError,
+    get_history,
+    get_indicators,
+    get_quote,
+)
 
 
 class StockServiceTest(unittest.TestCase):
@@ -10,14 +18,50 @@ class StockServiceTest(unittest.TestCase):
         self._patch_load_quote = patch("backend.app.stocks.service._load_quote_from_postgres", return_value=None)
         self._patch_load_history = patch("backend.app.stocks.service._load_history_from_postgres", return_value=None)
         self._patch_persist = patch("backend.app.stocks.service._persist_series_to_postgres", return_value=None)
+        self._patch_short_cache = patch("backend.app.stocks.service.load_short_quote_cache", return_value=None)
+        self._patch_save_short_cache = patch("backend.app.stocks.service.save_short_quote_cache", return_value=None)
+        self._patch_rate_guard = patch("backend.app.stocks.service.enforce_quote_rate_guard", return_value={})
         self._patch_load_quote.start()
         self._patch_load_history.start()
         self._patch_persist.start()
+        self._patch_short_cache.start()
+        self._patch_save_short_cache.start()
+        self._patch_rate_guard.start()
 
     def tearDown(self):
         self._patch_load_quote.stop()
         self._patch_load_history.stop()
         self._patch_persist.stop()
+        self._patch_short_cache.stop()
+        self._patch_save_short_cache.stop()
+        self._patch_rate_guard.stop()
+
+    @patch("backend.app.stocks.service.load_short_quote_cache")
+    def test_get_quote_prefers_short_cache_when_available(self, mock_short_cache):
+        mock_short_cache.return_value = {
+            "symbol": "2330",
+            "name": "TSMC",
+            "as_of_date": "2026-03-02",
+            "quote_time": "2026-03-02 13:25:01",
+            "open": 1001.0,
+            "high": 1012.0,
+            "low": 998.0,
+            "close": 1009.0,
+            "change": 8.0,
+            "volume": 1234,
+            "source": "twse_realtime",
+            "source_priority": "realtime_primary",
+            "market_state": "trading",
+            "is_realtime": True,
+            "delay_seconds": 0,
+            "provider_used": "twse_realtime",
+            "cache_hit": False,
+            "is_fallback": False,
+            "note": "",
+        }
+        result = get_quote("2330")
+        self.assertEqual(result["source"], "twse_realtime")
+        self.assertTrue(result["cache_hit"])
 
     @patch("backend.app.stocks.service._fetch_quote_from_provider_chain")
     def test_get_quote_uses_provider_chain(self, mock_provider_chain):
@@ -48,6 +92,8 @@ class StockServiceTest(unittest.TestCase):
         self.assertIn("freshness", result)
         self.assertIn("is_fresh", result["freshness"])
         mock_provider_chain.assert_called_once()
+        self.assertEqual(result["cache_hit"], False)
+        self.assertIsInstance(result["fetch_latency_ms"], int)
 
     @patch("backend.app.stocks.service._fetch_quote_from_provider_chain")
     def test_get_quote_handles_realtime_source(self, mock_provider_chain):
@@ -90,6 +136,14 @@ class StockServiceTest(unittest.TestCase):
     def test_get_quote_symbol_not_found(self, _mock_provider_chain):
         with self.assertRaises(SymbolNotFoundError):
             get_quote("9999")
+
+    @patch(
+        "backend.app.stocks.service.enforce_quote_rate_guard",
+        side_effect=QuoteRateLimitExceeded("Quote rate limit exceeded"),
+    )
+    def test_get_quote_raises_when_rate_limited(self, _mock_guard):
+        with self.assertRaises(QuoteRateLimitedError):
+            get_quote("2330")
 
     @patch("backend.app.stocks.service._fetch_history_from_twse")
     @patch("backend.app.stocks.service._fetch_history_from_finmind")

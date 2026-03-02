@@ -11,17 +11,89 @@ on:
         description: "Token user id used for smoke"
         required: false
         default: "cloud-smoke-gha"
+  schedule:
+    # 00:30 UTC = 08:30 Asia/Taipei
+    - cron: "30 0 * * *"
+
+concurrency:
+  group: cloud-smoke
+  cancel-in-progress: false
 
 jobs:
   cloud-smoke:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: write
+    env:
+      BACKEND_BASE_URL: ${{ github.event_name == 'workflow_dispatch' && inputs.backend_base_url || vars.CLOUD_SMOKE_BACKEND_BASE_URL || 'https://stockmai-backend.onrender.com' }}
+      SMOKE_USER_ID: ${{ github.event_name == 'workflow_dispatch' && inputs.user_id || vars.CLOUD_SMOKE_USER_ID || 'cloud-smoke-nightly' }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
       - name: Run cloud smoke script
+        id: smoke
         shell: pwsh
         run: |
           ./scripts/cloud-smoke.ps1 `
-            -BackendBaseUrl "${{ inputs.backend_base_url }}" `
-            -UserId "${{ inputs.user_id }}"
+            -BackendBaseUrl "${{ env.BACKEND_BASE_URL }}" `
+            -UserId "${{ env.SMOKE_USER_ID }}"
+
+      - name: Create or update failure issue (nightly only)
+        if: failure() && github.event_name == 'schedule'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const marker = "<!-- cloud-smoke-nightly-failure -->";
+            const title = "[Cloud Smoke] Nightly check failed";
+            const runUrl = `https://github.com/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}`;
+            const nowUtc = new Date().toISOString();
+            const backendBaseUrl = process.env.BACKEND_BASE_URL;
+            const { owner, repo } = context.repo;
+
+            const issues = await github.paginate(github.rest.issues.listForRepo, {
+              owner,
+              repo,
+              state: "open",
+              per_page: 100,
+            });
+
+            const existing = issues.find(
+              (issue) => issue.title === title && (issue.body || "").includes(marker)
+            );
+
+            const commentBody = [
+              "Nightly cloud smoke failed again.",
+              `- Time (UTC): ${nowUtc}`,
+              `- Backend: ${backendBaseUrl}`,
+              `- Run: ${runUrl}`,
+            ].join("\n");
+
+            if (existing) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: existing.number,
+                body: commentBody,
+              });
+              return;
+            }
+
+            const issueBody = [
+              marker,
+              "Nightly cloud smoke failed.",
+              "",
+              `- Time (UTC): ${nowUtc}`,
+              `- Backend: ${backendBaseUrl}`,
+              `- Run: ${runUrl}`,
+              "",
+              "Check workflow logs and backend provider availability.",
+            ].join("\n");
+
+            await github.rest.issues.create({
+              owner,
+              repo,
+              title,
+              body: issueBody,
+            });

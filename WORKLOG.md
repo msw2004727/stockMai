@@ -152,3 +152,39 @@
 - 目前進度：Done
 - 下一步：等待 Render 自動部署完成後，重新執行 cloud smoke 驗證 2330/00878。
 - 備註（可選）：本地驗證 backend unittest 98/98 pass。
+
+## [2026-03-02 19:18] 即時報價可用性確認（Render）
+- 完成事項：重跑 cloud smoke 並通過；/stocks/quote 對 2330 與 00878 均成功回傳，source=twse_realtime、is_realtime=true。額外直測 2330 也回傳 market_state=trading、quote_time 正常。
+- 目前進度：Done
+- 下一步：持續觀察盤後時段回傳是否切換為 daily_close，並可補一個 nightly smoke 監控。
+- 備註（可選）：本回合無程式碼變更，屬雲端驗收確認。
+
+## [2026-03-02 19:21] 瀏覽器 404 排查：雲端即時報價目前可用
+- 完成事項：針對 https://stockmai-backend.onrender.com 連續 5 次帶 token 查詢 2330，皆回 200 且 source=twse_realtime。補做 cloud-smoke 亦 PASS（2330/00878）；帶 Origin 的 CORS 檢查也回 200 且 AC-Allow-Origin 正常。
+- 目前進度：Done
+- 下一步：請在瀏覽器 hard refresh 後重試；若仍 404，回傳該請求的 response body（error_code/message）與發生時間，便可精準判斷是暫時上游無資料或前端狀態問題。
+- 備註（可選）：目前前端部署 bundle 為 assets/index-Cb8b4_5j.js（與你提供 log 一致）。
+
+## [2026-03-02 19:23] 下一步計劃規劃（Phase 3/4 啟動）
+- 完成事項：依目前狀態（即時報價與雲端 smoke 已通過）規劃後續 5 個執行階段：可觀測監控、策略決策 MVP、回測 P1、動態權重、上線前驗收清單。
+- 目前進度：In Progress
+- 下一步：先執行第 1 階段最小動作：新增 nightly cloud smoke（排程）與失敗通知，確保即時報價穩定可觀測。
+- 備註（可選）：本回合無程式變更，屬規劃與路線確認。
+
+## [2026-03-02 19:26] 第 1 階段完成：nightly cloud smoke + 失敗通知
+- 完成事項：更新 `.github/workflows/cloud-smoke.yml`，新增每日 08:30（台灣時間）排程執行；支援 repo variables（`CLOUD_SMOKE_BACKEND_BASE_URL`、`CLOUD_SMOKE_USER_ID`）；排程失敗時自動建立/更新 GitHub issue `[Cloud Smoke] Nightly check failed`。README 已同步補上操作說明。
+- 目前進度：Done
+- 下一步：在 GitHub Actions 手動觸發一次 `Cloud Smoke`，確認流程正常；再等待下一個排程點驗證 issue 通知行為。
+- 備註（可選）：本回合未變更 backend API 邏輯，僅調整監控與文件。
+
+## [2026-03-02 19:49] 驗收指引提供：第 1 階段（nightly cloud smoke）
+- 完成事項：提供淺顯版驗收流程，涵蓋手動觸發、成功判定、排程確認與失敗通知驗證。
+- 目前進度：Done
+- 下一步：依指引在 GitHub Actions 手動跑一次 `Cloud Smoke`，確認後再決定是否 commit + push。
+- 備註（可選）：本回合無程式變更，屬操作驗收指引。
+
+## [2026-03-02 19:57] 第 1 階段驗收進度更新：手動驗收完成
+- 完成事項：使用者回報第 1、2 項驗收已通過（手動觸發 workflow 與成功判定 OK），準備提交監控 workflow 與 README 說明更新。
+- 目前進度：In Progress
+- 下一步：commit + push 後，待明天驗證第 3 項（08:30 排程自動執行與失敗通知行為）。
+- 備註（可選）：本次提交僅含監控與文件調整，不含 API 行為變更。

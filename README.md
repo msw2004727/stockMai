@@ -167,6 +167,11 @@ Or run in GitHub Actions:
 3. Input your backend URL and run.
 4. Check logs for `Cloud smoke check PASSED`.
 
+Nightly monitor (GitHub Actions `schedule`) is enabled at 08:30 Asia/Taipei.
+- Optional repo variable: `CLOUD_SMOKE_BACKEND_BASE_URL` (default `https://stockmai-backend.onrender.com`)
+- Optional repo variable: `CLOUD_SMOKE_USER_ID` (default `cloud-smoke-nightly`)
+- If nightly run fails, workflow auto-creates (or comments on) issue: `[Cloud Smoke] Nightly check failed`
+
 ## AI gateway MVP endpoint
 Protected endpoint: `POST /ai/analyze`
 
@@ -239,6 +244,10 @@ Runs on every push / PR to `main`:
 - backend unit tests
 - frontend production build
 - UTF-8 validation for `WORKLOG.md` (avoids Pages Jekyll encoding failures)
+
+Operational monitoring workflow: `.github/workflows/cloud-smoke.yml`
+- Manual trigger (`workflow_dispatch`) for ad-hoc cloud smoke
+- Nightly trigger (`schedule`) with failure issue notification
 
 ## API error response format
 Standard error payload now includes `error_code` for easier frontend handling and monitoring:

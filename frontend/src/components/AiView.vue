@@ -17,7 +17,7 @@ defineProps({
   strategyCheckedAt: { type: String, default: "" },
 });
 
-const emit = defineEmits(["refresh", "update:prompt", "change-provider"]);
+const emit = defineEmits(["refresh", "update:symbol", "update:prompt", "change-provider"]);
 </script>
 
 <template>
@@ -45,10 +45,10 @@ const emit = defineEmits(["refresh", "update:prompt", "change-provider"]);
         :selected-provider="selectedProvider"
         :provider-options="providerOptions"
         @refresh="emit('refresh')"
+        @update:symbol="emit('update:symbol', $event)"
         @update:prompt="emit('update:prompt', $event)"
         @change-provider="emit('change-provider', $event)"
       />
     </div>
   </div>
 </template>
-

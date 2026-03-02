@@ -30,7 +30,7 @@ const props = defineProps({
   showVolumeMa5: { type: Boolean, default: true },
 });
 
-const emit = defineEmits(["mousemove", "mouseleave", "click"]);
+const emit = defineEmits(["mousemove", "mouseleave", "click", "touchmove", "touchend"]);
 
 function fmtPrice(value) {
   return Number.isFinite(value) ? value.toFixed(2) : "-";
@@ -53,6 +53,8 @@ function fmtVolume(value) {
     @mousemove="emit('mousemove', $event)"
     @mouseleave="emit('mouseleave')"
     @click="emit('click', $event)"
+    @touchmove.prevent="emit('touchmove', $event)"
+    @touchend.prevent="emit('touchend', $event)"
   >
     <g>
       <line

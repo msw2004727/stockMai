@@ -32,14 +32,25 @@ const emit = defineEmits(["refresh-health"]);
     <div class="panel">
       <h2 class="section-title">外觀設定</h2>
       <div class="settings-row">
-        <span>深淺主題</span>
-        <button type="button" class="btn" @click="toggleTheme">
-          {{ theme === 'light' ? '切換至深色模式' : '切換至淺色模式' }}
+        <div class="settings-row-label">
+          <span>深色模式</span>
+          <span class="settings-row-desc">深色背景，適合夜間使用</span>
+        </div>
+        <button
+          type="button"
+          class="toggle-switch"
+          :class="{ active: theme === 'dark' }"
+          role="switch"
+          :aria-checked="theme === 'dark'"
+          :aria-label="theme === 'dark' ? '深色模式已開啟' : '深色模式已關閉'"
+          @click="toggleTheme"
+        >
+          <span class="toggle-knob"></span>
         </button>
       </div>
     </div>
 
-    <!-- Google Login (placeholder) -->
+    <!-- Account (placeholder) -->
     <div class="panel">
       <h2 class="section-title">帳號</h2>
       <button type="button" class="google-btn" disabled>

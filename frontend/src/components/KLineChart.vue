@@ -66,6 +66,17 @@ const layerOptions = [
 function toggleLayer(key) {
   layerVisible[key] = !layerVisible[key];
 }
+
+function onTouchMove(event) {
+  const touch = event.touches[0];
+  if (!touch) return;
+  // Synthetic event that matches what getNearestIndex expects
+  onMouseMove({ clientX: touch.clientX, currentTarget: event.currentTarget });
+}
+
+function onTouchEnd() {
+  onClick({});
+}
 </script>
 
 <template>
@@ -117,6 +128,8 @@ function toggleLayer(key) {
       @mousemove="onMouseMove"
       @mouseleave="onMouseLeave"
       @click="onClick"
+      @touchmove="onTouchMove"
+      @touchend="onTouchEnd"
     />
 
     <KlineLegend
@@ -126,7 +139,7 @@ function toggleLayer(key) {
       :show-volume-ma5="layerVisible.volume && layerVisible.volumeMa5"
     />
     <KlineMeta :first="first" :last="last" :pct-change="pctChange()" />
-    <p class="hint-tip">滑鼠移動可看單日 OHLC 與量能，點一下可鎖定 tooltip，再點一次取消。</p>
+    <p class="hint-tip">移動（或觸控滑動）可看單日 OHLC 與量能，點一下鎖定，再點一次取消。</p>
   </div>
 </template>
 

@@ -1,7 +1,9 @@
 ﻿import { onBeforeUnmount, ref } from "vue";
 
-import { getStockHistory, getStockIndicators, getStockQuote } from "../api";
+import { getStockHistory, getStockIndicators, getStockQuote, getStockSymbolSearch } from "../api";
 import { formatTimeLabel } from "../utils/formatters";
+
+const SYMBOL_PATTERN = /^\d{4,6}$/;
 
 export function useQuoteHistory(initialSymbol = "") {
   const symbol = ref(initialSymbol);
@@ -49,11 +51,22 @@ export function useQuoteHistory(initialSymbol = "") {
     quoteLoading.value = true;
 
     try {
-      const quoteResult = await getStockQuote(parsedSymbol, controller.signal);
+      let resolvedSymbol = parsedSymbol;
+      if (!SYMBOL_PATTERN.test(resolvedSymbol)) {
+        const searchPayload = await getStockSymbolSearch(resolvedSymbol, 1, controller.signal);
+        const bestMatch = Array.isArray(searchPayload?.results) ? searchPayload.results[0] : null;
+        if (!bestMatch?.symbol || !SYMBOL_PATTERN.test(String(bestMatch.symbol))) {
+          throw new Error("查無相關股票，請輸入更完整的中文名稱或代號");
+        }
+        resolvedSymbol = String(bestMatch.symbol);
+        symbol.value = resolvedSymbol;
+      }
+
+      const quoteResult = await getStockQuote(resolvedSymbol, controller.signal);
       quote.value = quoteResult;
 
       try {
-        const historyResult = await getStockHistory(parsedSymbol, selectedDays.value, controller.signal);
+        const historyResult = await getStockHistory(resolvedSymbol, selectedDays.value, controller.signal);
         history.value = historyResult;
       } catch (error) {
         if (error.name !== "AbortError") {
@@ -63,7 +76,7 @@ export function useQuoteHistory(initialSymbol = "") {
       }
 
       try {
-        const indicatorsResult = await getStockIndicators(parsedSymbol, 60, controller.signal);
+        const indicatorsResult = await getStockIndicators(resolvedSymbol, 60, controller.signal);
         indicators.value = indicatorsResult;
       } catch (error) {
         if (error.name !== "AbortError") {
@@ -115,4 +128,3 @@ export function useQuoteHistory(initialSymbol = "") {
     setDayRange,
   };
 }
-

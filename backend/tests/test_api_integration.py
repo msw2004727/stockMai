@@ -119,6 +119,40 @@ class ApiIntegrationTest(unittest.TestCase):
         self.assertEqual(payload["detail"], "Missing bearer token")
         self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
 
+    def test_stocks_search_requires_token(self):
+        status, payload = self._request_json("GET", "/stocks/search", query="q=233")
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_stocks_search_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_results = [
+            {"symbol": "2330", "name": "台積電", "market": "twse"},
+            {"symbol": "2337", "name": "旺宏", "market": "twse"},
+        ]
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.search_stock_symbols", return_value=fake_results):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "search-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/search",
+                        query="q=233&limit=5",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["query"], "233")
+                    self.assertEqual(len(payload["results"]), 2)
+                    self.assertEqual(payload["results"][0]["symbol"], "2330")
+
     def test_stocks_quote_invalid_symbol_returns_422_with_error_code(self):
         fake_redis = _FakeRedis()
         with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):

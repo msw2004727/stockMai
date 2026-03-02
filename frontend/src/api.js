@@ -195,3 +195,18 @@ export async function getStrategyDecision(symbol, userPrompt = "", providers = [
   return response.json();
 }
 
+export async function getStockSymbolSearch(query, limit = 8, signal) {
+  const keyword = (query || "").trim();
+  const cappedLimit = Math.min(Math.max(Number(limit) || 8, 1), 20);
+  const response = await fetchProtected(
+    `/stocks/search?q=${encodeURIComponent(keyword)}&limit=${encodeURIComponent(cappedLimit)}`,
+    { signal },
+  );
+
+  if (!response.ok) {
+    throwApiError("股票代號搜尋", response.status, keyword);
+  }
+
+  return response.json();
+}
+

@@ -1,5 +1,6 @@
 ﻿<script setup>
 import KLineChart from "./KLineChart.vue";
+import { useStockSymbolSearch } from "../composables/useStockSymbolSearch";
 
 defineProps({
   symbol: {
@@ -50,8 +51,25 @@ defineProps({
 
 const emit = defineEmits(["update:symbol", "refresh", "change-day"]);
 
+const { searchResults, searchLoading, searchError, clearSearch, scheduleSearch } = useStockSymbolSearch();
+
 function onSymbolInput(event) {
-  emit("update:symbol", event.target.value);
+  const value = event.target.value;
+  emit("update:symbol", value);
+  scheduleSearch(value);
+}
+
+function onSelectSearchResult(item) {
+  if (!item?.symbol) {
+    return;
+  }
+  emit("update:symbol", item.symbol);
+  clearSearch();
+}
+
+function onRefreshClick() {
+  clearSearch();
+  emit("refresh");
 }
 
 function fmt(value) {
@@ -81,7 +99,7 @@ function marketStateLabel(raw) {
 
 <template>
   <h2 class="section-title">行情查詢</h2>
-  <p class="hint hint-inline">支援 4~6 碼台股代號，例如 2330、2485、00878</p>
+  <p class="hint hint-inline">支援台股代號與中文名稱模糊搜尋，例如 2330、台積電、00878</p>
 
   <div class="field-box">
     <p class="field-title">查詢條件</p>
@@ -90,16 +108,33 @@ function marketStateLabel(raw) {
         :value="symbol"
         class="input"
         type="text"
-        maxlength="6"
-        inputmode="numeric"
-        placeholder="輸入台股代號"
+        maxlength="20"
+        inputmode="text"
+        placeholder="輸入台股代號或中文名稱"
         @input="onSymbolInput"
+        @keydown.enter.prevent="onRefreshClick"
       />
-      <button type="button" class="btn" :disabled="quoteLoading" @click="emit('refresh')">
+      <button type="button" class="btn" :disabled="quoteLoading" @click="onRefreshClick">
         {{ quoteLoading ? "查詢中..." : "查詢股價" }}
       </button>
       <span v-if="quoteCheckedAt" class="checked-at no-wrap">更新時間：{{ quoteCheckedAt }}</span>
     </div>
+
+    <p v-if="searchLoading" class="sub">正在搜尋代號...</p>
+    <p v-else-if="searchError" class="sub warn-text">{{ searchError }}</p>
+    <ul v-else-if="searchResults.length" class="search-list" role="listbox" aria-label="股票代號建議">
+      <li v-for="item in searchResults" :key="item.symbol" class="search-item-wrap">
+        <button
+          type="button"
+          class="search-item"
+          @mousedown.prevent="onSelectSearchResult(item)"
+          @click="onSelectSearchResult(item)"
+        >
+          <span class="search-symbol">{{ item.symbol }}</span>
+          <span class="search-name">{{ item.name }}</span>
+        </button>
+      </li>
+    </ul>
   </div>
 
   <div class="field-box">

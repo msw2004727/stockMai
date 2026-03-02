@@ -9,6 +9,7 @@ from .service import (
     get_indicators,
     get_quote,
 )
+from .search_service import search_stock_symbols
 
 router = APIRouter(prefix="/stocks", tags=["stocks"])
 
@@ -54,3 +55,16 @@ def get_stock_indicators(
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except SymbolNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc)) from exc
+
+
+@router.get("/search")
+def search_stocks(
+    q: str = Query(..., min_length=1, max_length=20),
+    limit: int = Query(8, ge=1, le=20),
+    _quota: dict = Depends(enforce_rate_limit("stocks_search")),
+) -> dict:
+    return {
+        "query": q,
+        "limit": int(limit),
+        "results": search_stock_symbols(q, limit=limit),
+    }

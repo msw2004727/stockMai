@@ -410,3 +410,12 @@
 - 目前進度：Done
 - 下一步：commit + push 到 `origin/main`，確認雲端部署後首次開啟呈現淺色主題。
 - 備註（可選）：frontend `npm run build` 已通過。
+## [2026-03-02 23:40] 查詢股價新增中文模糊搜尋代號
+- 完成事項：
+  - 新增後端 `GET /stocks/search`（JWT 保護），支援關鍵字模糊比對 `symbol/name`。
+  - 新增搜尋模組（provider/mapper/service/constants）與記憶體快取，外部清單抓取失敗時會 fallback 常用台股清單。
+  - 前端查詢框支援輸入中文名稱（如台積電），提供候選清單；按「查詢股價」時若輸入非代號會先自動解析成台股代號再查報價。
+  - 補前端樣式（候選清單）與 API 串接；新增/更新後端測試檔（search service 與 API integration 路徑）。
+- 目前進度：Done
+- 下一步：請在前端驗收「中文輸入 -> 候選代號 -> 查詢成功」，確認符合你的查價流程。
+- 備註（可選）：frontend `npm run build` 通過；backend 在此環境缺少 `fastapi` 套件，僅完成 `py_compile` 語法檢查。

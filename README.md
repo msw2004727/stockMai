@@ -125,3 +125,16 @@ VITE_API_BASE=/api
 VITE_API_USER_ID=h5-demo-user
 VITE_API_TOKEN_EXPIRES_MINUTES=60
 ```
+
+## Deploy on Render (Blueprint)
+This repo includes `render.yaml` for one-shot deployment (Postgres + Redis + Backend + Frontend).
+
+Steps:
+1. Push latest code to GitHub.
+2. In Render dashboard: `New` -> `Blueprint`.
+3. Select this repo and branch `main`, then apply.
+4. After first deploy, set `FINMIND_TOKEN` in backend service env (optional but recommended).
+
+Notes:
+- Backend service URL is injected into frontend `VITE_API_BASE` automatically.
+- Backend currently uses `CORS_ALLOW_ORIGINS=*` for easy deployment. You can tighten it later.

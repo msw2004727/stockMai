@@ -1,0 +1,55 @@
+databases:
+  - name: stockmai-postgres
+    databaseName: twstock
+    user: twstock_user
+    ipAllowList: []
+
+services:
+  - type: keyvalue
+    name: stockmai-redis
+    ipAllowList: []
+
+  - type: web
+    name: stockmai-backend
+    runtime: python
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: uvicorn backend.app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: stockmai-postgres
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: keyvalue
+          name: stockmai-redis
+          property: connectionString
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRE_MINUTES
+        value: "60"
+      - key: API_DAILY_LIMIT
+        value: "200"
+      - key: CORS_ALLOW_ORIGINS
+        value: "*"
+      - key: FINMIND_TOKEN
+        sync: false
+
+  - type: web
+    name: stockmai-frontend
+    runtime: static
+    rootDir: frontend
+    buildCommand: npm ci && npm run build
+    staticPublishPath: dist
+    envVars:
+      - key: VITE_API_BASE
+        fromService:
+          type: web
+          name: stockmai-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: VITE_API_USER_ID
+        value: h5-demo-user
+      - key: VITE_API_TOKEN_EXPIRES_MINUTES
+        value: "60"
+

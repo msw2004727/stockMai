@@ -16,6 +16,7 @@ class Settings(BaseSettings):
     jwt_secret: str = "change_me"
     jwt_expire_minutes: int = 60
     api_daily_limit: int = 200
+    cors_allow_origins: str = "*"
 
     model_config = SettingsConfigDict(
         env_file=".env",

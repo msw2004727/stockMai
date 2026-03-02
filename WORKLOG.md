@@ -141,3 +141,8 @@
 - 目前狀態：Done（遠端回應 Everything up-to-date）。
 - 下一步：若有新變更，再次 git add/commit/push。
 - 備註：本次無新程式變更，僅補工作日誌紀錄。
+## [2026-03-02 13:11] 新增 Render Blueprint 一次部署配置
+- 做了什麼：新增 ender.yaml（Postgres + Redis + backend + frontend），後端加入 CORS_ALLOW_ORIGINS 設定與 CORS middleware，更新 .env.example、README.md 部署說明。
+- 目前狀態：Done（可於 Render 以 Blueprint 一次建置）。
+- 下一步：使用者於 Render Dashboard 建立 Blueprint，部署後補上 backend FINMIND_TOKEN。
+- 驗收結果：scripts/smoke-check.ps1 通過（backend 22/22 tests + frontend build success）。

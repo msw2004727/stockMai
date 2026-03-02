@@ -15,6 +15,11 @@ from backend.modules.sentiment_analysis import build_sentiment_context
 
 from ..auth import enforce_rate_limit, get_current_user
 from ..config import get_settings
+from ..stocks.service import (
+    DataUnavailableError as StockDataUnavailableError,
+    SymbolNotFoundError as StockSymbolNotFoundError,
+    get_history,
+)
 
 router = APIRouter(prefix="/ai", tags=["ai"])
 
@@ -59,12 +64,22 @@ def _get_cost_tracker(redis_url: str) -> CostTracker:
 
 
 def _load_cached_history(symbol: str, database_url: str, days: int = 60) -> dict | None:
-    return load_recent_history(
+    cached = load_recent_history(
         database_url=database_url,
         symbol=symbol,
         days=days,
         max_age_days=7,
     )
+    if cached:
+        return cached
+
+    # Fallback: if cache is missing/insufficient, fetch fresh history for AI context.
+    try:
+        return get_history(symbol=symbol, days=days)
+    except (StockSymbolNotFoundError, StockDataUnavailableError):
+        return None
+    except Exception:
+        return None
 
 
 def _build_indicator_context(symbol: str, cached: dict | None, days: int = 60) -> dict:

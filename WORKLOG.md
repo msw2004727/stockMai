@@ -380,3 +380,27 @@
 - 目前進度：Done
 - 下一步：等待雲端部署完成後，於夜間與假日驗收市場狀態是否正確顯示。
 - 備註（可選）：backend unittest 仍受本機缺少 `fastapi` 套件限制，未完整執行。
+
+## [2026-03-02 23:20] 指標欄位存在性確認（SMA/RSI/MACD）
+- 完成事項：確認後端已實作並輸出 `SMA5`、`SMA20`、`RSI14`、`MACD`（含 `macd_signal`、`macd_hist`）；並釐清顯示空值常見原因是資料不足（天數不足）或 AI 路徑只讀本地快取 60 日歷史失敗。
+- 目前進度：Done
+- 下一步：若要避免 AI 出現空值，建議新增「AI 分析時快取不足則自動補抓歷史資料」的 fallback。
+- 備註（可選）：本回合無程式碼變更，屬行為確認與原因釐清。
+
+## [2026-03-02 23:23] 提供 latest 指標最短查詢指令
+- 完成事項：提供僅輸出 `/stocks/indicators` 的 `latest` 欄位之最短 PowerShell 指令（含 JWT 取得與授權呼叫）。
+- 目前進度：Done
+- 下一步：使用者執行指令後回傳結果，確認 `sma5/sma20/rsi14/macd` 是否有值。
+- 備註（可選）：本回合無程式碼變更，屬操作指引。
+
+## [2026-03-02 23:26] AI 歷史資料 fallback：快取不足自動補抓
+- 完成事項：在 `backend/app/ai/routes.py` 實作 AI 歷史資料 fallback：先讀 PostgreSQL 快取，若不足則自動呼叫 `stocks.service.get_history(days=60)` 補抓，抓不到才回 `none`；並新增 `backend/tests/test_ai_history_fallback.py` 覆蓋快取優先與 fallback 行為。
+- 目前進度：Done
+- 下一步：部署後重新測試 AI 分析，確認 `indicator_context.latest` 不再常態為空。
+- 備註（可選）：`py_compile` 通過；本機 `unittest` 受缺少 `fastapi` 套件限制無法完整執行。
+
+## [2026-03-02 23:26] AI 歷史 fallback 提交與推送
+- 完成事項：提交並推送 AI 分析歷史資料 fallback 修正（快取不足時自動補抓歷史）與對應測試檔。
+- 目前進度：Done
+- 下一步：等待雲端部署完成後，實測 AI 分析確認指標欄位填值改善。
+- 備註（可選）：僅提交本次相關檔案，未包含其他未追蹤檔。

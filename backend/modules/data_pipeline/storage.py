@@ -159,72 +159,78 @@ def upsert_price_series(
 
     try:
         with _connect(database_url) as conn:
-            with conn.cursor() as cur:
-                _upsert_or_replace(cur, payload)
+            try:
+                with conn.cursor() as cur:
+                    _upsert_rows(cur, payload)
+            except Exception:
+                conn.rollback()
+                with conn.cursor() as cur:
+                    _replace_rows(cur, payload)
     except Exception:
         return 0
 
     return len(payload)
 
 
-def _upsert_or_replace(cur, payload: list[tuple]) -> None:
-    try:
-        cur.executemany(
-            """
-            INSERT INTO stock_daily_prices (
-                symbol,
-                trade_date,
-                open,
-                high,
-                low,
-                close,
-                change,
-                volume,
-                source
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            ON CONFLICT (symbol, trade_date)
-            DO UPDATE SET
-                open = EXCLUDED.open,
-                high = EXCLUDED.high,
-                low = EXCLUDED.low,
-                close = EXCLUDED.close,
-                change = EXCLUDED.change,
-                volume = EXCLUDED.volume,
-                source = EXCLUDED.source
-            """,
-            payload,
+def _upsert_rows(cur, payload: list[tuple]) -> None:
+    cur.executemany(
+        """
+        INSERT INTO stock_daily_prices (
+            symbol,
+            trade_date,
+            open,
+            high,
+            low,
+            close,
+            change,
+            volume,
+            source
         )
-    except Exception:
-        keys = [(row[0], row[1]) for row in payload]
-        cur.executemany(
-            """
-            DELETE FROM stock_daily_prices
-            WHERE symbol = %s AND trade_date = %s
-            """,
-            keys,
+        VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s
         )
-        cur.executemany(
-            """
-            INSERT INTO stock_daily_prices (
-                symbol,
-                trade_date,
-                open,
-                high,
-                low,
-                close,
-                change,
-                volume,
-                source
-            )
-            VALUES (
-                %s, %s, %s, %s, %s, %s, %s, %s, %s
-            )
-            """,
-            payload,
+        ON CONFLICT (symbol, trade_date)
+        DO UPDATE SET
+            open = EXCLUDED.open,
+            high = EXCLUDED.high,
+            low = EXCLUDED.low,
+            close = EXCLUDED.close,
+            change = EXCLUDED.change,
+            volume = EXCLUDED.volume,
+            source = EXCLUDED.source
+        """,
+        payload,
+    )
+
+
+def _replace_rows(cur, payload: list[tuple]) -> None:
+    keys = [(row[0], row[1]) for row in payload]
+    cur.executemany(
+        """
+        DELETE FROM stock_daily_prices
+        WHERE symbol = %s AND trade_date = %s
+        """,
+        keys,
+    )
+    cur.executemany(
+        """
+        INSERT INTO stock_daily_prices (
+            symbol,
+            trade_date,
+            open,
+            high,
+            low,
+            close,
+            change,
+            volume,
+            source
         )
+        VALUES (
+            %s, %s, %s, %s, %s, %s, %s, %s, %s
+        )
+        """,
+        payload,
+    )
 
 
 def _prepare_upsert_payload(symbol: str, series: list[dict], source: str) -> list[tuple]:

@@ -299,6 +299,16 @@ h2 {
   color: var(--muted);
 }
 
+.title-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 9px;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border));
+  background: color-mix(in srgb, var(--brand-soft) 60%, var(--bg-card));
+  color: var(--brand);
+}
+
 .value {
   margin: 6px 0 0;
   font-size: 1.1rem;
@@ -341,6 +351,16 @@ h2 {
 .section-title {
   margin: 0;
   font-size: 1.2rem;
+}
+
+.section-title-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 5px 12px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border));
+  background: color-mix(in srgb, var(--brand-soft) 72%, var(--bg-card));
+  color: var(--brand);
 }
 
 .field-box {
@@ -1139,4 +1159,81 @@ h2 {
 
 .short-term-evidence li + li {
   margin-top: 4px;
+}
+
+.sentiment-metrics {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
+  gap: 8px;
+}
+
+.sentiment-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 36px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--brand) 20%, var(--border));
+  background: color-mix(in srgb, var(--brand-soft) 42%, var(--bg-card));
+}
+
+.sentiment-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-size: 0.66rem;
+  font-weight: 900;
+}
+
+.sentiment-icon-score {
+  background: #0ea5e9;
+}
+
+.sentiment-icon-score::before {
+  content: "◎";
+}
+
+.sentiment-icon-change {
+  background: #f97316;
+}
+
+.sentiment-icon-change::before {
+  content: "↕";
+}
+
+.sentiment-icon-volatility {
+  background: #8b5cf6;
+}
+
+.sentiment-icon-volatility::before {
+  content: "≈";
+}
+
+.sentiment-icon-window {
+  background: #14b8a6;
+}
+
+.sentiment-icon-window::before {
+  content: "◷";
+}
+
+.sentiment-chip-label {
+  font-size: 0.76rem;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.sentiment-chip-value {
+  margin-left: auto;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ink);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
 }

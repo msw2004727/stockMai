@@ -24,6 +24,25 @@ const emit = defineEmits(["refresh", "update:symbol", "update:prompt", "change-p
   <div class="view-container">
     <div class="panel">
       <div class="grid quote-grid">
+        <AIPanel
+          :symbol="symbol"
+          :ai-result="aiResult"
+          :ai-loading="aiLoading"
+          :ai-error="aiError"
+          :ai-checked-at="aiCheckedAt"
+          :user-prompt="userPrompt"
+          :selected-provider="selectedProvider"
+          :provider-options="providerOptions"
+          @refresh="emit('refresh')"
+          @update:symbol="emit('update:symbol', $event)"
+          @update:prompt="emit('update:prompt', $event)"
+          @change-provider="emit('change-provider', $event)"
+        />
+      </div>
+
+      <div class="divider"></div>
+
+      <div class="grid quote-grid">
         <StrategyPanel
           :symbol="symbol"
           :strategy-result="strategyResult"
@@ -32,23 +51,6 @@ const emit = defineEmits(["refresh", "update:symbol", "update:prompt", "change-p
           :strategy-checked-at="strategyCheckedAt"
         />
       </div>
-
-      <div class="divider"></div>
-
-      <AIPanel
-        :symbol="symbol"
-        :ai-result="aiResult"
-        :ai-loading="aiLoading"
-        :ai-error="aiError"
-        :ai-checked-at="aiCheckedAt"
-        :user-prompt="userPrompt"
-        :selected-provider="selectedProvider"
-        :provider-options="providerOptions"
-        @refresh="emit('refresh')"
-        @update:symbol="emit('update:symbol', $event)"
-        @update:prompt="emit('update:prompt', $event)"
-        @change-provider="emit('change-provider', $event)"
-      />
     </div>
   </div>
 </template>

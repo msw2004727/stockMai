@@ -1,10 +1,10 @@
 ﻿<script setup>
-import { ref } from "vue";
+import { computed, ref } from "vue";
 
 import { useStockSymbolSearch } from "../composables/useStockSymbolSearch";
 import { displayOrFallback, localizeAiText } from "../utils/aiTextLocalizer";
 
-defineProps({
+const props = defineProps({
   symbol: { type: String, default: "" },
   aiResult: { type: Object, default: null },
   aiLoading: { type: Boolean, default: false },
@@ -122,14 +122,89 @@ function shortTermEvidence(result) {
 
   return evidence.slice(0, 6);
 }
+
+function parseSentimentSummary(summary) {
+  const text = localize(summary, "尚無情緒摘要");
+  const normalized = String(text || "").trim();
+  const metrics = [];
+
+  if (!normalized) {
+    return { summary: "尚無情緒摘要", metrics };
+  }
+
+  const definitions = [
+    {
+      label: "情緒分數",
+      icon: "score",
+      patterns: [
+        /分數\s*[=:]\s*([+\-]?\d+(?:\.\d+)?)/i,
+        /\bscore\s*[=:]\s*([+\-]?\d+(?:\.\d+)?)/i,
+      ],
+    },
+    {
+      label: "漲跌幅",
+      icon: "change",
+      patterns: [
+        /漲跌\s*[=:]\s*([+\-]?\d+(?:\.\d+)?%?)/i,
+        /\bchange\s*[=:]\s*([+\-]?\d+(?:\.\d+)?%?)/i,
+      ],
+    },
+    {
+      label: "波動率",
+      icon: "volatility",
+      patterns: [
+        /波動\s*[=:]\s*([+\-]?\d+(?:\.\d+)?%?)/i,
+        /\bvol\s*[=:]\s*([+\-]?\d+(?:\.\d+)?%?)/i,
+      ],
+    },
+    {
+      label: "視窗天數",
+      icon: "window",
+      patterns: [
+        /情緒視窗天數\s*[=:]\s*([+\-]?\d+(?:\.\d+)?)/i,
+        /視窗天數\s*[=:]\s*([+\-]?\d+(?:\.\d+)?)/i,
+        /\bwindow_days\s*[=:]\s*([+\-]?\d+(?:\.\d+)?)/i,
+      ],
+    },
+  ];
+
+  for (const def of definitions) {
+    let matched = "";
+    for (const pattern of def.patterns) {
+      const result = normalized.match(pattern);
+      if (result?.[1]) {
+        matched = result[1];
+        break;
+      }
+    }
+    if (matched) {
+      metrics.push({ label: def.label, value: matched, icon: def.icon });
+    }
+  }
+
+  const cleanedSummary = normalized
+    .replace(
+      /[（(][^）)]*(?:分數|score|漲跌|change|波動|vol|情緒視窗天數|視窗天數|window_days)[^）)]*[）)]/gi,
+      ""
+    )
+    .replace(/\s{2,}/g, " ")
+    .trim();
+
+  return {
+    summary: cleanedSummary || "尚無情緒摘要",
+    metrics,
+  };
+}
+
+const sentimentInfo = computed(() => parseSentimentSummary(props.aiResult?.sentiment_context?.summary));
 </script>
 
 <template>
-  <h2 class="section-title">AI 分析</h2>
+  <h2 class="section-title section-title-chip">AI 分析</h2>
   <p class="hint">先在行情頁查詢股價，再執行 AI 分析會更準確。</p>
 
   <div class="field-box">
-    <p class="field-title">分析標的</p>
+    <p class="field-title title-chip">分析標的</p>
     <div class="query-row">
       <input
         :value="symbol"
@@ -165,7 +240,7 @@ function shortTermEvidence(result) {
   </div>
 
   <div class="field-box">
-    <p class="field-title">AI 核心</p>
+    <p class="field-title title-chip">AI 核心</p>
     <div class="period-row provider-grid">
       <button
         v-for="provider in providerOptions"
@@ -182,7 +257,7 @@ function shortTermEvidence(result) {
   </div>
 
   <div class="field-box">
-    <p class="field-title">你想要 AI 著重的分析重點</p>
+    <p class="field-title title-chip">你想要 AI 著重的分析重點</p>
     <textarea
       :value="userPrompt"
       class="textarea"
@@ -197,7 +272,7 @@ function shortTermEvidence(result) {
 
   <div v-else-if="aiResult">
     <article class="card full-span" style="margin-top:16px;">
-      <p class="label">AI 共識結果</p>
+      <p class="label title-chip">AI 共識結果</p>
       <p class="value" :class="signalClass(aiResult.consensus?.signal)" style="margin-top:8px;">
         {{ toSignalLabel(aiResult.consensus?.signal) }}
         <span style="font-size:1rem;font-weight:600;">（信心 {{ fmt(aiResult.consensus?.confidence, 2) }}）</span>
@@ -210,7 +285,7 @@ function shortTermEvidence(result) {
     </article>
 
     <article class="card full-span" style="margin-top:0;">
-      <p class="label">AI短線分析（1~5 個交易日）</p>
+      <p class="label title-chip">AI短線分析（1~5 個交易日）</p>
       <p class="sub" style="margin-top:8px;font-weight:700;">AI依據資料分析：</p>
       <ul class="short-term-evidence">
         <li v-for="(line, idx) in shortTermEvidence(aiResult)" :key="`short-evidence-${idx}`">
@@ -222,24 +297,31 @@ function shortTermEvidence(result) {
       </p>
     </article>
 
-    <article class="card full-span" style="margin-top:0;">
-      <p class="label">市場情緒</p>
-      <p class="sub" style="margin-top:6px;">
-        <span :class="signalClass(aiResult.sentiment_context?.market_sentiment)" style="font-weight:700;">
-          {{ toSignalLabel(aiResult.sentiment_context?.market_sentiment) }}
-        </span>
-        ・ 波動：{{ localize(aiResult.sentiment_context?.volatility_level, "--") }}
-      </p>
-      <p class="sub">{{ localize(aiResult.sentiment_context?.summary, "尚無情緒摘要") }}</p>
-    </article>
-
     <button class="detail-toggle" @click="showDetail = !showDetail">
       {{ showDetail ? "收合AI反饋數據" : "展開AI反饋數據" }}
     </button>
 
     <template v-if="showDetail">
       <article class="card full-span">
-        <p class="label">技術指標快照</p>
+        <p class="label title-chip">市場情緒</p>
+        <p class="sub" style="margin-top:6px;">
+          <span :class="signalClass(aiResult.sentiment_context?.market_sentiment)" style="font-weight:700;">
+            {{ toSignalLabel(aiResult.sentiment_context?.market_sentiment) }}
+          </span>
+          ・ 波動：{{ localize(aiResult.sentiment_context?.volatility_level, "--") }}
+        </p>
+        <div v-if="sentimentInfo.metrics.length" class="sentiment-metrics">
+          <div v-for="item in sentimentInfo.metrics" :key="item.label" class="sentiment-chip">
+            <span class="sentiment-icon" :class="`sentiment-icon-${item.icon}`" aria-hidden="true"></span>
+            <span class="sentiment-chip-label">{{ item.label }}</span>
+            <span class="sentiment-chip-value">{{ item.value }}</span>
+          </div>
+        </div>
+        <p class="sub">{{ sentimentInfo.summary }}</p>
+      </article>
+
+      <article class="card full-span">
+        <p class="label title-chip">技術指標快照</p>
         <p class="sub" style="margin-top:6px;">
           來源：{{ localize(aiResult.indicator_context?.history_source, "--") }}
           ・ 日期：{{ localize(aiResult.indicator_context?.as_of_date, "--") }}
@@ -255,7 +337,7 @@ function shortTermEvidence(result) {
       </article>
 
       <article v-for="item in aiResult.results" :key="item.provider" class="card">
-        <p class="label">{{ providerLabel(item.provider) }}</p>
+        <p class="label title-chip">{{ providerLabel(item.provider) }}</p>
         <p class="value" :class="item.ok ? (signalClass(item.data?.signal) || 'ok') : 'warn'" style="margin-top:6px;font-size:1rem;">
           {{ item.ok ? toSignalLabel(item.data?.signal) : "失敗" }}
         </p>

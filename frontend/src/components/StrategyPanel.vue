@@ -87,7 +87,7 @@ function localizeError(value) {
 
 <template>
   <article class="card full-span">
-    <p class="label">策略決策</p>
+    <p class="label title-chip">策略決策</p>
     <p class="sub no-wrap" style="font-size: 0.82rem">
       標的：{{ symbol || "未輸入" }}
       <span v-if="strategyCheckedAt">・更新：{{ strategyCheckedAt }}</span>
@@ -122,7 +122,7 @@ function localizeError(value) {
 
       <div class="divider"></div>
 
-      <p class="field-title">構成分數</p>
+      <p class="field-title title-chip">構成分數</p>
       <div v-for="(item, key) in strategyResult.components || {}" :key="`comp-${key}`" class="component-row">
         <span class="component-name">{{ componentLabel(key) }}</span>
         <div class="progress-track">
@@ -139,7 +139,7 @@ function localizeError(value) {
 
       <div class="divider"></div>
 
-      <p class="field-title">決策理由</p>
+      <p class="field-title title-chip">決策理由</p>
       <div v-if="(strategyResult.reasons || []).length > 0" class="reason-grid">
         <article v-for="(reason, idx) in strategyResult.reasons || []" :key="`reason-${idx}`" class="reason-card">
           <p class="reason-index">理由 {{ idx + 1 }}</p>

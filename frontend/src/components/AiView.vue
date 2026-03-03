@@ -1,6 +1,5 @@
 <script setup>
 import AIPanel from "./AIPanel.vue";
-import StrategyPanel from "./StrategyPanel.vue";
 
 defineProps({
   symbol: { type: String, default: "" },
@@ -33,22 +32,14 @@ const emit = defineEmits(["refresh", "update:symbol", "update:prompt", "change-p
           :user-prompt="userPrompt"
           :selected-provider="selectedProvider"
           :provider-options="providerOptions"
-          @refresh="emit('refresh')"
-          @update:symbol="emit('update:symbol', $event)"
-          @update:prompt="emit('update:prompt', $event)"
-          @change-provider="emit('change-provider', $event)"
-        />
-      </div>
-
-      <div class="divider"></div>
-
-      <div class="grid quote-grid">
-        <StrategyPanel
-          :symbol="symbol"
           :strategy-result="strategyResult"
           :strategy-loading="strategyLoading"
           :strategy-error="strategyError"
           :strategy-checked-at="strategyCheckedAt"
+          @refresh="emit('refresh')"
+          @update:symbol="emit('update:symbol', $event)"
+          @update:prompt="emit('update:prompt', $event)"
+          @change-provider="emit('change-provider', $event)"
         />
       </div>
     </div>

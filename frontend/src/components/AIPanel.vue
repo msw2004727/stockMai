@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 
 import { useStockSymbolSearch } from "../composables/useStockSymbolSearch";
 import { displayOrFallback, localizeAiText } from "../utils/aiTextLocalizer";
+import StrategyPanel from "./StrategyPanel.vue";
 
 const props = defineProps({
   symbol: { type: String, default: "" },
@@ -13,6 +14,10 @@ const props = defineProps({
   userPrompt: { type: String, default: "" },
   selectedProvider: { type: String, default: "gpt5" },
   providerOptions: { type: Array, default: () => ["gpt5", "claude", "grok", "deepseek"] },
+  strategyResult: { type: Object, default: null },
+  strategyLoading: { type: Boolean, default: false },
+  strategyError: { type: String, default: "" },
+  strategyCheckedAt: { type: String, default: "" },
 });
 
 const emit = defineEmits(["refresh", "update:symbol", "update:prompt", "change-provider"]);
@@ -268,10 +273,20 @@ const sentimentInfo = computed(() => parseSentimentSummary(props.aiResult?.senti
     ></textarea>
   </div>
 
-  <div v-if="aiError" class="card error">{{ localizeError(aiError) }}</div>
+  <div class="stack-block">
+    <StrategyPanel
+      :symbol="symbol"
+      :strategy-result="strategyResult"
+      :strategy-loading="strategyLoading"
+      :strategy-error="strategyError"
+      :strategy-checked-at="strategyCheckedAt"
+    />
+  </div>
+
+  <div v-if="aiError" class="card error stack-block">{{ localizeError(aiError) }}</div>
 
   <div v-else-if="aiResult">
-    <article class="card full-span" style="margin-top:16px;">
+    <article class="card full-span stack-block">
       <p class="label title-chip">AI 共識結果</p>
       <p class="value" :class="signalClass(aiResult.consensus?.signal)" style="margin-top:8px;">
         {{ toSignalLabel(aiResult.consensus?.signal) }}
@@ -284,9 +299,8 @@ const sentimentInfo = computed(() => parseSentimentSummary(props.aiResult?.senti
       </p>
     </article>
 
-    <article class="card full-span" style="margin-top:0;">
-      <p class="label title-chip">AI短線分析（1~5 個交易日）</p>
-      <p class="sub" style="margin-top:8px;font-weight:700;">AI依據資料分析：</p>
+    <article class="card full-span stack-block">
+      <p class="label title-chip">AI依據資料分析</p>
       <ul class="short-term-evidence">
         <li v-for="(line, idx) in shortTermEvidence(aiResult)" :key="`short-evidence-${idx}`">
           {{ line }}
@@ -297,54 +311,56 @@ const sentimentInfo = computed(() => parseSentimentSummary(props.aiResult?.senti
       </p>
     </article>
 
-    <button class="detail-toggle" @click="showDetail = !showDetail">
+    <template v-if="showDetail">
+      <div class="detail-stack stack-block">
+        <article class="card full-span">
+          <p class="label title-chip">市場情緒</p>
+          <p class="sub" style="margin-top:6px;">
+            <span :class="signalClass(aiResult.sentiment_context?.market_sentiment)" style="font-weight:700;">
+              {{ toSignalLabel(aiResult.sentiment_context?.market_sentiment) }}
+            </span>
+            ・ 波動：{{ localize(aiResult.sentiment_context?.volatility_level, "--") }}
+          </p>
+          <div v-if="sentimentInfo.metrics.length" class="sentiment-metrics">
+            <div v-for="item in sentimentInfo.metrics" :key="item.label" class="sentiment-chip">
+              <span class="sentiment-icon" :class="`sentiment-icon-${item.icon}`" aria-hidden="true"></span>
+              <span class="sentiment-chip-label">{{ item.label }}</span>
+              <span class="sentiment-chip-value">{{ item.value }}</span>
+            </div>
+          </div>
+          <p class="sub">{{ sentimentInfo.summary }}</p>
+        </article>
+
+        <article class="card full-span">
+          <p class="label title-chip">技術指標快照</p>
+          <p class="sub" style="margin-top:6px;">
+            來源：{{ localize(aiResult.indicator_context?.history_source, "--") }}
+            ・ 日期：{{ localize(aiResult.indicator_context?.as_of_date, "--") }}
+          </p>
+          <p class="sub">
+            SMA5：{{ fmt(aiResult.indicator_context?.latest?.sma5, 2) }}
+            ／ SMA20：{{ fmt(aiResult.indicator_context?.latest?.sma20, 2) }}
+          </p>
+          <p class="sub">
+            RSI14：{{ fmt(aiResult.indicator_context?.latest?.rsi14, 1) }}
+            ／ MACD：{{ fmt(aiResult.indicator_context?.latest?.macd, 2) }}
+          </p>
+        </article>
+
+        <article v-for="item in aiResult.results" :key="item.provider" class="card">
+          <p class="label title-chip">{{ providerLabel(item.provider) }}</p>
+          <p class="value" :class="item.ok ? (signalClass(item.data?.signal) || 'ok') : 'warn'" style="margin-top:6px;font-size:1rem;">
+            {{ item.ok ? toSignalLabel(item.data?.signal) : "失敗" }}
+          </p>
+          <p class="sub" v-if="item.ok">{{ localize(item.data?.summary) }}</p>
+          <p class="sub" v-else>{{ localizeError(item.error) }}</p>
+          <p class="sub" v-if="item.ok" style="font-size:0.82rem;">信心：{{ fmt(item.data?.confidence, 2) }}</p>
+        </article>
+      </div>
+    </template>
+
+    <button class="detail-toggle stack-block" @click="showDetail = !showDetail">
       {{ showDetail ? "收合AI反饋數據" : "展開AI反饋數據" }}
     </button>
-
-    <template v-if="showDetail">
-      <article class="card full-span">
-        <p class="label title-chip">市場情緒</p>
-        <p class="sub" style="margin-top:6px;">
-          <span :class="signalClass(aiResult.sentiment_context?.market_sentiment)" style="font-weight:700;">
-            {{ toSignalLabel(aiResult.sentiment_context?.market_sentiment) }}
-          </span>
-          ・ 波動：{{ localize(aiResult.sentiment_context?.volatility_level, "--") }}
-        </p>
-        <div v-if="sentimentInfo.metrics.length" class="sentiment-metrics">
-          <div v-for="item in sentimentInfo.metrics" :key="item.label" class="sentiment-chip">
-            <span class="sentiment-icon" :class="`sentiment-icon-${item.icon}`" aria-hidden="true"></span>
-            <span class="sentiment-chip-label">{{ item.label }}</span>
-            <span class="sentiment-chip-value">{{ item.value }}</span>
-          </div>
-        </div>
-        <p class="sub">{{ sentimentInfo.summary }}</p>
-      </article>
-
-      <article class="card full-span">
-        <p class="label title-chip">技術指標快照</p>
-        <p class="sub" style="margin-top:6px;">
-          來源：{{ localize(aiResult.indicator_context?.history_source, "--") }}
-          ・ 日期：{{ localize(aiResult.indicator_context?.as_of_date, "--") }}
-        </p>
-        <p class="sub">
-          SMA5：{{ fmt(aiResult.indicator_context?.latest?.sma5, 2) }}
-          ／ SMA20：{{ fmt(aiResult.indicator_context?.latest?.sma20, 2) }}
-        </p>
-        <p class="sub">
-          RSI14：{{ fmt(aiResult.indicator_context?.latest?.rsi14, 1) }}
-          ／ MACD：{{ fmt(aiResult.indicator_context?.latest?.macd, 2) }}
-        </p>
-      </article>
-
-      <article v-for="item in aiResult.results" :key="item.provider" class="card">
-        <p class="label title-chip">{{ providerLabel(item.provider) }}</p>
-        <p class="value" :class="item.ok ? (signalClass(item.data?.signal) || 'ok') : 'warn'" style="margin-top:6px;font-size:1rem;">
-          {{ item.ok ? toSignalLabel(item.data?.signal) : "失敗" }}
-        </p>
-        <p class="sub" v-if="item.ok">{{ localize(item.data?.summary) }}</p>
-        <p class="sub" v-else>{{ localizeError(item.error) }}</p>
-        <p class="sub" v-if="item.ok" style="font-size:0.82rem;">信心：{{ fmt(item.data?.confidence, 2) }}</p>
-      </article>
-    </template>
   </div>
 </template>

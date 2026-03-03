@@ -88,6 +88,31 @@ class QuoteProviderTest(unittest.TestCase):
         self.assertFalse(result["is_realtime"])
         self.assertIn("prev_close", result["note"])
 
+    def test_parse_twse_realtime_payload_treats_zero_last_trade_as_invalid(self):
+        payload = {
+            "msgArray": [
+                {
+                    "c": "3231",
+                    "n": "Wistron",
+                    "z": "0",
+                    "o": "132.0",
+                    "h": "133.0",
+                    "l": "130.5",
+                    "y": "135.0",
+                    "v": "8200",
+                    "d": "20260303",
+                    "t": "12:58:31",
+                    "b": "131.5_131.0_130.5",
+                    "a": "132.0_132.5_133.0",
+                }
+            ]
+        }
+        result = _parse_twse_realtime_payload(payload=payload, symbol="3231")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["close"], 131.75)
+        self.assertTrue(result["is_realtime"])
+        self.assertIn("book_mid", result["note"])
+
     @patch("backend.app.stocks.quote_provider._fetch_twse_daily_quote")
     @patch("backend.app.stocks.quote_provider._fetch_finmind_daily_quote")
     @patch("backend.app.stocks.quote_provider._fetch_twse_realtime_quote")

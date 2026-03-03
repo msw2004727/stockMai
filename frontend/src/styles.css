@@ -815,11 +815,32 @@ h2 {
   opacity: 0.4;
 }
 
-.quote-meta-line {
-  margin: 4px 0 0;
-  font-size: 0.77rem;
+.quote-meta-list {
+  margin-top: 8px;
+  border-top: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+.quote-meta-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 8px 0;
+  border-bottom: 1px solid color-mix(in srgb, var(--border) 88%, transparent);
+}
+
+.quote-meta-key {
+  font-size: 0.78rem;
   color: var(--muted);
-  opacity: 0.8;
+  white-space: nowrap;
+}
+
+.quote-meta-value {
+  font-size: 0.8rem;
+  color: var(--ink);
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  word-break: break-word;
 }
 
 /* ── Shortcut Buttons (空狀態熱門) ── */

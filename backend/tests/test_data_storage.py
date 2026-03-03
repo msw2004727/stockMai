@@ -94,6 +94,25 @@ class DataStorageTest(unittest.TestCase):
 
         self.assertIsNone(result)
 
+    def test_load_latest_quote_returns_none_when_non_positive_close(self):
+        fake_row = {
+            "symbol": "2330",
+            "trade_date": date.today(),
+            "open": Decimal("100"),
+            "high": Decimal("101"),
+            "low": Decimal("99"),
+            "close": Decimal("0"),
+            "change": Decimal("0"),
+            "volume": 1234,
+        }
+        fake_cursor = _FakeCursor(row=fake_row)
+        fake_connection = _FakeConnection(cursor=fake_cursor)
+
+        with patch("backend.modules.data_pipeline.storage._connect", return_value=fake_connection):
+            result = load_latest_quote("postgresql://dummy", "2330")
+
+        self.assertIsNone(result)
+
     def test_load_recent_history_returns_none_when_insufficient_rows(self):
         fake_rows = [
             {
@@ -144,6 +163,36 @@ class DataStorageTest(unittest.TestCase):
 
         self.assertEqual(count, 2)
         self.assertEqual(len(fake_cursor.executemany_payload or []), 2)
+
+    def test_upsert_price_series_skips_non_positive_rows(self):
+        fake_cursor = _FakeCursor()
+        fake_connection = _FakeConnection(cursor=fake_cursor)
+        series = [
+            {
+                "date": "2026-03-01",
+                "open": 100.0,
+                "high": 101.0,
+                "low": 99.5,
+                "close": 100.5,
+                "change": 0.5,
+                "volume": 1000,
+            },
+            {
+                "date": "2026-03-02",
+                "open": 0.0,
+                "high": 0.0,
+                "low": 0.0,
+                "close": 0.0,
+                "change": 0.0,
+                "volume": 1200,
+            },
+        ]
+
+        with patch("backend.modules.data_pipeline.storage._connect", return_value=fake_connection):
+            count = upsert_price_series("postgresql://dummy", "2330", series=series, source="twse")
+
+        self.assertEqual(count, 1)
+        self.assertEqual(len(fake_cursor.executemany_payload or []), 1)
 
 
 if __name__ == "__main__":

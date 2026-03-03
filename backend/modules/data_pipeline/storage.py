@@ -46,14 +46,21 @@ def load_latest_quote(
     if _is_stale(trade_date, max_age_days):
         return None
 
+    open_price = _to_positive_float(row["open"])
+    high = _to_positive_float(row["high"])
+    low = _to_positive_float(row["low"])
+    close = _to_positive_float(row["close"])
+    if open_price is None or high is None or low is None or close is None:
+        return None
+
     return {
         "symbol": symbol,
         "name": symbol,
         "as_of_date": trade_date.isoformat(),
-        "open": _to_float(row["open"]),
-        "high": _to_float(row["high"]),
-        "low": _to_float(row["low"]),
-        "close": _to_float(row["close"]),
+        "open": open_price,
+        "high": high,
+        "low": low,
+        "close": close,
         "change": _to_float(row["change"]),
         "volume": int(row["volume"] or 0),
         "source": "postgres",
@@ -103,18 +110,29 @@ def load_recent_history(
         return None
 
     normalized = sorted(rows, key=lambda row: row["trade_date"])
-    series = [
-        {
-            "date": row["trade_date"].isoformat(),
-            "open": _to_float(row["open"]),
-            "high": _to_float(row["high"]),
-            "low": _to_float(row["low"]),
-            "close": _to_float(row["close"]),
-            "change": _to_float(row["change"]),
-            "volume": int(row["volume"] or 0),
-        }
-        for row in normalized
-    ]
+    series: list[dict] = []
+    for row in normalized:
+        open_price = _to_positive_float(row["open"])
+        high = _to_positive_float(row["high"])
+        low = _to_positive_float(row["low"])
+        close = _to_positive_float(row["close"])
+        if open_price is None or high is None or low is None or close is None:
+            continue
+
+        series.append(
+            {
+                "date": row["trade_date"].isoformat(),
+                "open": open_price,
+                "high": high,
+                "low": low,
+                "close": close,
+                "change": _to_float(row["change"]),
+                "volume": int(row["volume"] or 0),
+            }
+        )
+
+    if len(series) < days:
+        return None
 
     return {
         "symbol": symbol,
@@ -188,14 +206,21 @@ def _prepare_upsert_payload(symbol: str, series: list[dict], source: str) -> lis
         except ValueError:
             continue
 
+        open_price = _to_positive_float(item.get("open", 0.0))
+        high = _to_positive_float(item.get("high", 0.0))
+        low = _to_positive_float(item.get("low", 0.0))
+        close = _to_positive_float(item.get("close", 0.0))
+        if open_price is None or high is None or low is None or close is None:
+            continue
+
         rows.append(
             (
                 symbol,
                 trade_date,
-                _to_float(item.get("open", 0.0)),
-                _to_float(item.get("high", 0.0)),
-                _to_float(item.get("low", 0.0)),
-                _to_float(item.get("close", 0.0)),
+                open_price,
+                high,
+                low,
+                close,
                 _to_float(item.get("change", 0.0)),
                 int(item.get("volume") or 0),
                 source,
@@ -237,3 +262,10 @@ def _to_float(raw: object) -> float:
         return float(raw)
     except Exception:
         return 0.0
+
+
+def _to_positive_float(raw: object) -> float | None:
+    parsed = _to_float(raw)
+    if parsed <= 0:
+        return None
+    return parsed

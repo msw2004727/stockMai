@@ -193,6 +193,9 @@ def _load_postgres_quote_fallback(symbol: str, twse_holidays_raw: str) -> dict |
     except Exception:
         return None
 
+    if not _is_valid_quote_payload(cached):
+        return None
+
     with_meta = _with_quote_runtime_meta(
         cached,
         default_priority="cache",
@@ -222,10 +225,21 @@ def _should_persist_and_cache_quote(payload: dict, twse_holidays_raw: str) -> bo
     return not _is_taipei_trading_session_now(twse_holidays_raw)
 
 
+def _is_valid_quote_payload(payload: dict) -> bool:
+    try:
+        close = float(payload.get("close"))
+    except Exception:
+        return False
+
+    if close <= 0:
+        return False
+    return True
+
+
 def get_quote(symbol: str) -> dict:
     settings = get_settings()
     short_cache = load_short_quote_cache(settings.redis_url, symbol=symbol)
-    if short_cache:
+    if short_cache and _is_valid_quote_payload(short_cache):
         with_meta = _with_quote_runtime_meta(
             short_cache,
             default_priority="short_cache",
@@ -259,6 +273,10 @@ def get_quote(symbol: str) -> dict:
                 default_priority="daily_fallback",
                 twse_holidays_raw=settings.twse_holidays,
             )
+            if not _is_valid_quote_payload(with_meta):
+                if postgres_fallback:
+                    return postgres_fallback
+                raise DataUnavailableError("Market data providers returned invalid quote payload.")
             with_meta["provider_used"] = with_meta.get("source", "unknown")
             with_meta["fetch_latency_ms"] = fetch_latency_ms
             with_meta["cache_hit"] = False

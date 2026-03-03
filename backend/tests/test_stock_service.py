@@ -194,6 +194,47 @@ class StockServiceTest(unittest.TestCase):
         self.assertEqual(result["source_priority"], "cache")
         self.assertIn("freshness", result)
 
+    @patch("backend.app.stocks.service._fetch_quote_from_provider_chain")
+    @patch("backend.app.stocks.service._load_quote_from_postgres")
+    def test_get_quote_uses_postgres_when_provider_payload_is_invalid(self, mock_load_postgres, mock_provider_chain):
+        mock_load_postgres.return_value = {
+            "symbol": "3231",
+            "name": "Wistron",
+            "as_of_date": "2026-03-03",
+            "open": 131.0,
+            "high": 132.0,
+            "low": 130.5,
+            "close": 131.5,
+            "change": -2.5,
+            "volume": 2000,
+            "source": "postgres",
+            "is_fallback": False,
+            "note": "",
+        }
+        mock_provider_chain.return_value = {
+            "symbol": "3231",
+            "name": "Wistron",
+            "as_of_date": "2026-03-03",
+            "quote_time": "2026-03-03 12:58:31",
+            "open": 0.0,
+            "high": 0.0,
+            "low": 0.0,
+            "close": 0.0,
+            "change": 0.0,
+            "volume": 0,
+            "source": "twse_realtime",
+            "source_priority": "realtime_primary",
+            "market_state": "trading",
+            "is_realtime": True,
+            "delay_seconds": 0,
+            "is_fallback": False,
+            "note": "",
+        }
+
+        result = get_quote("3231")
+        self.assertEqual(result["source"], "postgres")
+        self.assertEqual(result["close"], 131.5)
+
     @patch(
         "backend.app.stocks.service._fetch_quote_from_provider_chain",
         side_effect=QuoteProviderUnavailableError("All quote providers failed."),

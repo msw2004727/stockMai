@@ -285,17 +285,32 @@ function macdDirectionClass(indicatorPayload) {
         <span>量 {{ fmtVol(quote.volume) }} 張</span>
       </div>
 
-      <p class="quote-meta-line">
-        交易日：{{ quote.as_of_date }}
-        • 成交時間：{{ quote.quote_time || "--" }}
-        • {{ quote.is_realtime ? "即時報價" : "日線報價" }}
-        • 來源：{{ quote.source || "--" }}
-      </p>
-      <p class="quote-meta-line">
-        供應商：{{ quote.provider_used || "--" }}
-        • 通道：{{ quote.source_priority || "--" }}
-        • 回退：{{ isFallbackQuote(quote) ? "是" : "否" }}
-      </p>
+      <div class="quote-meta-list" aria-label="報價資訊細節">
+        <div class="quote-meta-row">
+          <span class="quote-meta-key">交易日</span>
+          <span class="quote-meta-value">{{ quote.as_of_date || "--" }}</span>
+        </div>
+        <div class="quote-meta-row">
+          <span class="quote-meta-key">成交時間</span>
+          <span class="quote-meta-value">{{ quote.quote_time || "--" }}</span>
+        </div>
+        <div class="quote-meta-row">
+          <span class="quote-meta-key">即時報價來源</span>
+          <span class="quote-meta-value">{{ quote.source || "--" }}</span>
+        </div>
+        <div class="quote-meta-row">
+          <span class="quote-meta-key">供應商</span>
+          <span class="quote-meta-value">{{ quote.provider_used || "--" }}</span>
+        </div>
+        <div class="quote-meta-row">
+          <span class="quote-meta-key">通道</span>
+          <span class="quote-meta-value">{{ quote.source_priority || "--" }}</span>
+        </div>
+        <div class="quote-meta-row">
+          <span class="quote-meta-key">回退</span>
+          <span class="quote-meta-value">{{ isFallbackQuote(quote) ? "是" : "否" }}</span>
+        </div>
+      </div>
     </article>
 
     <article class="card full-span">

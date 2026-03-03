@@ -86,10 +86,10 @@ def _parse_twse_realtime_payload(payload: dict, symbol: str) -> dict | None:
     if not row:
         return None
 
-    last_trade = _to_float(row.get("z"))
+    last_trade = _to_positive_price(row.get("z"))
     bid = _first_level_price(row.get("b"))
     ask = _first_level_price(row.get("a"))
-    prev_close = _to_float(row.get("y"))
+    prev_close = _to_positive_price(row.get("y"))
     close, price_source = _resolve_realtime_close(
         last_trade=last_trade,
         bid=bid,
@@ -99,9 +99,9 @@ def _parse_twse_realtime_payload(payload: dict, symbol: str) -> dict | None:
     if close is None:
         return None
 
-    open_price = _to_float(row.get("o"))
-    high = _to_float(row.get("h"))
-    low = _to_float(row.get("l"))
+    open_price = _to_positive_price(row.get("o"))
+    high = _to_positive_price(row.get("h"))
+    low = _to_positive_price(row.get("l"))
     volume = _to_int(row.get("v")) or _to_int(row.get("tv")) or 0
 
     as_of_date = _parse_yyyymmdd(row.get("d")) or date.today().isoformat()
@@ -230,7 +230,7 @@ def _first_level_price(raw: object) -> float | None:
         return None
 
     for part in text.split("_"):
-        parsed = _to_float(part)
+        parsed = _to_positive_price(part)
         if parsed is not None:
             return parsed
     return None
@@ -252,6 +252,13 @@ def _to_float(raw: object) -> float | None:
         return float(text)
     except Exception:
         return None
+
+
+def _to_positive_price(raw: object) -> float | None:
+    parsed = _to_float(raw)
+    if parsed is None:
+        return None
+    return parsed if parsed > 0 else None
 
 
 def _to_int(raw: object) -> int | None:

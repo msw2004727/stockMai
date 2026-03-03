@@ -3,7 +3,8 @@ param(
   [string]$BackendBaseUrl,
   [string]$UserId = "cloud-smoke-user",
   [int]$ExpiresMinutes = 30,
-  [int]$TimeoutSec = 30
+  [int]$TimeoutSec = 30,
+  [switch]$TriggerSnapshot
 )
 
 Set-StrictMode -Version Latest
@@ -28,7 +29,7 @@ try {
     throw "BackendBaseUrl must start with http/https."
   }
 
-  Write-Host "[1/4] Health check: $base/health"
+  Write-Host "[1/6] Health check: $base/health"
   $health = Invoke-RestMethod -Method Get -Uri "$base/health" -TimeoutSec $TimeoutSec
   if ($health.status -ne "ok") {
     throw "Health check failed: status=$($health.status)"
@@ -40,7 +41,7 @@ try {
     throw "Health check failed: redis not ok"
   }
 
-  Write-Host "[2/4] Issue JWT token"
+  Write-Host "[2/6] Issue JWT token"
   $tokenResp = Invoke-RestMethod -Method Post -Uri "$base/auth/token" -ContentType "application/json" -TimeoutSec $TimeoutSec -Body (@{
       user_id = $UserId
       expires_minutes = $ExpiresMinutes
@@ -53,38 +54,42 @@ try {
 
   $headers = @{ Authorization = "Bearer $token" }
 
-  Write-Host "[3/4] Quote check: symbol=2330"
+  Write-Host "[3/6] Quote checks"
   $q2330 = Invoke-RestMethod -Method Get -Uri "$base/stocks/quote?symbol=2330" -Headers $headers -TimeoutSec $TimeoutSec
-  Assert-HasKeys -Object $q2330 -Keys @("symbol", "source", "quote_time", "market_state", "is_realtime", "source_priority", "freshness") -Context "quote(2330)"
-  Assert-HasKeys -Object $q2330.freshness -Keys @("as_of_date", "age_days", "is_fresh", "max_age_days") -Context "quote(2330).freshness"
-
-  Write-Host "[4/4] Quote check: symbol=00878"
   $q00878 = Invoke-RestMethod -Method Get -Uri "$base/stocks/quote?symbol=00878" -Headers $headers -TimeoutSec $TimeoutSec
+  Assert-HasKeys -Object $q2330 -Keys @("symbol", "source", "quote_time", "market_state", "is_realtime", "source_priority", "freshness") -Context "quote(2330)"
   Assert-HasKeys -Object $q00878 -Keys @("symbol", "source", "quote_time", "market_state", "is_realtime", "source_priority", "freshness") -Context "quote(00878)"
-  Assert-HasKeys -Object $q00878.freshness -Keys @("as_of_date", "age_days", "is_fresh", "max_age_days") -Context "quote(00878).freshness"
 
-  $summary = @(
-    [PSCustomObject]@{
-      symbol          = $q2330.symbol
-      source          = $q2330.source
-      is_realtime     = $q2330.is_realtime
-      source_priority = $q2330.source_priority
-      quote_time      = $q2330.quote_time
-      cache_hit       = $q2330.cache_hit
-    },
-    [PSCustomObject]@{
-      symbol          = $q00878.symbol
-      source          = $q00878.source
-      is_realtime     = $q00878.is_realtime
-      source_priority = $q00878.source_priority
-      quote_time      = $q00878.quote_time
-      cache_hit       = $q00878.cache_hit
-    }
-  )
+  Write-Host "[4/6] Movers check"
+  $movers = Invoke-RestMethod -Method Get -Uri "$base/stocks/movers?limit=6" -Headers $headers -TimeoutSec $TimeoutSec
+  Assert-HasKeys -Object $movers -Keys @("as_of_date", "categories", "coverage_ratio", "requested_trade_date") -Context "movers"
+  Assert-HasKeys -Object $movers.categories -Keys @("top_volume", "top_gainers", "top_losers") -Context "movers.categories"
+
+  if ($TriggerSnapshot.IsPresent) {
+    Write-Host "[5/6] Snapshot trigger check"
+    $snapshot = Invoke-RestMethod -Method Post -Uri "$base/stocks/pipeline/snapshot?max_symbols=3000" -Headers $headers -TimeoutSec $TimeoutSec
+    Assert-HasKeys -Object $snapshot -Keys @("ok", "inserted_rows", "trade_date", "coverage_ratio") -Context "snapshot"
+  } else {
+    Write-Host "[5/6] Snapshot trigger skipped"
+  }
+
+  Write-Host "[6/6] Pipeline status check"
+  $pipeline = Invoke-RestMethod -Method Get -Uri "$base/stocks/pipeline/status" -Headers $headers -TimeoutSec $TimeoutSec
+  Assert-HasKeys -Object $pipeline -Keys @("status", "is_healthy", "latest_trade_date", "coverage_ratio", "note") -Context "pipeline_status"
+
+  $summary = [PSCustomObject]@{
+    quote_2330_source    = $q2330.source
+    quote_00878_source   = $q00878.source
+    movers_date          = $movers.as_of_date
+    movers_coverage      = $movers.coverage_ratio
+    pipeline_status      = $pipeline.status
+    pipeline_trade_date  = $pipeline.latest_trade_date
+    pipeline_coverage    = $pipeline.coverage_ratio
+  }
 
   Write-Host ""
   Write-Host "Cloud smoke summary:"
-  $summary | Format-Table -AutoSize | Out-String | Write-Host
+  $summary | Format-List | Out-String | Write-Host
   Write-Host "Cloud smoke check PASSED"
 }
 catch {

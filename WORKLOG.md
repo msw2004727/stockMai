@@ -744,3 +744,21 @@
 - 目前進度：In Progress
 - 下一步：第3階段補「雲端排程接入 + 同步失敗告警/重試策略」與驗收腳本，完成後再進入第4階段。
 - 備註（可選）：本回合已先完成第2階段 commit+push，並持續實作第3階段（尚未提交）。
+## [2026-03-03 15:55] 第3階段提交推送並完成第4階段雲端排程/監控骨架
+- 完成事項：
+  - 已依需求完成第3階段變更 `commit + push`（`a8c5109`）。
+  - 第4階段新增 pipeline 監控 API：`GET /stocks/pipeline/status`，提供 `latest_trade_date`、`expected_trade_date`、`lag_days`、`coverage_ratio`、`source_breakdown`、`is_healthy`。
+  - 新增狀態分層模組：`pipeline_status_repository.py`（DB 讀取）與 `pipeline_status_service.py`（健康判定與說明）。
+  - 新增雲端排程腳本：
+    - `scripts/run_pipeline_snapshot.py`（自動取 token -> 觸發 `/stocks/pipeline/snapshot` -> 驗證 `/stocks/pipeline/status`）
+    - `scripts/check_pipeline_status.py`（巡檢 pipeline/movers 健康，失敗時回傳非 0）
+  - 更新 `render.yaml`：新增兩個 cron service（快照同步、同步後監控）。
+  - 更新 `scripts/cloud-smoke.ps1`：納入 movers 與 pipeline status 檢查，並可選擇觸發 snapshot。
+  - 新增 `PIPELINE_RUNBOOK.md`（手動觸發、驗收與異常處理流程）。
+  - 驗證完成：
+    - `python -m unittest backend.tests.test_market_clock backend.tests.test_movers_service backend.tests.test_market_snapshot_parser backend.tests.test_market_snapshot_service backend.tests.test_pipeline_status_service` 通過。
+    - `python -m py_compile`（本回合新增/修改後端與腳本）通過。
+    - frontend `npm run build` 通過。
+- 目前進度：Done
+- 下一步：部署到 Render 後，先手動跑一次 `stockmai-snapshot-cron` 與 `stockmai-pipeline-monitor-cron`，再執行 `scripts/cloud-smoke.ps1` 完整驗收。
+- 備註（可選）：本回合第4階段變更尚未提交，待使用者確認後可進行 commit + push。

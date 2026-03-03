@@ -72,6 +72,48 @@ services:
       - key: FINMIND_TOKEN
         sync: false
 
+  - type: cron
+    name: stockmai-snapshot-cron
+    runtime: python
+    schedule: "30 0 * * 1-5"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python scripts/run_pipeline_snapshot.py
+    envVars:
+      - key: BACKEND_BASE_URL
+        fromService:
+          type: web
+          name: stockmai-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: PIPELINE_USER_ID
+        value: pipeline-cron-user
+      - key: PIPELINE_EXPIRES_MINUTES
+        value: "30"
+      - key: SNAPSHOT_MAX_SYMBOLS
+        value: "3000"
+      - key: PIPELINE_TIMEOUT_SECONDS
+        value: "45"
+
+  - type: cron
+    name: stockmai-pipeline-monitor-cron
+    runtime: python
+    schedule: "0 1 * * 1-5"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python scripts/check_pipeline_status.py
+    envVars:
+      - key: BACKEND_BASE_URL
+        fromService:
+          type: web
+          name: stockmai-backend
+          envVarKey: RENDER_EXTERNAL_URL
+      - key: PIPELINE_MONITOR_USER_ID
+        value: pipeline-monitor-user
+      - key: PIPELINE_EXPIRES_MINUTES
+        value: "30"
+      - key: PIPELINE_TIMEOUT_SECONDS
+        value: "45"
+      - key: ALLOW_WARN_STATUS
+        value: "false"
+
   - type: web
     name: stockmai-frontend
     runtime: static

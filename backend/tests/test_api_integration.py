@@ -250,6 +250,52 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertEqual(payload["source"], "twse_openapi_stock_day_all")
                     self.assertEqual(payload["inserted_rows"], 998)
 
+    def test_stocks_pipeline_status_requires_token(self):
+        status, payload = self._request_json(
+            "GET",
+            "/stocks/pipeline/status",
+        )
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_stocks_pipeline_status_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_result = {
+            "status": "ok",
+            "is_healthy": True,
+            "expected_trade_date": "2026-03-03",
+            "latest_trade_date": "2026-03-03",
+            "lag_days": 0,
+            "row_count": 2100,
+            "symbol_count": 2000,
+            "expected_universe_size": 2300,
+            "coverage_ratio": 0.8696,
+            "coverage_warn_threshold": 0.8,
+            "source_breakdown": [{"source": "twse_openapi_stock_day_all", "rows": 2100}],
+            "note": "ok",
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.get_pipeline_status", return_value=fake_result):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "pipeline-status-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/pipeline/status",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["status"], "ok")
+                    self.assertTrue(payload["is_healthy"])
+                    self.assertIn("coverage_ratio", payload)
+
     def test_stocks_quote_invalid_symbol_returns_422_with_error_code(self):
         fake_redis = _FakeRedis()
         with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):

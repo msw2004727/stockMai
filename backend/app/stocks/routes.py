@@ -3,6 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Response
 from ..auth import enforce_rate_limit
 from .market_snapshot_service import MarketSnapshotSyncError, run_market_snapshot
 from .movers_service import MarketMoversUnavailableError, get_market_movers
+from .pipeline_status_service import PipelineStatusUnavailableError, get_pipeline_status
 from .service import (
     DataUnavailableError,
     QuoteRateLimitedError,
@@ -96,4 +97,14 @@ def sync_market_snapshot(
     try:
         return run_market_snapshot(max_symbols=max_symbols)
     except MarketSnapshotSyncError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/pipeline/status")
+def get_snapshot_pipeline_status(
+    _quota: dict = Depends(enforce_rate_limit("stocks_pipeline_status")),
+) -> dict:
+    try:
+        return get_pipeline_status()
+    except PipelineStatusUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

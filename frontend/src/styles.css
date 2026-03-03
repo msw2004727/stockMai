@@ -637,20 +637,28 @@ h2 {
 
 .loading-marquee-track {
   margin: 0;
+  display: flex;
+  align-items: center;
+  width: max-content;
+  min-width: 200%;
+  white-space: nowrap;
+  animation: loading-marquee 9s linear infinite;
+  will-change: transform;
+}
+
+.loading-marquee-group {
   display: inline-flex;
   align-items: center;
   gap: 30px;
-  padding: 5px 0;
-  white-space: nowrap;
+  flex: 0 0 auto;
+  padding: 5px 15px;
+}
+
+.loading-marquee-group span {
+  flex: 0 0 auto;
   font-size: 0.82rem;
   font-weight: 800;
   color: var(--brand);
-  padding-left: 100%;
-  animation: loading-marquee 8s linear infinite;
-}
-
-.loading-marquee-track span {
-  flex: 0 0 auto;
 }
 
 .loading-fade-enter-active,
@@ -668,7 +676,7 @@ h2 {
     transform: translateX(0);
   }
   to {
-    transform: translateX(-66%);
+    transform: translateX(-50%);
   }
 }
 
@@ -1348,20 +1356,31 @@ h2 {
   margin-top: 0;
 }
 
-.ai-tech-grid {
+.ai-tech-scroll {
   margin-top: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  padding-bottom: 4px;
+  -webkit-overflow-scrolling: touch;
+}
+
+.ai-tech-grid {
   display: grid;
-  gap: 6px;
+  gap: 0;
+  width: max-content;
+  min-width: 760px;
+  padding-right: 8px;
 }
 
 .ai-tech-row {
   margin: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: 240px minmax(380px, auto);
+  align-items: center;
+  column-gap: 14px;
   border-bottom: 1px dashed color-mix(in srgb, var(--border) 85%, transparent);
-  padding-bottom: 6px;
+  padding: 7px 0;
+  white-space: nowrap;
 }
 
 .ai-tech-row:last-child {
@@ -1372,22 +1391,45 @@ h2 {
 .ai-tech-key {
   color: var(--muted);
   font-size: 0.84rem;
-  line-height: 1.4;
+  line-height: 1.3;
+  white-space: nowrap;
 }
 
 .ai-tech-value {
   color: var(--ink);
   font-size: 0.84rem;
   font-weight: 800;
-  line-height: 1.4;
+  line-height: 1.3;
   text-align: right;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  justify-self: end;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.ai-tech-chip {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 9px;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 28%, var(--border));
+  background: color-mix(in srgb, var(--brand-soft) 44%, var(--bg-card));
+  font-size: 0.8rem;
+  font-weight: 800;
+  white-space: nowrap;
 }
 
 .ai-tech-formula {
-  margin: 2px 0 0;
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px dashed color-mix(in srgb, var(--border) 85%, transparent);
   color: var(--muted);
   font-size: 0.76rem;
-  line-height: 1.45;
+  line-height: 1.35;
+  white-space: nowrap;
 }
 
 .sentiment-metrics {

@@ -206,11 +206,18 @@ onMounted(() => {
       <div class="loading-modal">
         <span class="loading-spinner" aria-hidden="true"></span>
         <div v-if="showAiLoadingMarquee" class="loading-marquee" aria-hidden="true">
-          <p class="loading-marquee-track">
-            <span>AI努力分析中</span>
-            <span>AI努力分析中</span>
-            <span>AI努力分析中</span>
-          </p>
+          <div class="loading-marquee-track">
+            <div class="loading-marquee-group">
+              <span>AI努力分析中</span>
+              <span>AI努力分析中</span>
+              <span>AI努力分析中</span>
+            </div>
+            <div class="loading-marquee-group" aria-hidden="true">
+              <span>AI努力分析中</span>
+              <span>AI努力分析中</span>
+              <span>AI努力分析中</span>
+            </div>
+          </div>
         </div>
         <p class="loading-text">{{ loadingMessage }}</p>
       </div>

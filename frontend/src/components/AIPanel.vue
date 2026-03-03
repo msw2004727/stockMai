@@ -267,14 +267,17 @@ function fmtKg(value) {
   return `${Number(value).toFixed(6)} kgCO2e`;
 }
 
-function tokenUsageText(metrics) {
+function parseTokenUsage(metrics) {
   const usage = metrics?.token_usage || {};
-  if (!usage?.is_complete_real) return "N/A";
-  const total = fmtInt(usage.total_tokens);
-  const input = fmtInt(usage.input_tokens);
-  const output = fmtInt(usage.output_tokens);
-  return `${total}（輸入 ${input} / 輸出 ${output}）`;
+  if (!usage?.is_complete_real) return null;
+  return {
+    total: fmtInt(usage.total_tokens),
+    input: fmtInt(usage.input_tokens),
+    output: fmtInt(usage.output_tokens),
+  };
 }
+
+const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
 </script>
 
 <template>
@@ -456,30 +459,47 @@ function tokenUsageText(metrics) {
 
         <article class="card full-span ai-tech-metrics-card">
           <p class="label title-chip">AI模型技術分析</p>
-          <div class="ai-tech-grid">
-            <p class="sub ai-tech-row">
-              <span class="ai-tech-key">1. 呼叫AI次數</span>
-              <span class="ai-tech-value">{{ callCountText(modelTechMetrics.ai_call_count) }}</span>
-            </p>
-            <p class="sub ai-tech-row">
-              <span class="ai-tech-key">2. 耗時幾秒</span>
-              <span class="ai-tech-value">{{ fmtSeconds(modelTechMetrics.duration_seconds) }}</span>
-            </p>
-            <p class="sub ai-tech-row">
-              <span class="ai-tech-key">3. 花費Token數量（真實統計）</span>
-              <span class="ai-tech-value">{{ tokenUsageText(modelTechMetrics) }}</span>
-            </p>
-            <p class="sub ai-tech-row">
-              <span class="ai-tech-key">4. 消耗電力（公式預估）</span>
-              <span class="ai-tech-value">{{ fmtKwh(modelTechMetrics?.energy_estimate?.kwh) }}</span>
-            </p>
-            <p class="sub ai-tech-row">
-              <span class="ai-tech-key">5. 碳排放數量（公式預估）</span>
-              <span class="ai-tech-value">{{ fmtKg(modelTechMetrics?.carbon_estimate?.kg_co2e) }}</span>
-            </p>
-            <p class="sub ai-tech-formula">
-              公式：電力 = 總Token / 1000 × AI_ENERGY_KWH_PER_1K_TOKENS；碳排 = 電力 × AI_GRID_KGCO2E_PER_KWH
-            </p>
+          <div class="ai-tech-scroll">
+            <div class="ai-tech-grid">
+              <p class="sub ai-tech-row">
+                <span class="ai-tech-key">1. 呼叫AI次數</span>
+                <span class="ai-tech-value">
+                  <span class="ai-tech-chip">{{ callCountText(modelTechMetrics.ai_call_count) }}</span>
+                </span>
+              </p>
+              <p class="sub ai-tech-row">
+                <span class="ai-tech-key">2. 耗時幾秒</span>
+                <span class="ai-tech-value">
+                  <span class="ai-tech-chip">{{ fmtSeconds(modelTechMetrics.duration_seconds) }}</span>
+                </span>
+              </p>
+              <p class="sub ai-tech-row">
+                <span class="ai-tech-key">3. 花費Token數量（真實統計）</span>
+                <span class="ai-tech-value">
+                  <template v-if="tokenUsageInfo">
+                    <span class="ai-tech-chip">總計 {{ tokenUsageInfo.total }}</span>
+                    <span class="ai-tech-chip">輸入 {{ tokenUsageInfo.input }}</span>
+                    <span class="ai-tech-chip">輸出 {{ tokenUsageInfo.output }}</span>
+                  </template>
+                  <span v-else class="ai-tech-chip">N/A</span>
+                </span>
+              </p>
+              <p class="sub ai-tech-row">
+                <span class="ai-tech-key">4. 消耗電力（公式預估）</span>
+                <span class="ai-tech-value">
+                  <span class="ai-tech-chip">{{ fmtKwh(modelTechMetrics?.energy_estimate?.kwh) }}</span>
+                </span>
+              </p>
+              <p class="sub ai-tech-row">
+                <span class="ai-tech-key">5. 碳排放數量（公式預估）</span>
+                <span class="ai-tech-value">
+                  <span class="ai-tech-chip">{{ fmtKg(modelTechMetrics?.carbon_estimate?.kg_co2e) }}</span>
+                </span>
+              </p>
+              <p class="sub ai-tech-formula">
+                公式：電力 = 總Token / 1000 × AI_ENERGY_KWH_PER_1K_TOKENS；碳排 = 電力 × AI_GRID_KGCO2E_PER_KWH
+              </p>
+            </div>
           </div>
         </article>
       </div>

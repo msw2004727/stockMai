@@ -1363,7 +1363,8 @@ h2 {
 
 .mover-name,
 .mover-symbol,
-.mover-meta {
+.mover-pct,
+.mover-volume {
   max-width: 100%;
   white-space: nowrap;
   overflow: hidden;
@@ -1382,9 +1383,27 @@ h2 {
   line-height: 1.1;
 }
 
-.mover-meta {
+.mover-pct {
+  font-size: 0.72rem;
+  font-weight: 900;
+}
+
+.mover-pct-up {
+  color: #ff2b2b;
+}
+
+.mover-pct-down {
+  color: #00c853;
+}
+
+.mover-pct-neutral {
+  color: var(--muted);
+}
+
+.mover-volume {
   font-size: 0.68rem;
   color: var(--muted);
+  margin-top: 1px;
 }
 
 @media (max-width: 420px) {
@@ -1408,7 +1427,11 @@ h2 {
     font-size: 0.82rem;
   }
 
-  .mover-meta {
+  .mover-pct {
+    font-size: 0.66rem;
+  }
+
+  .mover-volume {
     font-size: 0.64rem;
   }
 }

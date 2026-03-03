@@ -808,3 +808,15 @@
 - 目前進度：Done
 - 下一步：請你在手機版確認上下排列後的閱讀順序是否符合預期；若要再調每欄間距可再微調。
 - 備註（可選）：本回合未執行 commit + push。
+## [2026-03-03 17:52] movers 百分比顏色與交易張數校正
+- 完成事項：
+  - 行情快速查詢小卡改版：六大漲幅的 `%` 改為鮮紅色、六大跌幅的 `%` 改為亮綠色。
+  - 將交易量資訊從同一行拆到下一行，避免手機版寬度不足時被遮蔽。
+  - 後端修正 movers `volume` 單位：由原始股數換算為張數（`shares / 1000`），並新增 `volume_shares` 供查核。
+  - 謹慎查核：以 TWSE `STOCK_DAY_ALL` 實測 `TradeVolume=224651381`，換算為 `224651.381 張`，驗證修正邏輯。
+  - 測試驗證：
+    - `python -m unittest backend.tests.test_movers_repository backend.tests.test_stock_search_service backend.tests.test_movers_service backend.tests.test_market_snapshot_service backend.tests.test_pipeline_status_service backend.tests.test_market_snapshot_parser` 通過。
+    - frontend `npm run build` 通過。
+- 目前進度：Done
+- 下一步：請在手機版確認紅綠色對比與卡片資訊密度；若還需更醒目可再調色碼。
+- 備註（可選）：本回合尚未 commit + push，待使用者確認後可提交。

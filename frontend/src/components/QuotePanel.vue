@@ -66,23 +66,30 @@ function moversLabel(item) {
   return String(item?.symbol || "--").trim() || "--";
 }
 
-function moverMeta(item, categoryKey) {
-  const vol = fmtVol(item?.volume);
+function fmtLots(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  return new Intl.NumberFormat("zh-TW", {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 3,
+  }).format(Number(value));
+}
+
+function moverPercent(item, categoryKey) {
   const pct = Number(item?.change_pct);
-  if (categoryKey === "top_volume") {
-    if (Number.isFinite(pct)) {
-      const sign = pct > 0 ? "+" : "";
-      return `量 ${vol} 張 ・ ${sign}${pct.toFixed(2)}%`;
-    }
-    return `量 ${vol} 張`;
-  }
+  if (!Number.isFinite(pct)) return "";
+  const sign = pct > 0 ? "+" : "";
+  if (categoryKey === "top_volume") return `${sign}${pct.toFixed(2)}%`;
+  return `${sign}${pct.toFixed(2)}%`;
+}
 
-  if (Number.isFinite(pct)) {
-    const sign = pct > 0 ? "+" : "";
-    return `${sign}${pct.toFixed(2)}% ・ 量 ${vol} 張`;
-  }
+function moverPercentClass(categoryKey) {
+  if (categoryKey === "top_gainers") return "mover-pct-up";
+  if (categoryKey === "top_losers") return "mover-pct-down";
+  return "mover-pct-neutral";
+}
 
-  return `量 ${vol} 張`;
+function moverVolume(item) {
+  return `量 ${fmtLots(item?.volume)} 張`;
 }
 
 function moversCoverageText(payload) {
@@ -305,7 +312,14 @@ function macdDirectionClass(indicatorPayload) {
           >
             <span class="mover-name">{{ moversLabel(item) }}</span>
             <span class="mover-symbol">{{ item.symbol }}</span>
-            <span class="mover-meta">{{ moverMeta(item, group.key) }}</span>
+            <span
+              v-if="moverPercent(item, group.key)"
+              class="mover-pct"
+              :class="moverPercentClass(group.key)"
+            >
+              {{ moverPercent(item, group.key) }}
+            </span>
+            <span class="mover-volume">{{ moverVolume(item) }}</span>
           </button>
         </div>
       </article>

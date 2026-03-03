@@ -161,9 +161,9 @@ def _normalize_rows(rows: list[dict]) -> list[dict]:
         close = _to_float(row.get("close"))
         change = _to_float(row.get("change"))
         change_pct = _to_float(row.get("change_pct"))
-        volume = int(row.get("volume") or 0)
+        volume_shares = int(row.get("volume") or 0)
 
-        if close <= 0 or volume < 0:
+        if close <= 0 or volume_shares < 0:
             continue
 
         result.append(
@@ -173,7 +173,8 @@ def _normalize_rows(rows: list[dict]) -> list[dict]:
                 "close": round(close, 4),
                 "change": round(change, 4),
                 "change_pct": round(change_pct, 4),
-                "volume": volume,
+                "volume": _to_lots(volume_shares),
+                "volume_shares": volume_shares,
             }
         )
     return result
@@ -186,6 +187,10 @@ def _to_float(raw: object) -> float:
         return float(raw)
     except Exception:
         return 0.0
+
+
+def _to_lots(shares: int) -> float:
+    return round(max(float(shares), 0.0) / 1000.0, 3)
 
 
 def _empty_payload(limit: int, requested_trade_date: date | None) -> dict:

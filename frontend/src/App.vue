@@ -81,7 +81,7 @@ const staleAiStockName = computed(() => {
 
 const loadingMessage = computed(() => {
   if (aiLoading.value || strategyLoading.value) {
-    return "AI 分析中，請稍候...";
+    return "提醒：沒有人能準確預測股價走勢，即使是最頂級的分析師也不行，建議任何投資決策前，多參考專業券商的研究報告、諮詢合格的財務顧問，並且量力而為！";
   }
   if (quoteLoading.value) {
     return "行情查詢中，請稍候...";

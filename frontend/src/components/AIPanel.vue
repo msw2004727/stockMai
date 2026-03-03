@@ -459,44 +459,46 @@ const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
 
         <article class="card full-span ai-tech-metrics-card">
           <p class="label title-chip">AI模型技術分析</p>
-          <div class="ai-tech-scroll">
-            <div class="ai-tech-grid">
-              <p class="sub ai-tech-row">
-                <span class="ai-tech-key">1. 呼叫AI次數</span>
-                <span class="ai-tech-value">
-                  <span class="ai-tech-chip">{{ callCountText(modelTechMetrics.ai_call_count) }}</span>
-                </span>
-              </p>
-              <p class="sub ai-tech-row">
-                <span class="ai-tech-key">2. 耗時幾秒</span>
-                <span class="ai-tech-value">
-                  <span class="ai-tech-chip">{{ fmtSeconds(modelTechMetrics.duration_seconds) }}</span>
-                </span>
-              </p>
-              <p class="sub ai-tech-row">
-                <span class="ai-tech-key">3. 花費Token數量（真實統計）</span>
-                <span class="ai-tech-value">
-                  <template v-if="tokenUsageInfo">
-                    <span class="ai-tech-chip">總計 {{ tokenUsageInfo.total }}</span>
-                    <span class="ai-tech-chip">輸入 {{ tokenUsageInfo.input }}</span>
-                    <span class="ai-tech-chip">輸出 {{ tokenUsageInfo.output }}</span>
-                  </template>
-                  <span v-else class="ai-tech-chip">N/A</span>
-                </span>
-              </p>
-              <p class="sub ai-tech-row">
-                <span class="ai-tech-key">4. 消耗電力（公式預估）</span>
-                <span class="ai-tech-value">
-                  <span class="ai-tech-chip">{{ fmtKwh(modelTechMetrics?.energy_estimate?.kwh) }}</span>
-                </span>
-              </p>
-              <p class="sub ai-tech-row">
-                <span class="ai-tech-key">5. 碳排放數量（公式預估）</span>
-                <span class="ai-tech-value">
-                  <span class="ai-tech-chip">{{ fmtKg(modelTechMetrics?.carbon_estimate?.kg_co2e) }}</span>
-                </span>
-              </p>
-            </div>
+          <div class="ai-tech-grid">
+            <section class="ai-tech-row">
+              <p class="sub ai-tech-key">1. 呼叫AI次數</p>
+              <div class="ai-tech-value-row">
+                <span class="ai-tech-chip">{{ callCountText(modelTechMetrics.ai_call_count) }}</span>
+              </div>
+            </section>
+
+            <section class="ai-tech-row">
+              <p class="sub ai-tech-key">2. 耗時幾秒</p>
+              <div class="ai-tech-value-row">
+                <span class="ai-tech-chip">{{ fmtSeconds(modelTechMetrics.duration_seconds) }}</span>
+              </div>
+            </section>
+
+            <section class="ai-tech-row">
+              <p class="sub ai-tech-key">3. 花費Token數量（真實統計）</p>
+              <div class="ai-tech-value-row">
+                <template v-if="tokenUsageInfo">
+                  <span class="ai-tech-chip">總計 {{ tokenUsageInfo.total }}</span>
+                  <span class="ai-tech-chip">輸入 {{ tokenUsageInfo.input }}</span>
+                  <span class="ai-tech-chip">輸出 {{ tokenUsageInfo.output }}</span>
+                </template>
+                <span v-else class="ai-tech-chip">N/A</span>
+              </div>
+            </section>
+
+            <section class="ai-tech-row">
+              <p class="sub ai-tech-key">4. 消耗電力（公式預估）</p>
+              <div class="ai-tech-value-row">
+                <span class="ai-tech-chip">{{ fmtKwh(modelTechMetrics?.energy_estimate?.kwh) }}</span>
+              </div>
+            </section>
+
+            <section class="ai-tech-row">
+              <p class="sub ai-tech-key">5. 碳排放數量（公式預估）</p>
+              <div class="ai-tech-value-row">
+                <span class="ai-tech-chip">{{ fmtKg(modelTechMetrics?.carbon_estimate?.kg_co2e) }}</span>
+              </div>
+            </section>
           </div>
         </article>
       </div>

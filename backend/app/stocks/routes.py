@@ -4,6 +4,7 @@ from ..auth import enforce_rate_limit
 from .market_snapshot_service import MarketSnapshotSyncError, run_market_snapshot
 from .movers_service import MarketMoversUnavailableError, get_market_movers
 from .pipeline_status_service import PipelineStatusUnavailableError, get_pipeline_status
+from .resolve_service import resolve_stock_query
 from .service import (
     DataUnavailableError,
     QuoteRateLimitedError,
@@ -76,6 +77,15 @@ def search_stocks(
         "limit": int(limit),
         "results": search_stock_symbols(q, limit=limit),
     }
+
+
+@router.get("/resolve")
+def resolve_stock_symbol(
+    q: str = Query(..., min_length=1, max_length=20),
+    limit: int = Query(5, ge=1, le=10),
+    _quota: dict = Depends(enforce_rate_limit("stocks_resolve")),
+) -> dict:
+    return resolve_stock_query(q, limit=limit)
 
 
 @router.get("/movers")

@@ -115,7 +115,13 @@ function handleTabChange(nextTab) {
   showAiStalePrompt.value = false;
 }
 
-async function refreshAiAndStrategy() {
+async function refreshAiAndStrategy(payload = null) {
+  const nextSymbol = String(payload?.symbol || "").trim();
+  const nextName = String(payload?.name || "").trim();
+  if (nextSymbol) {
+    symbol.value = nextSymbol;
+  }
+
   const sym = String(symbol.value || "").trim();
   if (!sym) {
     showAiPrerequisiteError("");
@@ -129,7 +135,7 @@ async function refreshAiAndStrategy() {
     const analyzedSymbol = currentQuoteSymbol.value || sym;
     lastAiAnalyzedSnapshot.value = {
       symbol: analyzedSymbol,
-      name: currentQuoteName.value || analyzedSymbol,
+      name: nextName || currentQuoteName.value || analyzedSymbol,
       checkedAt: String(aiCheckedAt.value || ""),
     };
     showAiStalePrompt.value = false;

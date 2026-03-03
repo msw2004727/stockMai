@@ -1007,3 +1007,15 @@
 - 目前進度：Done
 - 下一步：請在手機版確認欄位已為上下排列，並檢查 Token 膠囊在窄螢幕仍清楚可讀。
 - 備註（可選）：本回合僅調整前端呈現，未改後端資料來源與計算邏輯。
+## [2026-03-03 22:16] 實作AI分析中文輸入解析與錯字容錯流程
+- 完成事項：
+  - 後端新增 `/stocks/resolve` 端點與解析服務：支援中文名稱、代號、錯字 alias、Levenshtein 容錯、信心分級與候選清單回傳。
+  - 前端 AI 分析改為：非純代號輸入時先呼叫解析，彈窗要求使用者確認標的後才送出 AI 分析（避免分析錯股）。
+  - 修正事件傳遞鏈路（AIPanel -> AiView -> App）讓確認後可帶入解析出的 symbol/name 再執行分析。
+  - 新增後端單元測試 `test_stock_resolve_service.py`，並擴充 API 整合測試中的 `/stocks/resolve` 覆蓋案例。
+  - 驗證結果：
+    - `python -m unittest backend.tests.test_stock_search_service backend.tests.test_stock_resolve_service` 通過（8 tests）。
+    - `frontend npm run build` 通過。
+- 目前進度：Done
+- 下一步：在雲端手動驗收 4 種輸入（正確中文、錯字中文、多候選代號前綴、純代號）確認解析彈窗與最終 AI 分析目標一致。
+- 備註（可選）：本機缺少 `fastapi`，因此 `backend.tests.test_api_integration` 在本環境無法載入執行；程式碼已補齊對應測試案例。

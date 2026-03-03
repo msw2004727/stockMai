@@ -1,6 +1,7 @@
 ﻿<script setup>
-import { computed, ref } from "vue";
+import { computed, onBeforeUnmount, ref } from "vue";
 
+import { resolveStockSymbol } from "../api";
 import { useStockSymbolSearch } from "../composables/useStockSymbolSearch";
 import { displayOrFallback, localizeAiText } from "../utils/aiTextLocalizer";
 import StrategyPanel from "./StrategyPanel.vue";
@@ -23,24 +24,155 @@ const props = defineProps({
 const emit = defineEmits(["refresh", "update:symbol", "update:prompt", "change-provider"]);
 
 const showDetail = ref(false);
+const SYMBOL_PATTERN = /^\d{4,6}$/;
 
 const { searchResults, searchLoading, searchError, clearSearch, scheduleSearch } = useStockSymbolSearch();
+const showResolveDialog = ref(false);
+const resolveLoading = ref(false);
+const resolveError = ref("");
+const resolveHint = ref("");
+const resolveCandidates = ref([]);
+const resolveStatus = ref("");
+const resolveQuery = ref("");
+
+let resolveController = null;
 
 function onSymbolInput(event) {
   const value = event.target.value;
   emit("update:symbol", value);
   scheduleSearch(value);
+  if (showResolveDialog.value) {
+    closeResolveDialog();
+  }
 }
 
 function onSelectSearchResult(item) {
   if (!item?.symbol) return;
   emit("update:symbol", item.symbol);
   clearSearch();
+  if (showResolveDialog.value) {
+    closeResolveDialog();
+  }
 }
 
-function onRefreshClick() {
+function normalizeResolveCandidate(item) {
+  const symbol = String(item?.symbol || "").trim();
+  if (!SYMBOL_PATTERN.test(symbol)) return null;
+  const parsedScore = Number(item?.score);
+  return {
+    symbol,
+    name: String(item?.name || symbol).trim() || symbol,
+    market: String(item?.market || "unknown").trim() || "unknown",
+    score: Number.isFinite(parsedScore) ? Math.round(parsedScore) : null,
+    confidence: String(item?.confidence || "").trim().toLowerCase(),
+  };
+}
+
+function resolveStatusMessage(status) {
+  const parsed = String(status || "").toLowerCase();
+  if (parsed === "resolved") return "已找到最可能標的，請確認後開始分析。";
+  if (parsed === "ambiguous") return "找到多檔相近標的，請先確認股票。";
+  if (parsed === "low_confidence") return "名稱相似度偏低，請手動選擇正確股票。";
+  if (parsed === "not_found") return "查無可解析標的，請改用股票代號或更完整名稱。";
+  return "";
+}
+
+function confidenceLabel(value) {
+  const parsed = String(value || "").toLowerCase();
+  if (parsed === "high") return "高";
+  if (parsed === "medium") return "中";
+  if (parsed === "low") return "低";
+  return "--";
+}
+
+function closeResolveDialog() {
+  showResolveDialog.value = false;
+  resolveLoading.value = false;
+  resolveError.value = "";
+  resolveHint.value = "";
+  resolveCandidates.value = [];
+  resolveStatus.value = "";
+  resolveQuery.value = "";
+  if (resolveController) {
+    resolveController.abort();
+    resolveController = null;
+  }
+}
+
+function confirmResolvedCandidate(candidate) {
+  const selected = normalizeResolveCandidate(candidate);
+  if (!selected) return;
+  emit("update:symbol", selected.symbol);
   clearSearch();
-  emit("refresh");
+  closeResolveDialog();
+  emit("refresh", { symbol: selected.symbol, name: selected.name });
+}
+
+async function onRefreshClick() {
+  clearSearch();
+  const query = String(props.symbol || "").trim();
+  if (!query) {
+    emit("refresh");
+    return;
+  }
+
+  if (SYMBOL_PATTERN.test(query)) {
+    closeResolveDialog();
+    emit("refresh", { symbol: query });
+    return;
+  }
+
+  if (resolveController) {
+    resolveController.abort();
+  }
+  resolveController = new AbortController();
+
+  resolveLoading.value = true;
+  resolveError.value = "";
+  resolveHint.value = "";
+  resolveCandidates.value = [];
+  resolveStatus.value = "";
+  resolveQuery.value = query;
+  showResolveDialog.value = true;
+
+  try {
+    const payload = await resolveStockSymbol(query, 5, resolveController.signal);
+    const resolution = payload?.resolution || {};
+    const status = String(resolution.status || "").trim().toLowerCase() || "not_found";
+    const candidates = [];
+
+    const bestCandidate = normalizeResolveCandidate(resolution.best);
+    if (bestCandidate) {
+      candidates.push(bestCandidate);
+    }
+
+    const rawCandidates = Array.isArray(resolution.candidates) ? resolution.candidates : [];
+    for (const item of rawCandidates) {
+      const parsed = normalizeResolveCandidate(item);
+      if (!parsed) continue;
+      if (candidates.some((row) => row.symbol === parsed.symbol)) continue;
+      candidates.push(parsed);
+    }
+
+    resolveStatus.value = status;
+    resolveCandidates.value = candidates;
+    resolveHint.value = resolveStatusMessage(status);
+
+    if (!candidates.length) {
+      resolveError.value = "查無符合標的，請改用股票代號或更完整名稱。";
+    }
+  } catch (error) {
+    if (error.name === "AbortError") {
+      return;
+    }
+    resolveStatus.value = "not_found";
+    resolveCandidates.value = [];
+    resolveHint.value = "";
+    resolveError.value = error.message || "股票代號解析失敗";
+  } finally {
+    resolveLoading.value = false;
+    resolveController = null;
+  }
 }
 
 function onPromptInput(event) {
@@ -278,6 +410,13 @@ function parseTokenUsage(metrics) {
 }
 
 const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
+
+onBeforeUnmount(() => {
+  if (resolveController) {
+    resolveController.abort();
+    resolveController = null;
+  }
+});
 </script>
 
 <template>
@@ -294,12 +433,12 @@ const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
           maxlength="20"
           inputmode="text"
           placeholder="輸入台股代號或中文名稱"
-          :disabled="aiLoading"
+          :disabled="aiLoading || resolveLoading"
           @input="onSymbolInput"
           @keydown.enter.prevent="onRefreshClick"
         />
-        <button type="button" class="btn" :disabled="aiLoading" @click="onRefreshClick">
-          {{ aiLoading ? "分析中..." : "執行 AI 分析" }}
+        <button type="button" class="btn" :disabled="aiLoading || resolveLoading" @click="onRefreshClick">
+          {{ aiLoading ? "分析中..." : resolveLoading ? "解析中..." : "執行 AI 分析" }}
         </button>
         <span v-if="aiCheckedAt" class="checked-at no-wrap">更新時間：{{ aiCheckedAt }}</span>
       </div>
@@ -318,6 +457,7 @@ const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
           </button>
         </li>
       </ul>
+      <p v-if="resolveHint && !showResolveDialog" class="sub">{{ resolveHint }}</p>
     </div>
 
     <div class="field-box ai-control-provider">
@@ -349,6 +489,39 @@ const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
       ></textarea>
     </div>
   </div>
+
+  <transition name="loading-fade">
+    <div v-if="showResolveDialog" class="resolve-dialog-overlay" role="dialog" aria-modal="true" aria-labelledby="resolve-title">
+      <div class="resolve-dialog-card">
+        <h3 id="resolve-title" class="resolve-title">請確認要分析的股票</h3>
+        <p class="resolve-sub">
+          你輸入「{{ resolveQuery }}」，請先選擇正確標的再執行 AI 分析。
+        </p>
+        <p v-if="resolveError" class="resolve-sub warn-text">{{ resolveError }}</p>
+        <p v-else-if="resolveHint" class="resolve-sub">{{ resolveHint }}</p>
+
+        <div class="resolve-candidate-list">
+          <button
+            v-for="candidate in resolveCandidates"
+            :key="`${candidate.symbol}-${candidate.name}`"
+            type="button"
+            class="resolve-candidate-btn"
+            @click="confirmResolvedCandidate(candidate)"
+          >
+            <span class="resolve-candidate-main">{{ candidate.name }}（{{ candidate.symbol }}）</span>
+            <span class="resolve-candidate-meta">
+              市場：{{ candidate.market }} ・ 信心：{{ confidenceLabel(candidate.confidence) }}
+              <span v-if="candidate.score !== null">（{{ candidate.score }}）</span>
+            </span>
+          </button>
+        </div>
+
+        <div class="resolve-dialog-actions">
+          <button type="button" class="btn resolve-cancel-btn" @click="closeResolveDialog">取消</button>
+        </div>
+      </div>
+    </div>
+  </transition>
 
   <div class="stack-block">
     <StrategyPanel

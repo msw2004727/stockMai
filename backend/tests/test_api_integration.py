@@ -743,6 +743,65 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertEqual(status, 404)
                     self.assertEqual(payload["error_code"], "not_found")
 
+    def test_stocks_resolve_requires_token(self):
+        status, payload = self._request_json("GET", "/stocks/resolve", query="q=%E5%8F%B0%E7%A9%8D%E9%9B%BB")
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_stocks_resolve_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_payload = {
+            "query": "台積電",
+            "normalized_query": "台積電",
+            "resolution": {
+                "status": "resolved",
+                "best": {
+                    "symbol": "2330",
+                    "name": "台積電",
+                    "market": "twse",
+                    "score": 100,
+                    "confidence": "high",
+                    "reason": "exact_name",
+                },
+                "candidates": [
+                    {
+                        "symbol": "2330",
+                        "name": "台積電",
+                        "market": "twse",
+                        "score": 100,
+                        "confidence": "high",
+                        "reason": "exact_name",
+                    }
+                ],
+                "thresholds": {
+                    "high_confidence_min": 88,
+                    "min_margin": 8,
+                },
+            },
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.resolve_stock_query", return_value=fake_payload):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "resolve-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/resolve",
+                        query="q=%E5%8F%B0%E7%A9%8D%E9%9B%BB&limit=5",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["query"], "台積電")
+                    self.assertEqual(payload["resolution"]["status"], "resolved")
+                    self.assertEqual(payload["resolution"]["best"]["symbol"], "2330")
+
 
 if __name__ == "__main__":
     unittest.main()

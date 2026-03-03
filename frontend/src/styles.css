@@ -671,6 +671,86 @@ h2 {
   opacity: 0;
 }
 
+.resolve-dialog-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 258;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(15, 23, 42, 0.28);
+  backdrop-filter: blur(8px);
+}
+
+.resolve-dialog-card {
+  width: min(92vw, 420px);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-card);
+  box-shadow: 0 14px 34px rgba(2, 6, 23, 0.24);
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.resolve-title {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.resolve-sub {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
+.resolve-candidate-list {
+  max-height: min(46vh, 280px);
+  overflow-y: auto;
+  display: grid;
+  gap: 8px;
+}
+
+.resolve-candidate-btn {
+  width: 100%;
+  border: 1px solid color-mix(in srgb, var(--brand) 22%, var(--border));
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--brand-soft) 40%, var(--bg-card));
+  color: var(--ink);
+  text-align: left;
+  padding: 10px 11px;
+  display: grid;
+  gap: 3px;
+  cursor: pointer;
+}
+
+.resolve-candidate-btn:hover {
+  background: color-mix(in srgb, var(--brand-soft) 56%, var(--bg-card));
+}
+
+.resolve-candidate-main {
+  font-size: 0.9rem;
+  font-weight: 800;
+}
+
+.resolve-candidate-meta {
+  font-size: 0.78rem;
+  color: var(--muted);
+}
+
+.resolve-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.resolve-cancel-btn {
+  min-width: 88px;
+}
+
 @keyframes loading-marquee {
   from {
     transform: translateX(0);

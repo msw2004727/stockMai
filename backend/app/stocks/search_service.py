@@ -117,6 +117,10 @@ def get_stock_universe_size() -> int:
     return len(_load_universe())
 
 
+def get_stock_universe() -> list[dict]:
+    return _load_universe()
+
+
 def resolve_stock_name(symbol: str) -> str:
     target = str(symbol or "").strip()
     if not target:

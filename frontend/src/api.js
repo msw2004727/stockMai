@@ -216,6 +216,21 @@ export async function getStockSymbolSearch(query, limit = 8, signal) {
   return response.json();
 }
 
+export async function resolveStockSymbol(query, limit = 5, signal) {
+  const keyword = (query || "").trim();
+  const cappedLimit = Math.min(Math.max(Number(limit) || 5, 1), 10);
+  const response = await fetchProtected(
+    `/stocks/resolve?q=${encodeURIComponent(keyword)}&limit=${encodeURIComponent(cappedLimit)}`,
+    { signal },
+  );
+
+  if (!response.ok) {
+    throwApiError("股票代號解析", response.status, keyword);
+  }
+
+  return response.json();
+}
+
 export async function getStockMarketMovers(limit = 6, signal) {
   const cappedLimit = Math.min(Math.max(Number(limit) || 6, 3), 20);
   const response = await fetchProtected(

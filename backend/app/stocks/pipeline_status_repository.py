@@ -2,10 +2,13 @@ from __future__ import annotations
 
 from datetime import date
 
+from backend.modules.data_pipeline.schema import ensure_stock_daily_prices_table
+
 
 def load_pipeline_status_snapshot(database_url: str) -> dict:
     with _connect(database_url) as conn:
         with conn.cursor() as cur:
+            ensure_stock_daily_prices_table(cur)
             latest_trade_date = _load_latest_trade_date(cur)
             if latest_trade_date is None:
                 return {

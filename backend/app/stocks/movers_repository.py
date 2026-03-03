@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from backend.modules.data_pipeline.schema import ensure_stock_daily_prices_table
+
 
 def load_previous_day_movers(
     database_url: str,
@@ -13,6 +15,7 @@ def load_previous_day_movers(
 
     with _connect(database_url) as conn:
         with conn.cursor() as cur:
+            ensure_stock_daily_prices_table(cur)
             if target_trade_date is None:
                 trade_date = _load_latest_trade_date(cur)
             else:

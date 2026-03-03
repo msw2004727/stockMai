@@ -4,6 +4,8 @@ from datetime import date
 from decimal import Decimal
 from typing import TYPE_CHECKING
 
+from .schema import ensure_stock_daily_prices_table
+
 if TYPE_CHECKING:
     import psycopg
 
@@ -16,6 +18,7 @@ def load_latest_quote(
     try:
         with _connect(database_url) as conn:
             with conn.cursor() as cur:
+                ensure_stock_daily_prices_table(cur)
                 cur.execute(
                     """
                     SELECT
@@ -79,6 +82,7 @@ def load_recent_history(
     try:
         with _connect(database_url) as conn:
             with conn.cursor() as cur:
+                ensure_stock_daily_prices_table(cur)
                 cur.execute(
                     """
                     SELECT
@@ -161,10 +165,12 @@ def upsert_price_series(
         with _connect(database_url) as conn:
             try:
                 with conn.cursor() as cur:
+                    ensure_stock_daily_prices_table(cur)
                     _upsert_rows(cur, payload)
             except Exception:
                 conn.rollback()
                 with conn.cursor() as cur:
+                    ensure_stock_daily_prices_table(cur)
                     _replace_rows(cur, payload)
     except Exception:
         return 0

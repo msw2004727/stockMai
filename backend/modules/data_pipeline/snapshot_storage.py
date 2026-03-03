@@ -3,6 +3,8 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
+from .schema import ensure_stock_daily_prices_table
+
 
 class SnapshotStorageError(Exception):
     pass
@@ -21,10 +23,12 @@ def upsert_price_snapshots(
         with _connect(database_url) as conn:
             try:
                 with conn.cursor() as cur:
+                    ensure_stock_daily_prices_table(cur)
                     _upsert_rows(cur, payload)
             except Exception:
                 conn.rollback()
                 with conn.cursor() as cur:
+                    ensure_stock_daily_prices_table(cur)
                     _replace_rows(cur, payload)
     except Exception as exc:
         raise SnapshotStorageError(str(exc)) from exc

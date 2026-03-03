@@ -43,6 +43,22 @@ class AIGatewayNormalizerTest(unittest.TestCase):
         self.assertEqual(result["key_points"], ["資料缺口", "等待突破"])
         self.assertEqual(result["normalized_by"], "partial_json")
 
+    def test_normalize_extracts_analyst_narratives(self):
+        raw = (
+            '{"summary":"中性","signal":"neutral","confidence":0.6,'
+            '"bullish_view":"看多觀點內容","bearish_view":"看空觀點內容","easy_summary":"輕鬆總結內容"}'
+        )
+        result = normalize_ai_response("gpt5", raw)
+        self.assertEqual(result["bullish_view"], "看多觀點內容")
+        self.assertEqual(result["bearish_view"], "看空觀點內容")
+        self.assertEqual(result["easy_summary"], "輕鬆總結內容")
+
+    def test_normalize_fallback_text_includes_empty_narratives(self):
+        result = normalize_ai_response("gpt5", "plain response text")
+        self.assertEqual(result["bullish_view"], "")
+        self.assertEqual(result["bearish_view"], "")
+        self.assertEqual(result["easy_summary"], "")
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -38,7 +38,8 @@ def build_analysis_prompt(
 ) -> str:
     prompt = (
         "You are a Taiwan stock analysis assistant. "
-        "Return JSON with fields: summary, signal, confidence, key_points. "
+        "Return STRICT JSON only with fields: "
+        "summary, signal, confidence, key_points, bullish_view, bearish_view, easy_summary. "
         "signal must be one of bullish/bearish/neutral. confidence must be 0~1.\n"
         f"Target symbol: {symbol}."
     )
@@ -47,6 +48,14 @@ def build_analysis_prompt(
         prompt += f"\n{role_block}"
 
     prompt += "\nIf key data is missing, explicitly state assumptions and uncertainty in key_points."
+    prompt += (
+        "\nFor bullish_view and bearish_view, provide data-grounded arguments from opposite stances "
+        "(around 180~320 Traditional Chinese characters each)."
+    )
+    prompt += (
+        "\nFor easy_summary, provide a concise wrap-up comparing both stances "
+        "(around 80~140 Traditional Chinese characters)."
+    )
 
     indicator_block = _build_indicator_block(indicator_context)
     if indicator_block:

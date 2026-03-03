@@ -627,6 +627,32 @@ h2 {
   text-align: center;
 }
 
+.loading-marquee {
+  width: min(92%, 260px);
+  overflow: hidden;
+  border-radius: 999px;
+  border: 1px solid color-mix(in srgb, var(--brand) 24%, var(--border));
+  background: color-mix(in srgb, var(--brand-soft) 58%, var(--bg-card));
+}
+
+.loading-marquee-track {
+  margin: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 30px;
+  padding: 5px 0;
+  white-space: nowrap;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--brand);
+  padding-left: 100%;
+  animation: loading-marquee 8s linear infinite;
+}
+
+.loading-marquee-track span {
+  flex: 0 0 auto;
+}
+
 .loading-fade-enter-active,
 .loading-fade-leave-active {
   transition: opacity 180ms ease;
@@ -635,6 +661,15 @@ h2 {
 .loading-fade-enter-from,
 .loading-fade-leave-to {
   opacity: 0;
+}
+
+@keyframes loading-marquee {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-66%);
+  }
 }
 
 .stale-notice-overlay {

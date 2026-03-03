@@ -9,6 +9,9 @@ class PromptBuilderTest(unittest.TestCase):
         self.assertIn("Target symbol: 2330", prompt)
         self.assertIn("User focus: focus on momentum", prompt)
         self.assertNotIn("Technical indicators", prompt)
+        self.assertIn("bullish_view", prompt)
+        self.assertIn("bearish_view", prompt)
+        self.assertIn("easy_summary", prompt)
 
     def test_build_analysis_prompt_with_indicator_context(self):
         indicator_context = {

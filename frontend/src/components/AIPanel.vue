@@ -203,55 +203,39 @@ function parseSentimentSummary(summary) {
 
 const sentimentInfo = computed(() => parseSentimentSummary(props.aiResult?.sentiment_context?.summary));
 
+function resolvePrimaryAiNarrative(result) {
+  if (!result) return null;
+  const sourceProvider = String(result?.consensus?.source_provider || "").trim().toLowerCase();
+  const outputs = Array.isArray(result?.results) ? result.results : [];
+  const successful = outputs.filter((item) => item?.ok && item?.data);
+  if (!successful.length) return null;
+  if (sourceProvider) {
+    const matched = successful.find((item) => String(item?.provider || "").trim().toLowerCase() === sourceProvider);
+    if (matched?.data) return matched.data;
+  }
+  return successful[0]?.data || null;
+}
+
 function buildAnalystNarratives(result) {
   if (!result) {
     return {
-      bullish: "目前資料不足，無法建立完整偏多論述。若要提高可用性，建議先補齊近 20~60 日價格、成交量與主要指標，再觀察是否出現均線轉強與動能修復訊號。在資料不足時先小部位試單、嚴格停損，會比直接放大倉位更安全。",
-      bearish: "目前資料不足，偏向保守。沒有足夠證據前，不應把短暫反彈視為反轉；若價格落在壓力區且量能不續，回落機率仍高。操作上建議先防守、降低部位與槓桿，等關鍵位站穩後再重新評估，避免在不確定區間反覆受損。",
-      summary: "資料不足時，多空都不該太激進。先縮小部位、設好停損，再等市場自己給方向，會比硬猜高低點更穩。",
+      bullish: "尚未執行 AI 分析，暫無看多觀點。",
+      bearish: "尚未執行 AI 分析，暫無看空觀點。",
+      summary: "尚未執行 AI 分析，暫無輕鬆總結。",
     };
   }
 
-  const latest = result?.indicator_context?.latest || {};
-  const sma5 = toNum(latest?.sma5);
-  const sma20 = toNum(latest?.sma20);
-  const rsi14 = toNum(latest?.rsi14);
-  const macd = toNum(latest?.macd);
-  const macdSignal = toNum(latest?.macd_signal);
-  const consensusLabel = toSignalLabel(result?.consensus?.signal);
-  const confidenceText = fmt(result?.consensus?.confidence, 2);
-  const sentimentLabel = toSignalLabel(result?.sentiment_context?.market_sentiment);
-  const sentimentSummary = localize(result?.sentiment_context?.summary, "目前情緒資料有限。");
-  const volatilityLevel = localize(result?.sentiment_context?.volatility_level, "未知");
-  const asOfDate = localize(result?.indicator_context?.as_of_date, "--");
+  const primaryData = resolvePrimaryAiNarrative(result) || {};
+  const bullish = localize(primaryData?.bullish_view, "");
+  const bearish = localize(primaryData?.bearish_view, "");
+  const easySummary = localize(primaryData?.easy_summary, "");
+  const fallbackSummary = localize(primaryData?.summary, "");
 
-  const maBullText =
-    sma5 !== null && sma20 !== null
-      ? sma5 >= sma20
-        ? "短均線不弱於長均線，結構仍有撐"
-        : "短均線暫弱，但未必代表趨勢終結"
-      : "均線資料偏少，先以風控優先";
-  const maBearText =
-    sma5 !== null && sma20 !== null
-      ? sma5 < sma20
-        ? "短均線在長均線下方，壓力未解"
-        : "即使短均線在上，也可能是假突破"
-      : "均線資料偏少，先採防守假設";
-  const rsiText =
-    rsi14 !== null ? `RSI14 ${fmt(rsi14, 1)}` : "RSI14 資料不足";
-  const macdText =
-    macd !== null && macdSignal !== null
-      ? `MACD ${fmt(macd, 2)} / Signal ${fmt(macdSignal, 2)}`
-      : "MACD 資料不足";
-
-  const bullish = `截至 ${asOfDate}，共識為「${consensusLabel}」、信心 ${confidenceText}，他認為市場仍有延續上行空間。均線觀察為 ${maBullText}；動能端 ${rsiText}、${macdText}，若沒有同步轉弱，多方節奏通常不會一次結束。情緒目前偏${sentimentLabel}、波動 ${volatilityLevel}，${sentimentSummary} 因此策略上偏向分批布局、回檔承接，但會把停損放在關鍵支撐下方，先控風險再爭取波段。`;
-
-  const bearish = `同樣看截至 ${asOfDate} 的資料，他更重視「反彈是否有量能與結構支持」。目前共識「${consensusLabel}」信心 ${confidenceText} 並非壓倒性，代表方向仍可能反覆。均線面 ${maBearText}；動能面 ${rsiText}、${macdText} 若出現背離，回落風險會放大。情緒偏${sentimentLabel}、波動 ${volatilityLevel}，${sentimentSummary} 所以他主張先降槓桿、少追高，跌破支撐就先防守，等趨勢明確再調整部位。`;
-
-  const summary =
-    "看多派看的是延續機會，看空派盯的是回落風險。其實兩邊都同意，先把停損、部位上限與進出條件寫好，再跟著市場動作走，比主觀押方向更穩。";
-
-  return { bullish, bearish, summary };
+  return {
+    bullish: bullish || "AI 未回傳看多分析內容。",
+    bearish: bearish || "AI 未回傳看空分析內容。",
+    summary: easySummary || fallbackSummary || "AI 未回傳輕鬆總結內容。",
+  };
 }
 
 const analystNarratives = computed(() => buildAnalystNarratives(props.aiResult));

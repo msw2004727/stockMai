@@ -62,8 +62,11 @@ def _salvage_partial_json(raw: str) -> dict | None:
     signal = _extract_quoted_value(raw, ("signal",))
     confidence = _extract_number_value(raw, "confidence")
     key_points = _extract_key_points(raw)
+    bullish_view = _extract_quoted_value(raw, ("bullish_view", "bullish", "bull_case"))
+    bearish_view = _extract_quoted_value(raw, ("bearish_view", "bearish", "bear_case"))
+    easy_summary = _extract_quoted_value(raw, ("easy_summary", "light_summary", "summary_easy"))
 
-    if not any([summary, signal, confidence is not None, key_points]):
+    if not any([summary, signal, confidence is not None, key_points, bullish_view, bearish_view, easy_summary]):
         return None
 
     result: dict[str, object] = {}
@@ -75,6 +78,12 @@ def _salvage_partial_json(raw: str) -> dict | None:
         result["confidence"] = confidence
     if key_points:
         result["key_points"] = key_points
+    if bullish_view:
+        result["bullish_view"] = bullish_view
+    if bearish_view:
+        result["bearish_view"] = bearish_view
+    if easy_summary:
+        result["easy_summary"] = easy_summary
     return result
 
 
@@ -139,22 +148,36 @@ def _to_confidence(raw: object) -> float:
     return value
 
 
+def _pick_text(raw: dict, keys: tuple[str, ...]) -> str:
+    for key in keys:
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            return value.strip()
+    return ""
+
+
 def normalize_ai_response(provider: str, raw_text: str) -> dict:
     parsed, strategy = _parse_json(raw_text)
 
     if parsed:
-        summary = str(parsed.get("summary") or parsed.get("analysis") or "").strip()
+        summary = _pick_text(parsed, ("summary", "analysis"))
         if not summary:
             summary = raw_text.strip()[:240]
         key_points = parsed.get("key_points")
         if not isinstance(key_points, list):
             key_points = []
+        bullish_view = _pick_text(parsed, ("bullish_view", "bullish", "bull_case"))
+        bearish_view = _pick_text(parsed, ("bearish_view", "bearish", "bear_case"))
+        easy_summary = _pick_text(parsed, ("easy_summary", "light_summary", "summary_easy"))
         return {
             "provider": provider,
             "summary": summary,
             "signal": _to_signal(parsed.get("signal")),
             "confidence": _to_confidence(parsed.get("confidence")),
             "key_points": [str(item) for item in key_points],
+            "bullish_view": bullish_view,
+            "bearish_view": bearish_view,
+            "easy_summary": easy_summary,
             "normalized_by": strategy,
             "raw": raw_text,
         }
@@ -165,6 +188,9 @@ def normalize_ai_response(provider: str, raw_text: str) -> dict:
         "signal": "neutral",
         "confidence": 0.5,
         "key_points": [],
+        "bullish_view": "",
+        "bearish_view": "",
+        "easy_summary": "",
         "normalized_by": strategy,
         "raw": raw_text,
     }

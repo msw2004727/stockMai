@@ -90,6 +90,7 @@ const loadingMessage = computed(() => {
 });
 
 const showLoadingOverlay = computed(() => Boolean(loadingMessage.value));
+const showAiLoadingMarquee = computed(() => Boolean(aiLoading.value || strategyLoading.value));
 
 function updateSymbol(value) {
   symbol.value = value;
@@ -204,6 +205,13 @@ onMounted(() => {
     <div v-if="showLoadingOverlay" class="loading-overlay" role="status" aria-live="polite" aria-busy="true">
       <div class="loading-modal">
         <span class="loading-spinner" aria-hidden="true"></span>
+        <div v-if="showAiLoadingMarquee" class="loading-marquee" aria-hidden="true">
+          <p class="loading-marquee-track">
+            <span>AI努力分析中</span>
+            <span>AI努力分析中</span>
+            <span>AI努力分析中</span>
+          </p>
+        </div>
         <p class="loading-text">{{ loadingMessage }}</p>
       </div>
     </div>

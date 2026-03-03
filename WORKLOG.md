@@ -917,3 +917,23 @@
 - 目前進度：In Progress
 - 下一步：等待 Render 部署完成後，於前端實測 Grok/DeepSeek 分析是否成功回傳。
 - 備註（可選）：若部署後仍失敗，優先檢查 Render 的 `GROK_MODEL`、`GROK_API_KEY`、`DEEPSEEK_API_KEY` 是否生效。
+## [2026-03-03 19:41] 多空與輕鬆總結改為真AI回傳，並新增AI加載跑馬燈
+- 完成事項：
+  - 後端 `prompt_builder` 改為要求模型回傳 `bullish_view`、`bearish_view`、`easy_summary`，讓多空與輕鬆總結由 LLM 直接產生。
+  - 後端 `response_normalizer` 新增上述三欄位正規化與部分 JSON 搶救邏輯，API 結果可穩定帶出 AI 多空/總結文字。
+  - 前端 `AIPanel.vue` 移除原本固定模板腳本，改為優先讀取 AI 回傳欄位；若模型未回傳才顯示簡短備援提示。
+  - 前端 `App.vue` + `styles.css`：AI 分析加載彈窗於轉圈動畫下新增置中跑馬燈 `AI努力分析中`（輪播動畫）。
+  - 測試與驗證：
+    - `python -m unittest backend.tests.test_prompt_builder backend.tests.test_ai_gateway_normalizer backend.tests.test_openai_compat_clients backend.tests.test_deepseek_client` 通過（25 tests）。
+    - `frontend` 執行 `npm run build` 通過。
+- 目前進度：Done
+- 下一步：你可直接在前端執行一次 AI 分析，確認看多/看空/輕鬆總結文字明顯改為模型回傳內容，而非固定模板。
+- 備註（可選）：本回合尚未 commit + push，待你確認後可直接提交。
+## [2026-03-03 19:42] 提交多空真AI回饋與加載跑馬燈
+- 完成事項：
+  - 將多空分析師與輕鬆總結改為讀取 AI 真實回傳欄位（`bullish_view` / `bearish_view` / `easy_summary`）。
+  - 新增 AI 分析加載彈窗「AI努力分析中」置中跑馬燈。
+  - 執行測試與建置確認通過後，準備提交並推送至 `main` 觸發雲端部署。
+- 目前進度：In Progress
+- 下一步：執行 `git commit` 與 `git push origin main`。
+- 備註（可選）：若部署後內容未更新，需確認前端快取已清除。

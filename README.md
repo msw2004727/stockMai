@@ -222,7 +222,8 @@ Backfill recent history from FinMind into PostgreSQL:
 .venv\Scripts\python.exe .\scripts\backfill_prices.py --symbols 2330,2317,0050 --days 180
 ```
 
-After this, `/stocks/quote` and `/stocks/history` read from PostgreSQL cache first, then fallback to FinMind/TWSE.
+After this, `/stocks/quote` uses short cache first and then tries provider chain (TWSE realtime preferred), with PostgreSQL as fallback when providers are unavailable.
+`/stocks/history` still reads from PostgreSQL cache first, then fallback to FinMind/TWSE.
 If upstream providers are temporarily unavailable, API returns `503` (no local demo quote fallback in production mode).
 
 Symbol format:

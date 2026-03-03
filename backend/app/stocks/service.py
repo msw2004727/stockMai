@@ -185,6 +185,24 @@ def _with_quote_runtime_meta(payload: dict, default_priority: str, twse_holidays
     return out
 
 
+def _load_postgres_quote_fallback(symbol: str, twse_holidays_raw: str) -> dict | None:
+    try:
+        cached = _load_quote_from_postgres(symbol)
+        if not cached:
+            return None
+    except Exception:
+        return None
+
+    with_meta = _with_quote_runtime_meta(
+        cached,
+        default_priority="cache",
+        twse_holidays_raw=twse_holidays_raw,
+    )
+    with_meta["provider_used"] = "postgres"
+    with_meta["cache_hit"] = False
+    return _with_freshness(with_meta, max_age_days=5)
+
+
 def get_quote(symbol: str) -> dict:
     settings = get_settings()
     short_cache = load_short_quote_cache(settings.redis_url, symbol=symbol)
@@ -197,19 +215,10 @@ def get_quote(symbol: str) -> dict:
         with_meta["cache_hit"] = True
         return _with_freshness(with_meta, max_age_days=5)
 
-    try:
-        cached = _load_quote_from_postgres(symbol)
-        if cached:
-            with_meta = _with_quote_runtime_meta(
-                cached,
-                default_priority="cache",
-                twse_holidays_raw=settings.twse_holidays,
-            )
-            with_meta["provider_used"] = "postgres"
-            with_meta["cache_hit"] = False
-            return _with_freshness(with_meta, max_age_days=5)
-    except Exception:
-        pass
+    postgres_fallback = _load_postgres_quote_fallback(
+        symbol=symbol,
+        twse_holidays_raw=settings.twse_holidays,
+    )
 
     try:
         try:
@@ -257,7 +266,12 @@ def get_quote(symbol: str) -> dict:
             )
             return _with_freshness(with_meta, max_age_days=5)
     except QuoteProviderUnavailableError:
+        if postgres_fallback:
+            return postgres_fallback
         raise DataUnavailableError("Market data providers are temporarily unavailable.")
+
+    if postgres_fallback:
+        return postgres_fallback
 
     raise SymbolNotFoundError(f"No quote data found for symbol={symbol}")
 

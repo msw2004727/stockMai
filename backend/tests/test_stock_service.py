@@ -125,6 +125,75 @@ class StockServiceTest(unittest.TestCase):
         self.assertIn("freshness", result)
         self.assertIn("is_fresh", result["freshness"])
 
+    @patch("backend.app.stocks.service._fetch_quote_from_provider_chain")
+    @patch("backend.app.stocks.service._load_quote_from_postgres")
+    def test_get_quote_prefers_provider_before_postgres_cache(self, mock_load_postgres, mock_provider_chain):
+        mock_load_postgres.return_value = {
+            "symbol": "2330",
+            "name": "TSMC",
+            "as_of_date": "2026-03-02",
+            "open": 1000.0,
+            "high": 1005.0,
+            "low": 995.0,
+            "close": 998.0,
+            "change": -2.0,
+            "volume": 1000,
+            "source": "postgres",
+            "is_fallback": False,
+            "note": "",
+        }
+        mock_provider_chain.return_value = {
+            "symbol": "2330",
+            "name": "TSMC",
+            "as_of_date": "2026-03-02",
+            "quote_time": "2026-03-02 13:25:01",
+            "open": 1001.0,
+            "high": 1012.0,
+            "low": 998.0,
+            "close": 1009.0,
+            "change": 8.0,
+            "volume": 1234,
+            "source": "twse_realtime",
+            "source_priority": "realtime_primary",
+            "market_state": "trading",
+            "is_realtime": True,
+            "delay_seconds": 0,
+            "is_fallback": False,
+            "note": "",
+        }
+
+        result = get_quote("2330")
+        self.assertEqual(result["source"], "twse_realtime")
+        self.assertEqual(result["provider_used"], "twse_realtime")
+        mock_provider_chain.assert_called_once()
+
+    @patch(
+        "backend.app.stocks.service._fetch_quote_from_provider_chain",
+        side_effect=QuoteProviderUnavailableError("All quote providers failed."),
+    )
+    @patch("backend.app.stocks.service._load_quote_from_postgres")
+    def test_get_quote_falls_back_to_postgres_when_provider_unavailable(self, mock_load_postgres, _mock_provider_chain):
+        mock_load_postgres.return_value = {
+            "symbol": "2330",
+            "name": "TSMC",
+            "as_of_date": "2026-03-02",
+            "open": 1000.0,
+            "high": 1005.0,
+            "low": 995.0,
+            "close": 998.0,
+            "change": -2.0,
+            "volume": 1000,
+            "source": "postgres",
+            "is_fallback": False,
+            "note": "",
+        }
+
+        result = get_quote("2330")
+        self.assertEqual(result["source"], "postgres")
+        self.assertEqual(result["provider_used"], "postgres")
+        self.assertEqual(result["source_priority"], "cache")
+        self.assertIn("freshness", result)
+
     @patch(
         "backend.app.stocks.service._fetch_quote_from_provider_chain",
         side_effect=QuoteProviderUnavailableError("All quote providers failed."),

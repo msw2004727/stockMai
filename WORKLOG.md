@@ -580,3 +580,24 @@
 - 目前進度：Done
 - 下一步：請在 AI 分析頁驗收短線區塊內容與按鈕文字是否符合預期。
 - 備註（可選）：本回合含前端調整與版本推送。
+## [2026-03-03 12:12] 查詢股價非即時問題排查與修正
+- 完成事項：
+  - 釐清根因：`get_quote` 原流程為「短快取 -> PostgreSQL -> provider chain」，只要 DB 有資料就不會抓即時來源。
+  - 後端調整為「短快取 -> provider chain（TWSE 即時優先）-> PostgreSQL 回退」。
+  - 新增測試案例：
+    - 有 PostgreSQL 快取時仍優先 provider。
+    - provider 不可用時回退 PostgreSQL。
+  - README 同步更新 quote/history 快取策略說明。
+  - 前端 `npm run build` 驗證通過；`py_compile` 語法檢查通過。
+- 目前進度：Done
+- 下一步：部署 backend 後，實測 `/stocks/quote?symbol=2330`，確認 `source=twse_realtime`、`is_realtime=true`（盤中）。
+- 備註（可選）：本機未安裝 `fastapi`，故 `python -m unittest backend.tests.test_stock_service` 無法在此環境執行完整測試。
+## [2026-03-03 12:13] 即時報價修正提交與推送
+- 完成事項：
+  - 將 quote 流程改為 provider 優先、PostgreSQL 回退，避免盤中優先命中舊快取。
+  - 補上 `get_quote` 行為測試（provider 優先 / provider 失敗回退）。
+  - README 更新為最新快取策略說明。
+  - 依使用者要求執行 commit + push。
+- 目前進度：Done
+- 下一步：部署 backend 後實測 `/stocks/quote` 是否回傳 `source=twse_realtime`（盤中）。
+- 備註（可選）：本機缺 `fastapi` 套件，無法在此環境跑完整 backend unittest。

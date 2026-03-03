@@ -88,6 +88,12 @@ function marketStateBadgeClass(raw) {
   return String(raw || "").toLowerCase() === "trading" ? "badge-live" : "badge-close";
 }
 
+function isFallbackQuote(payload) {
+  const priority = String(payload?.source_priority || "").toLowerCase();
+  if (priority === "daily_fallback" || priority === "cache") return true;
+  return !Boolean(payload?.is_realtime);
+}
+
 function toNumber(value) {
   const parsed = Number(value);
   return Number.isFinite(parsed) ? parsed : null;
@@ -280,9 +286,15 @@ function macdDirectionClass(indicatorPayload) {
       </div>
 
       <p class="quote-meta-line">
-        {{ quote.as_of_date }}
+        交易日：{{ quote.as_of_date }}
+        • 成交時間：{{ quote.quote_time || "--" }}
         • {{ quote.is_realtime ? "即時報價" : "日線報價" }}
         • 來源：{{ quote.source || "--" }}
+      </p>
+      <p class="quote-meta-line">
+        供應商：{{ quote.provider_used || "--" }}
+        • 通道：{{ quote.source_priority || "--" }}
+        • 回退：{{ isFallbackQuote(quote) ? "是" : "否" }}
       </p>
     </article>
 

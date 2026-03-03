@@ -58,7 +58,7 @@ async function ensureAccessToken(signal) {
 
 async function fetchProtected(
   path,
-  { method = "GET", headers = {}, body = undefined, signal = undefined } = {},
+  { method = "GET", headers = {}, body = undefined, signal = undefined, cache = undefined } = {},
 ) {
   const token = await ensureAccessToken(signal);
   let response = await fetch(`${apiBase}${path}`, {
@@ -69,6 +69,7 @@ async function fetchProtected(
     },
     body,
     signal,
+    cache,
   });
 
   if (response.status === 401) {
@@ -82,6 +83,7 @@ async function fetchProtected(
       },
       body,
       signal,
+      cache,
     });
   }
 
@@ -111,7 +113,11 @@ export async function getHealth(signal) {
 
 export async function getStockQuote(symbol, signal) {
   const quoteSymbol = (symbol || "").trim();
-  const response = await fetchProtected(`/stocks/quote?symbol=${encodeURIComponent(quoteSymbol)}`, { signal });
+  const nonce = Date.now();
+  const response = await fetchProtected(
+    `/stocks/quote?symbol=${encodeURIComponent(quoteSymbol)}&_=${encodeURIComponent(nonce)}`,
+    { signal, cache: "no-store" },
+  );
 
   if (!response.ok) {
     throwApiError("股票報價", response.status, quoteSymbol);

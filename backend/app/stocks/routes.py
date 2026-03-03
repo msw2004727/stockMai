@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from ..auth import enforce_rate_limit
 from .service import (
@@ -16,11 +16,16 @@ router = APIRouter(prefix="/stocks", tags=["stocks"])
 
 @router.get("/quote")
 def get_stock_quote(
+    response: Response,
     symbol: str = Query(..., pattern=r"^\d{4,6}$"),
     _quota: dict = Depends(enforce_rate_limit("stocks_quote")),
 ) -> dict:
     try:
-        return get_quote(symbol)
+        payload = get_quote(symbol)
+        response.headers["Cache-Control"] = "no-store, no-cache, must-revalidate, max-age=0"
+        response.headers["Pragma"] = "no-cache"
+        response.headers["Expires"] = "0"
+        return payload
     except QuoteRateLimitedError as exc:
         raise HTTPException(status_code=429, detail=str(exc)) from exc
     except DataUnavailableError as exc:

@@ -601,3 +601,29 @@
 - 目前進度：Done
 - 下一步：部署 backend 後實測 `/stocks/quote` 是否回傳 `source=twse_realtime`（盤中）。
 - 備註（可選）：本機缺 `fastapi` 套件，無法在此環境跑完整 backend unittest。
+## [2026-03-03 12:53] 非即時股價深度排查（雲端實測）
+- 完成事項：
+  - 以 `scripts/cloud-smoke.ps1` 直接打雲端 backend 驗證報價來源。
+  - 兩次實測結果皆為 `source=twse_realtime`、`is_realtime=true`、`source_priority=realtime_primary`，顯示後端當下有抓到即時來源。
+  - 檢視前後端程式路徑，確認目前不屬於瀏覽器插件依賴。
+  - 整理可能非即時原因：前端未自動輪詢、瀏覽器舊版 bundle/快取、上游 TWSE 瞬時不可用時回退日線來源。
+- 目前進度：Done
+- 下一步：請在你的畫面同時確認 `來源` 與 `即時/日線` 標記；若顯示非 `twse_realtime`，即為上游回退而非插件問題。
+- 備註（可選）：本回合屬診斷排查，未新增程式碼變更。
+## [2026-03-03 13:03] 即時報價體驗強化（自動刷新 + 防快取 + 回退可視）
+- 完成事項：
+  - `/stocks/quote` 回應新增防快取標頭：`Cache-Control: no-store`、`Pragma: no-cache`、`Expires: 0`。
+  - 前端查價請求改為 `cache: no-store` 並加時間戳參數，降低瀏覽器/中繼快取影響。
+  - 行情頁新增盤中自動更新：市場狀態為 `trading` 且頁面可見時，每 5 秒靜默刷新一次。
+  - 行情卡新增即時診斷資訊：`成交時間`、`供應商`、`通道`、`回退(是/否)`。
+  - 驗證通過：frontend `npm run build`、backend `python -m py_compile`。
+- 目前進度：Done
+- 下一步：部署 backend + frontend 後，盤中驗收「5 秒自動刷新」與「回退標記」。
+- 備註（可選）：本回合含前後端程式變更，尚未 commit/push。
+## [2026-03-03 13:05] 即時查價強化提交與推送
+- 完成事項：
+  - 將行情自動刷新、防快取、回退可視化等變更納入提交。
+  - 依使用者要求執行 commit + push。
+- 目前進度：Done
+- 下一步：部署後盤中驗收 5 秒自動刷新與回退標記是否正常。
+- 備註（可選）：本回合為版本提交與推送。

@@ -25,6 +25,9 @@ const {
   historyError,
   indicators,
   indicatorsError,
+  marketMovers,
+  marketMoversLoading,
+  marketMoversError,
   selectedDays,
   dayOptions,
   refreshQuote,
@@ -158,6 +161,9 @@ onMounted(() => {
       :history-error="historyError"
       :indicators="indicators"
       :indicators-error="indicatorsError"
+      :market-movers="marketMovers"
+      :market-movers-loading="marketMoversLoading"
+      :market-movers-error="marketMoversError"
       :selected-days="selectedDays"
       :day-options="dayOptions"
       @update:symbol="updateSymbol"

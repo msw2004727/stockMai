@@ -1,6 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Response
 
 from ..auth import enforce_rate_limit
+from .movers_service import MarketMoversUnavailableError, get_market_movers
 from .service import (
     DataUnavailableError,
     QuoteRateLimitedError,
@@ -73,3 +74,14 @@ def search_stocks(
         "limit": int(limit),
         "results": search_stock_symbols(q, limit=limit),
     }
+
+
+@router.get("/movers")
+def get_stock_movers(
+    limit: int = Query(6, ge=3, le=20),
+    _quota: dict = Depends(enforce_rate_limit("stocks_movers")),
+) -> dict:
+    try:
+        return get_market_movers(limit=limit)
+    except MarketMoversUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc

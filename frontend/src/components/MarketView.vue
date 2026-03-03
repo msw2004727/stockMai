@@ -11,6 +11,9 @@ defineProps({
   historyError: { type: String, default: "" },
   indicators: { type: Object, default: null },
   indicatorsError: { type: String, default: "" },
+  marketMovers: { type: Object, default: null },
+  marketMoversLoading: { type: Boolean, default: false },
+  marketMoversError: { type: String, default: "" },
   selectedDays: { type: Number, default: 5 },
   dayOptions: { type: Array, default: () => [5, 20, 90, 180] },
 });
@@ -31,6 +34,9 @@ const emit = defineEmits(["update:symbol", "refresh", "change-day"]);
         :history-error="historyError"
         :indicators="indicators"
         :indicators-error="indicatorsError"
+        :market-movers="marketMovers"
+        :market-movers-loading="marketMoversLoading"
+        :market-movers-error="marketMoversError"
         :selected-days="selectedDays"
         :day-options="dayOptions"
         @update:symbol="emit('update:symbol', $event)"

@@ -12,6 +12,9 @@ defineProps({
   historyError: { type: String, default: "" },
   indicators: { type: Object, default: null },
   indicatorsError: { type: String, default: "" },
+  marketMovers: { type: Object, default: null },
+  marketMoversLoading: { type: Boolean, default: false },
+  marketMoversError: { type: String, default: "" },
   selectedDays: { type: Number, default: 5 },
   dayOptions: { type: Array, default: () => [5, 20, 90, 180] },
 });
@@ -20,13 +23,10 @@ const emit = defineEmits(["update:symbol", "refresh", "change-day"]);
 
 const { searchResults, searchLoading, searchError, clearSearch, scheduleSearch } = useStockSymbolSearch();
 
-const SHORTCUTS = [
-  { symbol: "2330", name: "台積電" },
-  { symbol: "2317", name: "鴻海" },
-  { symbol: "2454", name: "聯發科" },
-  { symbol: "2884", name: "玉山金" },
-  { symbol: "0050", name: "元大台灣50" },
-  { symbol: "00878", name: "國泰永續高股息" },
+const MOVER_GROUPS = [
+  { key: "top_volume", title: "前六大成交量" },
+  { key: "top_gainers", title: "前六大漲幅" },
+  { key: "top_losers", title: "前六大跌幅" },
 ];
 
 function onSymbolInput(event) {
@@ -46,10 +46,43 @@ function onRefreshClick() {
   emit("refresh");
 }
 
-function onShortcut(item) {
-  emit("update:symbol", item.symbol);
+function onShortcut(symbol) {
+  emit("update:symbol", symbol);
   clearSearch();
   emit("refresh");
+}
+
+function moversByCategory(payload, categoryKey) {
+  if (!payload || !payload.categories) {
+    return [];
+  }
+  const rows = payload.categories[categoryKey];
+  return Array.isArray(rows) ? rows : [];
+}
+
+function moversLabel(item) {
+  const name = String(item?.name || "").trim();
+  if (name) return name;
+  return String(item?.symbol || "--").trim() || "--";
+}
+
+function moverMeta(item, categoryKey) {
+  const vol = fmtVol(item?.volume);
+  const pct = Number(item?.change_pct);
+  if (categoryKey === "top_volume") {
+    if (Number.isFinite(pct)) {
+      const sign = pct > 0 ? "+" : "";
+      return `量 ${vol} 張 ・ ${sign}${pct.toFixed(2)}%`;
+    }
+    return `量 ${vol} 張`;
+  }
+
+  if (Number.isFinite(pct)) {
+    const sign = pct > 0 ? "+" : "";
+    return `${sign}${pct.toFixed(2)}% ・ 量 ${vol} 張`;
+  }
+
+  return `量 ${vol} 張`;
 }
 
 function isLockedRange(days) {
@@ -220,18 +253,28 @@ function macdDirectionClass(indicatorPayload) {
   </div>
 
   <div v-if="!quote && !quoteLoading && !quoteError" class="shortcut-section">
-    <p class="field-title">快速查詢</p>
-    <div class="shortcut-row">
-      <button
-        v-for="item in SHORTCUTS"
-        :key="item.symbol"
-        type="button"
-        class="shortcut-btn"
-        @click="onShortcut(item)"
-      >
-        <span class="shortcut-name">{{ item.name }}</span>
-        <span class="shortcut-symbol">{{ item.symbol }}</span>
-      </button>
+    <p class="field-title">前一交易日快速查詢</p>
+    <p v-if="marketMovers?.as_of_date" class="sub">交易日：{{ marketMovers.as_of_date }}</p>
+    <p v-if="marketMoversLoading" class="sub">正在載入市場排行...</p>
+    <p v-else-if="marketMoversError" class="sub warn-text">{{ marketMoversError }}</p>
+    <div v-else class="movers-category-grid">
+      <article v-for="group in MOVER_GROUPS" :key="group.key" class="movers-category-card">
+        <p class="movers-category-title">{{ group.title }}</p>
+        <p v-if="!moversByCategory(marketMovers, group.key).length" class="sub">暫無排行資料</p>
+        <div v-else class="shortcut-row movers-shortcut-row">
+          <button
+            v-for="item in moversByCategory(marketMovers, group.key)"
+            :key="`${group.key}-${item.symbol}`"
+            type="button"
+            class="shortcut-btn mover-shortcut-btn"
+            @click="onShortcut(item.symbol)"
+          >
+            <span class="shortcut-name">{{ moversLabel(item) }}</span>
+            <span class="shortcut-symbol">{{ item.symbol }}</span>
+            <span class="mover-meta">{{ moverMeta(item, group.key) }}</span>
+          </button>
+        </div>
+      </article>
     </div>
   </div>
 

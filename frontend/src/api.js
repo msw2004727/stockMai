@@ -216,3 +216,17 @@ export async function getStockSymbolSearch(query, limit = 8, signal) {
   return response.json();
 }
 
+export async function getStockMarketMovers(limit = 6, signal) {
+  const cappedLimit = Math.min(Math.max(Number(limit) || 6, 3), 20);
+  const response = await fetchProtected(
+    `/stocks/movers?limit=${encodeURIComponent(cappedLimit)}`,
+    { signal, cache: "no-store" },
+  );
+
+  if (!response.ok) {
+    throwApiError("市場排行", response.status);
+  }
+
+  return response.json();
+}
+

@@ -153,6 +153,58 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertEqual(len(payload["results"]), 2)
                     self.assertEqual(payload["results"][0]["symbol"], "2330")
 
+    def test_stocks_movers_requires_token(self):
+        status, payload = self._request_json("GET", "/stocks/movers", query="limit=6")
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_stocks_movers_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_payload = {
+            "as_of_date": "2026-03-03",
+            "limit": 6,
+            "source": "postgres",
+            "universe_size": 128,
+            "is_partial_universe": True,
+            "categories": {
+                "top_volume": [
+                    {
+                        "symbol": "2330",
+                        "name": "2330",
+                        "close": 1008.0,
+                        "change": 8.0,
+                        "change_pct": 0.8,
+                        "volume": 1234567,
+                    }
+                ],
+                "top_gainers": [],
+                "top_losers": [],
+            },
+            "note": "test",
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.get_market_movers", return_value=fake_payload):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "movers-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "GET",
+                        "/stocks/movers",
+                        query="limit=6",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertEqual(payload["as_of_date"], "2026-03-03")
+                    self.assertIn("categories", payload)
+                    self.assertIn("top_volume", payload["categories"])
+
     def test_stocks_quote_invalid_symbol_returns_422_with_error_code(self):
         fake_redis = _FakeRedis()
         with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):

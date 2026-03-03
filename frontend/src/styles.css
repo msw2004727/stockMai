@@ -746,6 +746,10 @@ h2 {
   .view-container {
     padding: 24px 16px;
   }
+
+  .movers-category-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
 }
 
 @keyframes spinner-rotate {
@@ -884,6 +888,32 @@ h2 {
   margin-top: 8px;
 }
 
+.movers-category-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.movers-category-card {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 10px;
+  background: var(--bg-card);
+}
+
+.movers-category-title {
+  margin: 0;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--brand);
+}
+
+.movers-shortcut-row {
+  grid-template-columns: 1fr;
+  gap: 6px;
+}
+
 .shortcut-btn {
   display: flex;
   flex-direction: column;
@@ -916,6 +946,19 @@ h2 {
   font-size: 1rem;
   font-weight: 800;
   color: var(--ink);
+}
+
+.mover-shortcut-btn {
+  align-items: stretch;
+  gap: 4px;
+}
+
+.mover-meta {
+  font-size: 0.74rem;
+  color: var(--muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Technical Indicator Rows ── */

@@ -1,6 +1,12 @@
 import { onBeforeUnmount, onMounted, ref } from "vue";
 
-import { getStockHistory, getStockIndicators, getStockQuote, getStockSymbolSearch } from "../api";
+import {
+  getStockHistory,
+  getStockIndicators,
+  getStockMarketMovers,
+  getStockQuote,
+  getStockSymbolSearch,
+} from "../api";
 import { formatTimeLabel } from "../utils/formatters";
 
 const SYMBOL_PATTERN = /^\d{4,6}$/;
@@ -19,10 +25,15 @@ export function useQuoteHistory(initialSymbol = "") {
   const indicators = ref(null);
   const indicatorsError = ref("");
 
+  const marketMovers = ref(null);
+  const marketMoversLoading = ref(false);
+  const marketMoversError = ref("");
+
   const selectedDays = ref(5);
   const dayOptions = [5, 20, 90, 180];
 
   let controller = null;
+  let moversController = null;
   let autoRefreshTimer = null;
   let silentRefreshing = false;
 
@@ -32,6 +43,29 @@ export function useQuoteHistory(initialSymbol = "") {
     if (quoteLoading.value) return false;
     if (typeof document !== "undefined" && document.visibilityState !== "visible") return false;
     return true;
+  }
+
+  async function refreshMarketMovers() {
+    if (moversController) {
+      moversController.abort();
+    }
+    moversController = new AbortController();
+
+    marketMoversLoading.value = true;
+    marketMoversError.value = "";
+
+    try {
+      const payload = await getStockMarketMovers(6, moversController.signal);
+      marketMovers.value = payload;
+    } catch (error) {
+      if (error.name === "AbortError") {
+        return;
+      }
+      marketMovers.value = null;
+      marketMoversError.value = error.message || "市場排行載入失敗";
+    } finally {
+      marketMoversLoading.value = false;
+    }
   }
 
   async function refreshQuote(options = {}) {
@@ -155,6 +189,7 @@ export function useQuoteHistory(initialSymbol = "") {
   }
 
   onMounted(() => {
+    refreshMarketMovers();
     if (typeof window !== "undefined") {
       autoRefreshTimer = window.setInterval(triggerAutoRefresh, AUTO_REFRESH_INTERVAL_MS);
     }
@@ -165,6 +200,7 @@ export function useQuoteHistory(initialSymbol = "") {
 
   onBeforeUnmount(() => {
     controller?.abort();
+    moversController?.abort();
     if (typeof window !== "undefined" && autoRefreshTimer !== null) {
       window.clearInterval(autoRefreshTimer);
       autoRefreshTimer = null;
@@ -184,9 +220,13 @@ export function useQuoteHistory(initialSymbol = "") {
     historyError,
     indicators,
     indicatorsError,
+    marketMovers,
+    marketMoversLoading,
+    marketMoversError,
     selectedDays,
     dayOptions,
     refreshQuote,
+    refreshMarketMovers,
     setDayRange,
   };
 }

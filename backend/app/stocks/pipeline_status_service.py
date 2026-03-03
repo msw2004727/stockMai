@@ -19,7 +19,10 @@ def get_pipeline_status() -> dict:
     expected_trade_date = _resolve_expected_trade_date(settings.twse_holidays)
 
     try:
-        snapshot = load_pipeline_status_snapshot(settings.database_url)
+        snapshot = load_pipeline_status_snapshot(
+            settings.database_url,
+            target_trade_date=expected_trade_date,
+        )
     except Exception as exc:
         raise PipelineStatusUnavailableError("同步狀態暫時無法取得。") from exc
 

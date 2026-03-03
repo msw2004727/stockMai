@@ -5,11 +5,17 @@ from datetime import date
 from backend.modules.data_pipeline.schema import ensure_stock_daily_prices_table
 
 
-def load_pipeline_status_snapshot(database_url: str) -> dict:
+def load_pipeline_status_snapshot(
+    database_url: str,
+    target_trade_date: date | None = None,
+) -> dict:
     with _connect(database_url) as conn:
         with conn.cursor() as cur:
             ensure_stock_daily_prices_table(cur)
-            latest_trade_date = _load_latest_trade_date(cur)
+            if target_trade_date is None:
+                latest_trade_date = _load_latest_trade_date(cur)
+            else:
+                latest_trade_date = _load_latest_trade_date_on_or_before(cur, target_trade_date)
             if latest_trade_date is None:
                 return {
                     "latest_trade_date": "",
@@ -31,6 +37,24 @@ def load_pipeline_status_snapshot(database_url: str) -> dict:
 
 def _load_latest_trade_date(cur) -> date | None:
     cur.execute("SELECT MAX(trade_date) AS trade_date FROM stock_daily_prices")
+    row = cur.fetchone()
+    if not row:
+        return None
+    value = row.get("trade_date")
+    if not isinstance(value, date):
+        return None
+    return value
+
+
+def _load_latest_trade_date_on_or_before(cur, target_trade_date: date) -> date | None:
+    cur.execute(
+        """
+        SELECT MAX(trade_date) AS trade_date
+        FROM stock_daily_prices
+        WHERE trade_date <= %s
+        """,
+        (target_trade_date,),
+    )
     row = cur.fetchone()
     if not row:
         return None

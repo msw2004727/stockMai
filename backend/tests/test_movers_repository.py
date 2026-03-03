@@ -7,8 +7,8 @@ from backend.app.stocks.movers_repository import _normalize_rows
 
 
 class MoversRepositoryTest(unittest.TestCase):
-    @patch("backend.app.stocks.movers_repository.resolve_stock_name", return_value="台積電")
-    def test_normalize_rows_converts_shares_to_lots(self, _mock_name):
+    @patch("backend.app.stocks.movers_repository.resolve_stock_name", return_value="TSMC")
+    def test_normalize_rows_converts_shares_to_integer_lots(self, _mock_name):
         rows = [
             {
                 "symbol": "2330",
@@ -18,11 +18,13 @@ class MoversRepositoryTest(unittest.TestCase):
                 "volume": 224651381,
             }
         ]
+
         payload = _normalize_rows(rows)
+
         self.assertEqual(len(payload), 1)
-        self.assertEqual(payload[0]["name"], "台積電")
+        self.assertEqual(payload[0]["name"], "TSMC")
         self.assertEqual(payload[0]["volume_shares"], 224651381)
-        self.assertEqual(payload[0]["volume"], 224651.381)
+        self.assertEqual(payload[0]["volume"], 224651)
 
 
 if __name__ == "__main__":

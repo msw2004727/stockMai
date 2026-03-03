@@ -68,10 +68,11 @@ function moversLabel(item) {
 
 function fmtLots(value) {
   if (value === null || value === undefined || Number.isNaN(Number(value))) return "--";
+  const safeLots = Math.trunc(Math.max(Number(value), 0));
   return new Intl.NumberFormat("zh-TW", {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 3,
-  }).format(Number(value));
+    maximumFractionDigits: 0,
+  }).format(safeLots);
 }
 
 function moverPercent(item, categoryKey) {

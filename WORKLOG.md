@@ -820,3 +820,14 @@
 - 目前進度：Done
 - 下一步：請在手機版確認紅綠色對比與卡片資訊密度；若還需更醒目可再調色碼。
 - 備註（可選）：本回合尚未 commit + push，待使用者確認後可提交。
+## [2026-03-03 17:58] movers 張數改為整數無條件捨去
+- 完成事項：
+  - 後端 movers 張數換算改為整數張（無條件捨去），例如 `224651381 股 -> 224651 張`。
+  - 前端 `fmtLots` 增加 `Math.trunc` 與整數格式化，確保畫面不出現小數張數。
+  - 測試更新：`test_movers_repository` 斷言調整為整數張。
+  - 驗證：
+    - `python -m unittest backend.tests.test_movers_repository backend.tests.test_movers_service backend.tests.test_market_snapshot_service backend.tests.test_pipeline_status_service backend.tests.test_stock_search_service backend.tests.test_market_snapshot_parser` 通過。
+    - frontend `npm run build` 通過。
+- 目前進度：Done
+- 下一步：請在手機版刷新行情頁確認小卡「量 XXX 張」已為整數且字長更短。
+- 備註（可選）：本回合尚未 commit + push。

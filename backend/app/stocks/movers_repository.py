@@ -189,8 +189,9 @@ def _to_float(raw: object) -> float:
         return 0.0
 
 
-def _to_lots(shares: int) -> float:
-    return round(max(float(shares), 0.0) / 1000.0, 3)
+def _to_lots(shares: int) -> int:
+    # 台股顯示張數時，採無條件捨去到整數張。
+    return int(max(int(shares), 0) / 1000)
 
 
 def _empty_payload(limit: int, requested_trade_date: date | None) -> dict:

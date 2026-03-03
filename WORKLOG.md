@@ -788,3 +788,15 @@
 - 目前進度：Done
 - 下一步：明日 08:30 觀察排程自動執行後的 `pipeline/status` 與 `movers` 覆蓋率是否持續穩定。
 - 備註（可選）：本回合共提交多筆修補 commit，已全部 push 到 `origin/main`。
+## [2026-03-03 17:28] 行情快速查詢改為三欄小卡版型並補中文名稱
+- 完成事項：
+  - 前端 `QuotePanel` 將「六大成交量 / 六大漲幅 / 六大跌幅」改為三欄卡片，每欄內固定小卡格線（每列 3 格、共 2 列），避免文字換行造成版面擠壓。
+  - 三欄加入區塊底色區分，欄位標題左側加入代表圖示（成交量/漲幅/跌幅）。
+  - 小卡內容改為 `中文名稱 + 代號 + 摘要數據`，並全面套用單行省略避免換行。
+  - 後端 movers 名稱補齊：新增 `resolve_stock_name`，讓排行回傳含中文股名而非僅代號。
+  - 測試驗證：
+    - `python -m unittest backend.tests.test_stock_search_service backend.tests.test_movers_service backend.tests.test_market_snapshot_service backend.tests.test_pipeline_status_service backend.tests.test_market_snapshot_parser` 通過。
+    - frontend `npm run build` 通過。
+- 目前進度：Done
+- 下一步：請在手機版行情頁實機確認三欄小卡密度與可讀性；若字級還想再縮，我可再調 1 檔。
+- 備註（可選）：本回合尚未執行 commit + push，待使用者確認後可直接提交。

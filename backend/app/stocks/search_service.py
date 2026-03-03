@@ -115,3 +115,18 @@ def search_stock_symbols(query: str, *, limit: int = 8) -> list[dict]:
 
 def get_stock_universe_size() -> int:
     return len(_load_universe())
+
+
+def resolve_stock_name(symbol: str) -> str:
+    target = str(symbol or "").strip()
+    if not target:
+        return ""
+
+    for item in _load_universe():
+        current = str(item.get("symbol") or "").strip()
+        if current != target:
+            continue
+        name = str(item.get("name") or "").strip()
+        return name or target
+
+    return target

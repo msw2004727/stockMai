@@ -24,9 +24,9 @@ const emit = defineEmits(["update:symbol", "refresh", "change-day"]);
 const { searchResults, searchLoading, searchError, clearSearch, scheduleSearch } = useStockSymbolSearch();
 
 const MOVER_GROUPS = [
-  { key: "top_volume", title: "前六大成交量" },
-  { key: "top_gainers", title: "前六大漲幅" },
-  { key: "top_losers", title: "前六大跌幅" },
+  { key: "top_volume", title: "六大成交量", icon: "▦", tone: "volume" },
+  { key: "top_gainers", title: "六大漲幅", icon: "▲", tone: "gainers" },
+  { key: "top_losers", title: "六大跌幅", icon: "▼", tone: "losers" },
 ];
 
 function onSymbolInput(event) {
@@ -284,10 +284,18 @@ function macdDirectionClass(indicatorPayload) {
     <p v-if="marketMoversLoading" class="sub">正在載入市場排行...</p>
     <p v-else-if="marketMoversError" class="sub warn-text">{{ marketMoversError }}</p>
     <div v-else class="movers-category-grid">
-      <article v-for="group in MOVER_GROUPS" :key="group.key" class="movers-category-card">
-        <p class="movers-category-title">{{ group.title }}</p>
+      <article
+        v-for="group in MOVER_GROUPS"
+        :key="group.key"
+        class="movers-category-card"
+        :class="`movers-tone-${group.tone}`"
+      >
+        <p class="movers-category-title">
+          <span class="movers-title-icon" aria-hidden="true">{{ group.icon }}</span>
+          <span class="movers-title-text">{{ group.title }}</span>
+        </p>
         <p v-if="!moversByCategory(marketMovers, group.key).length" class="sub">暫無排行資料</p>
-        <div v-else class="shortcut-row movers-shortcut-row">
+        <div v-else class="movers-shortcut-grid">
           <button
             v-for="item in moversByCategory(marketMovers, group.key)"
             :key="`${group.key}-${item.symbol}`"
@@ -295,8 +303,8 @@ function macdDirectionClass(indicatorPayload) {
             class="shortcut-btn mover-shortcut-btn"
             @click="onShortcut(item.symbol)"
           >
-            <span class="shortcut-name">{{ moversLabel(item) }}</span>
-            <span class="shortcut-symbol">{{ item.symbol }}</span>
+            <span class="mover-name">{{ moversLabel(item) }}</span>
+            <span class="mover-symbol">{{ item.symbol }}</span>
             <span class="mover-meta">{{ moverMeta(item, group.key) }}</span>
           </button>
         </div>

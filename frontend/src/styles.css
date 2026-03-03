@@ -1289,3 +1289,126 @@ h2 {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Movers cards: 3 columns (categories) x 2 rows (items) */
+.movers-category-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  align-items: stretch;
+}
+
+.movers-category-card {
+  min-width: 0;
+  border-radius: 12px;
+  padding: 10px;
+  border: 1px solid var(--border);
+}
+
+.movers-tone-volume {
+  background: color-mix(in srgb, #0284c7 14%, var(--bg-card));
+}
+
+.movers-tone-gainers {
+  background: color-mix(in srgb, #ef4444 14%, var(--bg-card));
+}
+
+.movers-tone-losers {
+  background: color-mix(in srgb, #16a34a 14%, var(--bg-card));
+}
+
+.movers-category-title {
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.movers-title-icon {
+  width: 18px;
+  height: 18px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: #fff;
+  background: color-mix(in srgb, var(--ink) 65%, transparent);
+}
+
+.movers-title-text {
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: var(--ink);
+}
+
+.movers-shortcut-grid {
+  margin-top: 8px;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.mover-shortcut-btn {
+  min-width: 0;
+  padding: 7px 8px;
+  gap: 2px;
+  border-radius: 10px;
+  align-items: flex-start;
+  background: color-mix(in srgb, var(--bg-card) 90%, #fff);
+}
+
+.mover-name,
+.mover-symbol,
+.mover-meta {
+  max-width: 100%;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mover-name {
+  font-size: 0.72rem;
+  color: var(--muted);
+}
+
+.mover-symbol {
+  font-size: 0.88rem;
+  font-weight: 900;
+  color: var(--ink);
+  line-height: 1.1;
+}
+
+.mover-meta {
+  font-size: 0.68rem;
+  color: var(--muted);
+}
+
+@media (max-width: 420px) {
+  .movers-category-grid {
+    gap: 8px;
+  }
+
+  .movers-shortcut-grid {
+    gap: 5px;
+  }
+
+  .mover-shortcut-btn {
+    padding: 6px;
+  }
+
+  .mover-name {
+    font-size: 0.68rem;
+  }
+
+  .mover-symbol {
+    font-size: 0.82rem;
+  }
+
+  .mover-meta {
+    font-size: 0.64rem;
+  }
+}

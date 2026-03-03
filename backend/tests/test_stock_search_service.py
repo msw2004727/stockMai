@@ -1,7 +1,7 @@
 import unittest
 from unittest.mock import patch
 
-from backend.app.stocks.search_service import search_stock_symbols
+from backend.app.stocks.search_service import resolve_stock_name, search_stock_symbols
 
 
 class StockSearchServiceTest(unittest.TestCase):
@@ -30,6 +30,15 @@ class StockSearchServiceTest(unittest.TestCase):
     def test_search_returns_empty_for_blank_query(self):
         results = search_stock_symbols("   ", limit=5)
         self.assertEqual(results, [])
+
+    def test_resolve_stock_name(self):
+        universe = [
+            {"symbol": "2330", "name": "台積電", "market": "twse"},
+            {"symbol": "2317", "name": "鴻海", "market": "twse"},
+        ]
+        with patch("backend.app.stocks.search_service._load_universe", return_value=universe):
+            self.assertEqual(resolve_stock_name("2330"), "台積電")
+            self.assertEqual(resolve_stock_name("9999"), "9999")
 
 
 if __name__ == "__main__":

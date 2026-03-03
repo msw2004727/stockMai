@@ -4,6 +4,7 @@ from datetime import date
 from decimal import Decimal
 
 from backend.modules.data_pipeline.schema import ensure_stock_daily_prices_table
+from .search_service import resolve_stock_name
 
 
 def load_previous_day_movers(
@@ -168,7 +169,7 @@ def _normalize_rows(rows: list[dict]) -> list[dict]:
         result.append(
             {
                 "symbol": symbol,
-                "name": symbol,
+                "name": resolve_stock_name(symbol),
                 "close": round(close, 4),
                 "change": round(change, 4),
                 "change_pct": round(change_pct, 4),

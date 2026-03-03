@@ -16,38 +16,71 @@ def upsert_price_snapshots(
     try:
         with _connect(database_url) as conn:
             with conn.cursor() as cur:
-                cur.executemany(
-                    """
-                    INSERT INTO stock_daily_prices (
-                        symbol,
-                        trade_date,
-                        open,
-                        high,
-                        low,
-                        close,
-                        change,
-                        volume,
-                        source
-                    )
-                    VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s
-                    )
-                    ON CONFLICT (symbol, trade_date)
-                    DO UPDATE SET
-                        open = EXCLUDED.open,
-                        high = EXCLUDED.high,
-                        low = EXCLUDED.low,
-                        close = EXCLUDED.close,
-                        change = EXCLUDED.change,
-                        volume = EXCLUDED.volume,
-                        source = EXCLUDED.source
-                    """,
-                    payload,
-                )
+                _upsert_or_replace(cur, payload)
     except Exception:
         return 0
 
     return len(payload)
+
+
+def _upsert_or_replace(cur, payload: list[tuple]) -> None:
+    try:
+        cur.executemany(
+            """
+            INSERT INTO stock_daily_prices (
+                symbol,
+                trade_date,
+                open,
+                high,
+                low,
+                close,
+                change,
+                volume,
+                source
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            ON CONFLICT (symbol, trade_date)
+            DO UPDATE SET
+                open = EXCLUDED.open,
+                high = EXCLUDED.high,
+                low = EXCLUDED.low,
+                close = EXCLUDED.close,
+                change = EXCLUDED.change,
+                volume = EXCLUDED.volume,
+                source = EXCLUDED.source
+            """,
+            payload,
+        )
+    except Exception:
+        keys = [(row[0], row[1]) for row in payload]
+        cur.executemany(
+            """
+            DELETE FROM stock_daily_prices
+            WHERE symbol = %s AND trade_date = %s
+            """,
+            keys,
+        )
+        cur.executemany(
+            """
+            INSERT INTO stock_daily_prices (
+                symbol,
+                trade_date,
+                open,
+                high,
+                low,
+                close,
+                change,
+                volume,
+                source
+            )
+            VALUES (
+                %s, %s, %s, %s, %s, %s, %s, %s, %s
+            )
+            """,
+            payload,
+        )
 
 
 def _prepare_payload(snapshots: list[dict], source: str) -> list[tuple]:

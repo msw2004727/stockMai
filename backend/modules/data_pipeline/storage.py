@@ -170,11 +170,10 @@ def upsert_price_series(
                         close,
                         change,
                         volume,
-                        source,
-                        updated_at
+                        source
                     )
                     VALUES (
-                        %s, %s, %s, %s, %s, %s, %s, %s, %s, NOW()
+                        %s, %s, %s, %s, %s, %s, %s, %s, %s
                     )
                     ON CONFLICT (symbol, trade_date)
                     DO UPDATE SET
@@ -184,8 +183,7 @@ def upsert_price_series(
                         close = EXCLUDED.close,
                         change = EXCLUDED.change,
                         volume = EXCLUDED.volume,
-                        source = EXCLUDED.source,
-                        updated_at = NOW()
+                        source = EXCLUDED.source
                     """,
                     payload,
                 )

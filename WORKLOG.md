@@ -762,3 +762,14 @@
 - 目前進度：Done
 - 下一步：部署到 Render 後，先手動跑一次 `stockmai-snapshot-cron` 與 `stockmai-pipeline-monitor-cron`，再執行 `scripts/cloud-smoke.ps1` 完整驗收。
 - 備註（可選）：本回合第4階段變更尚未提交，待使用者確認後可進行 commit + push。
+## [2026-03-03 16:04] 四階段雲端驗收與瑕疵盤點
+- 完成事項：
+  - 確認目前分支 `main` 與 `origin/main` 同步（最新 commit：`74ad70f`）。
+  - 本地驗收：`python -m unittest backend.tests.test_market_clock backend.tests.test_movers_service backend.tests.test_market_snapshot_parser backend.tests.test_market_snapshot_service backend.tests.test_pipeline_status_service` 通過。
+  - 本地限制：`backend.tests.test_api_integration` 因本機缺少 `fastapi` 套件，無法完成匯入測試。
+  - 前端驗收：`frontend` 執行 `npm run build` 通過。
+  - 雲端驗收：`/health`、`/stocks/quote` 成功；`/stocks/movers`、`/stocks/pipeline/status`、`/stocks/pipeline/snapshot` 皆回 503。
+  - 深入排查：TWSE `STOCK_DAY_ALL` 當前欄位為 `OpeningPrice/HighestPrice/LowestPrice/ClosingPrice`，現行 `market_snapshot_parser` 只處理 `Open/High/Low/Close`，造成 snapshot 解析結果為 0 筆，連帶影響 movers 與 pipeline status。
+- 目前進度：Blocked
+- 下一步：修正 `market_snapshot_parser` 欄位映射與測試覆蓋，重新部署後重跑 cloud smoke 與四階段驗收。
+- 備註（可選）：本回合以驗收與根因定位為主，尚未進行程式修補。

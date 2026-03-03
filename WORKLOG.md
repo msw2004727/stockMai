@@ -937,3 +937,17 @@
 - 目前進度：In Progress
 - 下一步：執行 `git commit` 與 `git push origin main`。
 - 備註（可選）：若部署後內容未更新，需確認前端快取已清除。
+## [2026-03-03 19:48] 補強AI多空欄位缺失時自動二次呼叫補齊
+- 完成事項：
+  - 根因確認：畫面顯示「AI 未回傳看多分析內容」代表該次 provider 回傳 JSON 缺少 `bullish_view / bearish_view / easy_summary`，不是前端沒呼叫。
+  - 後端 `gateway_router` 新增自動補抓邏輯：
+    - 第一輪正規化後若缺少上述欄位，會以同一 provider 自動再呼叫一次補齊欄位（補欄位專用 prompt）。
+    - 補欄位成功會合併回原結果，並標記 `narrative_enriched=true`（internal）。
+    - 補欄位失敗不影響主流程，仍回傳第一輪結果。
+  - 後端 `prompt_builder` 新增 `build_narrative_patch_prompt(...)`，專門要求模型只補缺的多空/總結欄位。
+  - 驗證：
+    - `python -m unittest backend.tests.test_prompt_builder backend.tests.test_ai_gateway_normalizer backend.tests.test_openai_compat_clients backend.tests.test_deepseek_client` 通過（25 tests）。
+    - `frontend` 執行 `npm run build` 通過。
+- 目前進度：Done
+- 下一步：部署後請你用同一檔股票連續測 2~3 次 AI 分析，確認看多/看空/輕鬆總結出現率明顯提升。
+- 備註（可選）：若 provider 本身持續不遵守 JSON 欄位，仍可能偶發備援文案，但已比原本多一輪補呼叫。

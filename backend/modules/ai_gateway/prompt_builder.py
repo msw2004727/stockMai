@@ -94,6 +94,55 @@ def build_provider_prompts(
     return prompts
 
 
+def build_narrative_patch_prompt(
+    symbol: str,
+    original_prompt: str,
+    normalized: dict | None,
+    missing_fields: list[str],
+) -> str:
+    normalized = normalized or {}
+    parsed_missing = [field for field in missing_fields if field in {"bullish_view", "bearish_view", "easy_summary"}]
+    if not parsed_missing:
+        parsed_missing = ["bullish_view", "bearish_view", "easy_summary"]
+
+    summary = str(normalized.get("summary") or "").strip()
+    signal = str(normalized.get("signal") or "").strip().lower()
+    confidence = normalized.get("confidence")
+    key_points = normalized.get("key_points")
+    if not isinstance(key_points, list):
+        key_points = []
+    key_points_text = "; ".join(str(item).strip() for item in key_points if str(item).strip())
+
+    fields_line = ", ".join(parsed_missing)
+    prompt = (
+        "You are a Taiwan stock analysis assistant. "
+        f"Target symbol: {symbol}. "
+        f"Now generate missing fields only: {fields_line}. "
+        "Return STRICT JSON only."
+    )
+    prompt += (
+        "\nOutput requirements:"
+        "\n- bullish_view: data-grounded bullish stance in Traditional Chinese (about 180~320 chars)."
+        "\n- bearish_view: data-grounded bearish stance in Traditional Chinese (about 180~320 chars)."
+        "\n- easy_summary: concise comparison in Traditional Chinese (about 80~140 chars)."
+    )
+    if summary:
+        prompt += f"\nExisting summary: {summary}"
+    if signal:
+        prompt += f"\nExisting signal: {signal}"
+    if confidence is not None:
+        prompt += f"\nExisting confidence: {confidence}"
+    if key_points_text:
+        prompt += f"\nExisting key_points: {key_points_text}"
+
+    original_prompt_text = str(original_prompt or "").strip()
+    if original_prompt_text:
+        prompt += f"\nOriginal analysis prompt:\n{original_prompt_text[:1800]}"
+
+    prompt += "\nRespond in Traditional Chinese."
+    return prompt
+
+
 def _build_role_block(provider: str | None) -> str:
     normalized = _normalize_provider(provider)
     if not normalized:

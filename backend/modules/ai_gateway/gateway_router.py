@@ -10,6 +10,7 @@ from .deepseek_client import DeepSeekClient
 from .grok_client import GrokClient
 from .mock_clients import MockAIClient
 from .openai_client import OpenAIClient
+from .prompt_builder import build_narrative_patch_prompt
 from .provider_client import AIProviderClient, ProviderCallError
 from .response_normalizer import normalize_ai_response
 
@@ -100,18 +101,51 @@ class GatewayRouter:
             if previous_failure:
                 fallback_used = True
             normalized = normalize_ai_response(provider=provider, raw_text=raw_text)
+            total_attempts = attempts
+            all_prompts = [provider_prompt]
+            all_raw_texts = [raw_text]
+            narrative_enriched = False
+            missing_narratives = _missing_narrative_fields(normalized)
+            if missing_narratives:
+                narrative_prompt = build_narrative_patch_prompt(
+                    symbol=request.symbol,
+                    original_prompt=provider_prompt,
+                    normalized=normalized,
+                    missing_fields=missing_narratives,
+                )
+                try:
+                    narrative_text, narrative_attempts = await _run_with_retry(
+                        client=client,
+                        prompt=narrative_prompt,
+                        symbol=request.symbol,
+                        timeout_seconds=request.timeout_seconds,
+                        retry_count=request.retry_count,
+                        retry_backoff_seconds=request.retry_backoff_seconds,
+                    )
+                    total_attempts += narrative_attempts
+                    all_prompts.append(narrative_prompt)
+                    all_raw_texts.append(narrative_text)
+                    narrative_normalized = normalize_ai_response(provider=provider, raw_text=narrative_text)
+                    normalized = _merge_narrative_fields(normalized, narrative_normalized)
+                    narrative_enriched = _has_any_narrative_fields(narrative_normalized)
+                except Exception:
+                    # Keep primary result if enrichment call fails.
+                    pass
+
             result_item = {
                 "provider": provider,
                 "ok": True,
                 "data": normalized,
-                "attempts": attempts,
+                "attempts": total_attempts,
             }
+            if narrative_enriched:
+                result_item["narrative_enriched"] = True
             usage = _track_cost_usage(
                 request=request,
                 user_id=user_id,
                 provider=provider,
-                prompt_text=provider_prompt,
-                raw_text=raw_text,
+                prompt_text="\n\n".join(all_prompts),
+                raw_text="\n\n".join(all_raw_texts),
             )
             if usage is not None:
                 result_item["cost"] = usage
@@ -225,6 +259,33 @@ def _resolve_provider_prompt(request: GatewayRequest, provider: str) -> str:
     prompt = request.provider_prompts.get(provider, request.prompt)
     parsed = prompt.strip()
     return parsed if parsed else request.prompt
+
+
+def _missing_narrative_fields(normalized: dict) -> list[str]:
+    required = ("bullish_view", "bearish_view", "easy_summary")
+    missing: list[str] = []
+    for key in required:
+        value = normalized.get(key)
+        if isinstance(value, str) and value.strip():
+            continue
+        missing.append(key)
+    return missing
+
+
+def _has_any_narrative_fields(normalized: dict) -> bool:
+    return any(
+        isinstance(normalized.get(key), str) and normalized.get(key).strip()
+        for key in ("bullish_view", "bearish_view", "easy_summary")
+    )
+
+
+def _merge_narrative_fields(base: dict, patch: dict) -> dict:
+    merged = dict(base)
+    for key in ("bullish_view", "bearish_view", "easy_summary"):
+        patch_value = patch.get(key)
+        if isinstance(patch_value, str) and patch_value.strip():
+            merged[key] = patch_value.strip()
+    return merged
 
 
 def build_default_router(

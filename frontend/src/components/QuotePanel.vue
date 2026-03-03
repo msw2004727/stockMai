@@ -85,6 +85,29 @@ function moverMeta(item, categoryKey) {
   return `量 ${vol} 張`;
 }
 
+function moversCoverageText(payload) {
+  const ratio = Number(payload?.coverage_ratio);
+  const actual = Number(payload?.universe_size);
+  const expected = Number(payload?.expected_universe_size);
+
+  if (!Number.isFinite(ratio) || ratio < 0) {
+    return "";
+  }
+  if (Number.isFinite(actual) && actual >= 0 && Number.isFinite(expected) && expected > 0) {
+    return `覆蓋率：${(ratio * 100).toFixed(1)}%（樣本 ${actual} / 全市場 ${expected}）`;
+  }
+  return `覆蓋率：${(ratio * 100).toFixed(1)}%`;
+}
+
+function moversFallbackText(payload) {
+  const requested = String(payload?.requested_trade_date || "").trim();
+  const asOf = String(payload?.as_of_date || "").trim();
+  if (!requested || !asOf || requested === asOf) {
+    return "";
+  }
+  return `指定交易日 ${requested} 無資料，已回退到最近可用交易日 ${asOf}`;
+}
+
 function isLockedRange(days) {
   return Number(days) === 90 || Number(days) === 180;
 }
@@ -255,6 +278,9 @@ function macdDirectionClass(indicatorPayload) {
   <div v-if="!quote && !quoteLoading && !quoteError" class="shortcut-section">
     <p class="field-title">前一交易日快速查詢</p>
     <p v-if="marketMovers?.as_of_date" class="sub">交易日：{{ marketMovers.as_of_date }}</p>
+    <p v-if="moversCoverageText(marketMovers)" class="sub">{{ moversCoverageText(marketMovers) }}</p>
+    <p v-if="moversFallbackText(marketMovers)" class="sub warn-text">{{ moversFallbackText(marketMovers) }}</p>
+    <p v-if="marketMovers?.note" class="sub">{{ marketMovers.note }}</p>
     <p v-if="marketMoversLoading" class="sub">正在載入市場排行...</p>
     <p v-else-if="marketMoversError" class="sub warn-text">{{ marketMoversError }}</p>
     <div v-else class="movers-category-grid">

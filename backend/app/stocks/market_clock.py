@@ -37,7 +37,7 @@ def infer_market_state(
     parsed_as_of = _parse_iso_date(as_of_date)
     base_state = str(market_state or "").strip().lower()
 
-    if not _is_trading_day(today, holiday_dates):
+    if not is_trading_day(today, holiday_dates):
         return "market_holiday"
 
     if now.time() < TRADING_OPEN:
@@ -58,10 +58,18 @@ def infer_market_state(
     return "daily_close"
 
 
-def _is_trading_day(target: date, holiday_dates: set[date]) -> bool:
+def is_trading_day(target: date, holiday_dates: set[date]) -> bool:
     if target.weekday() >= 5:
         return False
     return target not in holiday_dates
+
+
+def previous_trading_day(reference_date: date, holiday_dates: set[date]) -> date:
+    cursor = reference_date
+    while True:
+        cursor = cursor.fromordinal(cursor.toordinal() - 1)
+        if is_trading_day(cursor, holiday_dates):
+            return cursor
 
 
 def _parse_iso_date(raw: str) -> date | None:

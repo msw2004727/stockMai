@@ -2,7 +2,7 @@ import unittest
 from datetime import date, datetime
 from zoneinfo import ZoneInfo
 
-from backend.app.stocks.market_clock import infer_market_state
+from backend.app.stocks.market_clock import infer_market_state, previous_trading_day
 
 
 class MarketClockTest(unittest.TestCase):
@@ -53,6 +53,20 @@ class MarketClockTest(unittest.TestCase):
             now_taipei=now,
         )
         self.assertEqual(state, "market_holiday")
+
+    def test_previous_trading_day_skips_weekend(self):
+        # Monday -> previous Friday
+        self.assertEqual(
+            previous_trading_day(date(2026, 3, 2), holiday_dates=set()),
+            date(2026, 2, 27),
+        )
+
+    def test_previous_trading_day_skips_holiday(self):
+        # Tuesday with Monday holiday -> previous Friday
+        self.assertEqual(
+            previous_trading_day(date(2026, 3, 3), holiday_dates={date(2026, 3, 2)}),
+            date(2026, 2, 27),
+        )
 
 
 if __name__ == "__main__":

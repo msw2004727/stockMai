@@ -112,3 +112,6 @@ def search_stock_symbols(query: str, *, limit: int = 8) -> list[dict]:
         for _, _, item in scored[:capped_limit]
     ]
 
+
+def get_stock_universe_size() -> int:
+    return len(_load_universe())

@@ -730,3 +730,17 @@
 - 目前進度：In Progress
 - 下一步：第2階段補上「雲端排程接入」與「資料覆蓋率指標」（每日自動執行、回報同步筆數/市場覆蓋）。
 - 備註（可選）：本機缺 `fastapi`，無法跑 `test_api_integration` 匯入鏈路。
+## [2026-03-03 15:49] 第2階段提交推送並啟動第3階段品質/交易日曆/覆蓋率強化
+- 完成事項：
+  - 已將第2階段批次同步管線變更提交並推送（`6b5d86e`）。
+  - 第3階段完成交易日曆強化：新增 `previous_trading_day` 與公開 `is_trading_day`，movers 固定以「前一交易日」為目標日。
+  - movers 服務新增覆蓋率指標：`expected_universe_size`、`coverage_ratio`、`requested_trade_date`，並在回退到最近可用交易日時附加說明。
+  - 快照同步新增品質欄位：`fetched_rows`、`parsed_rows`、`valid_rows`、`invalid_rows`、`deduped_rows`，並回傳同步覆蓋率。
+  - 行情快速查詢 UI 顯示覆蓋率、回退提示與資料說明，降低使用者誤判風險。
+  - 驗證完成：
+    - `python -m unittest backend.tests.test_market_clock backend.tests.test_movers_service backend.tests.test_market_snapshot_parser backend.tests.test_market_snapshot_service` 通過。
+    - `python -m py_compile`（本回合後端修改檔）通過。
+    - frontend `npm run build` 通過。
+- 目前進度：In Progress
+- 下一步：第3階段補「雲端排程接入 + 同步失敗告警/重試策略」與驗收腳本，完成後再進入第4階段。
+- 備註（可選）：本回合已先完成第2階段 commit+push，並持續實作第3階段（尚未提交）。

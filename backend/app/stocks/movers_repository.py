@@ -3,18 +3,23 @@ from __future__ import annotations
 from datetime import date
 from decimal import Decimal
 
-import psycopg
-from psycopg.rows import dict_row
 
-
-def load_previous_day_movers(database_url: str, limit: int = 6) -> dict:
+def load_previous_day_movers(
+    database_url: str,
+    limit: int = 6,
+    target_trade_date: date | None = None,
+) -> dict:
     safe_limit = max(1, min(int(limit), 20))
 
     with _connect(database_url) as conn:
         with conn.cursor() as cur:
-            trade_date = _load_latest_trade_date(cur)
+            if target_trade_date is None:
+                trade_date = _load_latest_trade_date(cur)
+            else:
+                trade_date = _load_latest_trade_date_on_or_before(cur, target_trade_date)
+
             if trade_date is None:
-                return _empty_payload(limit=safe_limit)
+                return _empty_payload(limit=safe_limit, requested_trade_date=target_trade_date)
 
             universe_size = _load_universe_size(cur, trade_date=trade_date)
             top_volume = _load_top_volume(cur, trade_date=trade_date, limit=safe_limit)
@@ -23,6 +28,7 @@ def load_previous_day_movers(database_url: str, limit: int = 6) -> dict:
 
     return {
         "as_of_date": trade_date.isoformat(),
+        "requested_trade_date": target_trade_date.isoformat() if target_trade_date else "",
         "limit": safe_limit,
         "source": "postgres",
         "universe_size": int(universe_size),
@@ -36,7 +42,7 @@ def load_previous_day_movers(database_url: str, limit: int = 6) -> dict:
     }
 
 
-def _load_latest_trade_date(cur: psycopg.Cursor) -> date | None:
+def _load_latest_trade_date(cur) -> date | None:
     cur.execute("SELECT MAX(trade_date) AS trade_date FROM stock_daily_prices")
     row = cur.fetchone()
     if not row:
@@ -47,7 +53,25 @@ def _load_latest_trade_date(cur: psycopg.Cursor) -> date | None:
     return trade_date
 
 
-def _load_universe_size(cur: psycopg.Cursor, trade_date: date) -> int:
+def _load_latest_trade_date_on_or_before(cur, target_trade_date: date) -> date | None:
+    cur.execute(
+        """
+        SELECT MAX(trade_date) AS trade_date
+        FROM stock_daily_prices
+        WHERE trade_date <= %s
+        """,
+        (target_trade_date,),
+    )
+    row = cur.fetchone()
+    if not row:
+        return None
+    trade_date = row.get("trade_date")
+    if not isinstance(trade_date, date):
+        return None
+    return trade_date
+
+
+def _load_universe_size(cur, trade_date: date) -> int:
     cur.execute(
         """
         SELECT COUNT(*) AS total
@@ -60,7 +84,7 @@ def _load_universe_size(cur: psycopg.Cursor, trade_date: date) -> int:
     return int(row.get("total") or 0)
 
 
-def _load_top_volume(cur: psycopg.Cursor, trade_date: date, limit: int) -> list[dict]:
+def _load_top_volume(cur, trade_date: date, limit: int) -> list[dict]:
     cur.execute(
         """
         SELECT
@@ -81,7 +105,7 @@ def _load_top_volume(cur: psycopg.Cursor, trade_date: date, limit: int) -> list[
     return _normalize_rows(cur.fetchall())
 
 
-def _load_top_gainers(cur: psycopg.Cursor, trade_date: date, limit: int) -> list[dict]:
+def _load_top_gainers(cur, trade_date: date, limit: int) -> list[dict]:
     cur.execute(
         """
         SELECT
@@ -102,7 +126,7 @@ def _load_top_gainers(cur: psycopg.Cursor, trade_date: date, limit: int) -> list
     return _normalize_rows(cur.fetchall())
 
 
-def _load_top_losers(cur: psycopg.Cursor, trade_date: date, limit: int) -> list[dict]:
+def _load_top_losers(cur, trade_date: date, limit: int) -> list[dict]:
     cur.execute(
         """
         SELECT
@@ -160,9 +184,10 @@ def _to_float(raw: object) -> float:
         return 0.0
 
 
-def _empty_payload(limit: int) -> dict:
+def _empty_payload(limit: int, requested_trade_date: date | None) -> dict:
     return {
         "as_of_date": "",
+        "requested_trade_date": requested_trade_date.isoformat() if requested_trade_date else "",
         "limit": int(limit),
         "source": "postgres",
         "universe_size": 0,
@@ -176,7 +201,10 @@ def _empty_payload(limit: int) -> dict:
     }
 
 
-def _connect(database_url: str) -> psycopg.Connection:
+def _connect(database_url: str):
+    import psycopg
+    from psycopg.rows import dict_row
+
     return psycopg.connect(
         database_url,
         connect_timeout=2,

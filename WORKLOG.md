@@ -884,3 +884,36 @@
 - 目前進度：Done
 - 下一步：若你要，我可再加一個 `/ai/analyze` 的 provider 健康檢查 API，快速看 Grok/DeepSeek 是否可用與錯誤原因。
 - 備註（可選）：本回合尚未 commit + push。
+## [2026-03-03 19:19] AI頁文案去重與提示精簡
+- 完成事項：
+  - `AIPanel.vue` 移除提示文案：`先在行情頁查詢股價，再執行 AI 分析會更準確。`
+  - `App.vue` 將空代號時提示改為：`請先查詢股價`，不再顯示原句 `請先在行情頁查詢股價，再執行 AI 分析`。
+  - `AIPanel.vue` 移除多空分析與總結內文前綴，以下字樣不再顯示於段落開頭：
+    - `看多分析師：`
+    - `看空分析師：`
+    - `輕鬆總結：`
+  - 前端驗證：`frontend` 執行 `npm run build` 通過。
+- 目前進度：Done
+- 下一步：請在 AI 分析頁重新執行一次，確認多空段落與輕鬆總結已無重複前綴文字。
+- 備註（可選）：本回合尚未 commit + push。
+## [2026-03-03 19:26] 移除AI前置短提示並修復 Grok/DeepSeek 失敗
+- 完成事項：
+  - 前端 `App.vue`：按下「執行 AI 分析」且未輸入代號時，不再顯示任何「請先查詢股價」提示（錯誤訊息清空）。
+  - 後端 `openai_client.py`：新增模型名稱自動回退機制，修正 Grok 舊模型名 `grok-4.1-fast` 造成 `Model not found` 時可自動改用可用候選模型重試。
+  - 後端 `config.py` 與 `render.yaml`：`GROK_MODEL` 預設改為 `grok-4-1-fast-non-reasoning`，避免新部署直接打到失效模型名。
+  - 後端 `base_http_client.py`：補強 HTTP 例外訊息（帶出例外類型），並在 httpx 傳輸層失敗時自動改用 urllib 再試一次，降低 DeepSeek 連線失敗率。
+  - 後端 `deepseek_client.py`：DeepSeek base URL 改為 `https://api.deepseek.com`（官方相容端點）。
+  - 測試更新：新增 Grok `Model not found` fallback 測試案例。
+  - 驗證：
+    - `python -m unittest backend.tests.test_openai_compat_clients backend.tests.test_deepseek_client` 通過（14 tests）。
+    - `frontend` 執行 `npm run build` 通過。
+- 目前進度：Done
+- 下一步：部署後請在前端各測一次 Grok 與 DeepSeek；若 DeepSeek 仍失敗，可直接依新錯誤文字定位是金鑰/網路/模型問題。
+- 備註（可選）：`backend.tests.test_ai_gateway_router` 在本機缺少 `redis` 套件，故本回合未納入該檔測試。
+## [2026-03-03 19:29] 提交並推送修復，觸發雲端自動部署
+- 完成事項：
+  - 彙整本回合前端與後端修復（AI 前置提示移除、Grok 模型 fallback、DeepSeek 連線容錯與錯誤訊息補強、Render 預設模型更新）。
+  - 執行 `git commit` 與 `git push origin main`，以 Render 自動部署機制發布更新。
+- 目前進度：In Progress
+- 下一步：等待 Render 部署完成後，於前端實測 Grok/DeepSeek 分析是否成功回傳。
+- 備註（可選）：若部署後仍失敗，優先檢查 Render 的 `GROK_MODEL`、`GROK_API_KEY`、`DEEPSEEK_API_KEY` 是否生效。

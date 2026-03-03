@@ -117,9 +117,8 @@ function handleTabChange(nextTab) {
 async function refreshAiAndStrategy() {
   const sym = String(symbol.value || "").trim();
   if (!sym) {
-    const message = "請先在行情頁查詢股價，再執行 AI 分析";
-    showAiPrerequisiteError(message);
-    showStrategyPrerequisiteError(message);
+    showAiPrerequisiteError("");
+    showStrategyPrerequisiteError("");
     return;
   }
 

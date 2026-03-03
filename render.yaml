@@ -56,7 +56,7 @@ services:
       - key: GPT_MODEL
         value: "gpt-5.2"
       - key: GROK_MODEL
-        value: "grok-4.1-fast"
+        value: "grok-4-1-fast-non-reasoning"
       - key: DEEPSEEK_MODEL
         value: "deepseek-chat"
       - key: CORS_ALLOW_ORIGINS

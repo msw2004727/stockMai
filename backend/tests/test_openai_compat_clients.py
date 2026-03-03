@@ -85,6 +85,44 @@ class OpenAICompatClientsTest(unittest.TestCase):
         self.assertIn("max_completion_tokens", third_payload)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_grok_client_fallbacks_when_model_not_found(self, mock_post_json):
+        mock_post_json.side_effect = [
+            (
+                400,
+                {},
+                '{"code":"Client specified an invalid argument","error":"Model not found: grok-4.1-fast"}',
+            ),
+            (
+                400,
+                {},
+                '{"code":"Client specified an invalid argument","error":"Model not found: grok-4-1-fast"}',
+            ),
+            (
+                200,
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"ok model fallback","signal":"neutral","confidence":0.6}'
+                            }
+                        }
+                    ]
+                },
+                "",
+            ),
+        ]
+        client = GrokClient(api_key="k-grok", model="grok-4.1-fast")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("model fallback", text)
+        self.assertEqual(mock_post_json.call_count, 3)
+        first_payload = mock_post_json.call_args_list[0].kwargs["payload"]
+        second_payload = mock_post_json.call_args_list[1].kwargs["payload"]
+        third_payload = mock_post_json.call_args_list[2].kwargs["payload"]
+        self.assertEqual(first_payload["model"], "grok-4.1-fast")
+        self.assertEqual(second_payload["model"], "grok-4-1-fast")
+        self.assertEqual(third_payload["model"], "grok-4-1-fast-non-reasoning")
+
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_openai_client_supports_output_text_shape(self, mock_post_json):
         mock_post_json.return_value = (
             200,

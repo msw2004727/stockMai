@@ -74,26 +74,35 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         headers: dict[str, str],
         timeout_seconds: int,
     ) -> str:
-        payload_candidates = _build_chat_completion_payload_candidates(self.model, prompt)
         last_raw_text = ""
         last_error: ProviderCallError | None = None
 
-        for payload in payload_candidates:
-            try:
-                text, raw_text = await self._call_and_extract_text(
-                    endpoint="/chat/completions",
-                    payload=payload,
-                    headers=headers,
-                    timeout_seconds=timeout_seconds,
-                )
-                last_raw_text = raw_text
-                if text:
-                    return text
-            except ProviderCallError as exc:
-                last_error = exc
-                if _is_unsupported_parameter_error(str(exc)):
-                    continue
-                raise
+        model_candidates = _build_model_candidates(provider=self.provider, model=self.model)
+        for model in model_candidates:
+            payload_candidates = _build_chat_completion_payload_candidates(model, prompt)
+            switch_model = False
+            for payload in payload_candidates:
+                try:
+                    text, raw_text = await self._call_and_extract_text(
+                        endpoint="/chat/completions",
+                        payload=payload,
+                        headers=headers,
+                        timeout_seconds=timeout_seconds,
+                    )
+                    last_raw_text = raw_text
+                    if text:
+                        return text
+                except ProviderCallError as exc:
+                    last_error = exc
+                    parsed_error = str(exc)
+                    if _is_unsupported_parameter_error(parsed_error):
+                        continue
+                    if _is_model_not_found_error(parsed_error):
+                        switch_model = True
+                        break
+                    raise
+            if switch_model:
+                continue
 
         if last_error and not last_raw_text:
             raise last_error
@@ -201,6 +210,69 @@ def _is_unsupported_parameter_error(message: str) -> bool:
         or "is not supported with this model" in text
         or "unknown parameter" in text
     )
+
+
+def _is_model_not_found_error(message: str) -> bool:
+    text = str(message or "").lower()
+    return "model not found" in text or "unknown model" in text or "does not exist" in text
+
+
+def _build_model_candidates(provider: str, model: str) -> list[str]:
+    selected = str(model or "").strip()
+    if not selected:
+        return [selected]
+
+    candidates: list[str] = [selected]
+    normalized_provider = str(provider or "").strip().lower()
+    normalized_model = selected.lower()
+
+    if normalized_provider == "grok":
+        replacement = selected.replace(".", "-")
+        if replacement != selected:
+            candidates.append(replacement)
+
+        aliases = {
+            "grok-4.1-fast": [
+                "grok-4-1-fast-non-reasoning",
+                "grok-4-1-fast-reasoning",
+                "grok-4-fast-non-reasoning",
+                "grok-4-fast-reasoning",
+                "grok-4",
+            ],
+            "grok-4-1-fast": [
+                "grok-4-1-fast-non-reasoning",
+                "grok-4-1-fast-reasoning",
+                "grok-4-fast-non-reasoning",
+                "grok-4-fast-reasoning",
+                "grok-4",
+            ],
+            "grok-4-fast": [
+                "grok-4-fast-non-reasoning",
+                "grok-4-fast-reasoning",
+                "grok-4",
+            ],
+        }
+        candidates.extend(aliases.get(normalized_model, []))
+
+    if normalized_provider == "deepseek":
+        aliases = {
+            "deepseek": ["deepseek-chat", "deepseek-reasoner"],
+            "deepseek-v3": ["deepseek-chat"],
+            "deepseek-r1": ["deepseek-reasoner"],
+        }
+        candidates.extend(aliases.get(normalized_model, []))
+
+    deduped: list[str] = []
+    seen: set[str] = set()
+    for item in candidates:
+        parsed = str(item or "").strip()
+        if not parsed:
+            continue
+        if parsed in seen:
+            continue
+        seen.add(parsed)
+        deduped.append(parsed)
+    return deduped or [selected]
 
 
 def _build_chat_completion_payload_candidates(model: str, prompt: str) -> list[dict[str, Any]]:

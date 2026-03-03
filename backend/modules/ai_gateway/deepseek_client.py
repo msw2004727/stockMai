@@ -9,5 +9,5 @@ class DeepSeekClient(OpenAICompatClient):
             provider="deepseek",
             api_key=api_key,
             model=model,
-            base_url="https://api.deepseek.com/v1",
+            base_url="https://api.deepseek.com",
         )

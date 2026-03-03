@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     ai_provider_weights: str = "claude=1.0,gpt5=1.0,grok=1.0,deepseek=1.0"
     claude_model: str = "claude-opus-4-6"
     gpt_model: str = "gpt-5.2"
-    grok_model: str = "grok-4.1-fast"
+    grok_model: str = "grok-4-1-fast-non-reasoning"
     deepseek_model: str = "deepseek-chat"
     jwt_secret: str = "change_me"
     jwt_expire_minutes: int = 60

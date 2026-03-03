@@ -1,6 +1,10 @@
 import unittest
 
-from backend.modules.ai_gateway.prompt_builder import build_analysis_prompt, build_provider_prompts
+from backend.modules.ai_gateway.prompt_builder import (
+    build_analysis_prompt,
+    build_narrative_patch_prompt,
+    build_provider_prompts,
+)
 
 
 class PromptBuilderTest(unittest.TestCase):
@@ -83,6 +87,23 @@ class PromptBuilderTest(unittest.TestCase):
         self.assertIn("Provider role: Capital-flow and data auditor", prompts["deepseek"])
         self.assertIn("User focus: focus on momentum", prompts["claude"])
         self.assertIn("Target symbol: 2330", prompts["deepseek"])
+
+    def test_build_narrative_patch_prompt_contains_missing_fields_and_context(self):
+        prompt = build_narrative_patch_prompt(
+            symbol="2330",
+            original_prompt="base prompt body",
+            normalized={
+                "summary": "neutral summary",
+                "signal": "neutral",
+                "confidence": 0.62,
+                "key_points": ["point-a", "point-b"],
+            },
+            missing_fields=["bullish_view", "easy_summary"],
+        )
+        self.assertIn("Target symbol: 2330", prompt)
+        self.assertIn("missing fields only: bullish_view, easy_summary", prompt)
+        self.assertIn("Existing summary: neutral summary", prompt)
+        self.assertIn("Original analysis prompt:", prompt)
 
 
 if __name__ == "__main__":

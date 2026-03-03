@@ -4,13 +4,13 @@ import unittest
 
 from backend.modules.ai_gateway.cost_tracker import CostTracker
 from backend.modules.ai_gateway.gateway_router import GatewayRequest, GatewayRouter, build_default_router
-from backend.modules.ai_gateway.provider_client import ProviderCallError
+from backend.modules.ai_gateway.provider_client import ProviderCallError, ProviderResponse, TokenUsage
 
 
 class _ErrorClient:
     provider = "broken"
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
         raise RuntimeError("provider failure")
 
 
@@ -21,36 +21,42 @@ class _FlakyClient:
         self.fail_times = fail_times
         self.calls = 0
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
         self.calls += 1
         if self.calls <= self.fail_times:
             raise ProviderCallError("temporary timeout", retryable=True)
-        return json.dumps(
-            {
-                "summary": f"Recovered for {symbol}",
-                "signal": "neutral",
-                "confidence": 0.61,
-            }
+        return ProviderResponse(
+            text=json.dumps(
+                {
+                    "summary": f"Recovered for {symbol}",
+                    "signal": "neutral",
+                    "confidence": 0.61,
+                }
+            ),
+            usage=TokenUsage(input_tokens=120, output_tokens=60, total_tokens=180),
         )
 
 
 class _FirstFailThenSuccessClient:
     provider = "p1"
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
         raise ProviderCallError("provider A timeout", retryable=True)
 
 
 class _SuccessClient:
     provider = "p2"
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
-        return json.dumps(
-            {
-                "summary": f"Fallback success for {symbol}",
-                "signal": "bullish",
-                "confidence": 0.72,
-            }
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
+        return ProviderResponse(
+            text=json.dumps(
+                {
+                    "summary": f"Fallback success for {symbol}",
+                    "signal": "bullish",
+                    "confidence": 0.72,
+                }
+            ),
+            usage=TokenUsage(input_tokens=100, output_tokens=40, total_tokens=140),
         )
 
 
@@ -60,13 +66,16 @@ class _StaticResponseClient:
         self.signal = signal
         self.confidence = confidence
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
-        return json.dumps(
-            {
-                "summary": f"{self.provider} view for {symbol}",
-                "signal": self.signal,
-                "confidence": self.confidence,
-            }
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
+        return ProviderResponse(
+            text=json.dumps(
+                {
+                    "summary": f"{self.provider} view for {symbol}",
+                    "signal": self.signal,
+                    "confidence": self.confidence,
+                }
+            ),
+            usage=TokenUsage(input_tokens=90, output_tokens=30, total_tokens=120),
         )
 
 
@@ -74,15 +83,20 @@ class _CapturePromptClient:
     def __init__(self, provider: str):
         self.provider = provider
         self.last_prompt = ""
+        self.prompts: list[str] = []
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
         self.last_prompt = prompt
-        return json.dumps(
-            {
-                "summary": f"{self.provider} captured prompt for {symbol}",
-                "signal": "neutral",
-                "confidence": 0.5,
-            }
+        self.prompts.append(prompt)
+        return ProviderResponse(
+            text=json.dumps(
+                {
+                    "summary": f"{self.provider} captured prompt for {symbol}",
+                    "signal": "neutral",
+                    "confidence": 0.5,
+                }
+            ),
+            usage=TokenUsage(input_tokens=80, output_tokens=20, total_tokens=100),
         )
 
 
@@ -159,7 +173,7 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
         )
         result = asyncio.run(router.run(request))
         self.assertTrue(result["results"][0]["ok"])
-        self.assertEqual(result["results"][0]["attempts"], 2)
+        self.assertEqual(result["results"][0]["attempts"], 3)
 
     def test_run_uses_fallback_when_first_provider_fails(self):
         router = GatewayRouter(
@@ -219,6 +233,8 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
         self.assertEqual(len(result["cost"]["entries"]), 1)
         self.assertGreater(result["cost"]["total_request_cost_usd"], 0)
         self.assertIn("cost", result["results"][0])
+        self.assertIn("model_tech_metrics", result)
+        self.assertGreaterEqual(result["model_tech_metrics"]["ai_call_count"], 1)
 
     def test_run_blocks_when_budget_already_exceeded(self):
         cost_tracker = CostTracker(redis_url="")
@@ -272,8 +288,8 @@ class AIGatewayRouterAsyncTest(unittest.TestCase):
 
         self.assertTrue(result["results"][0]["ok"])
         self.assertTrue(result["results"][1]["ok"])
-        self.assertEqual(c1.last_prompt, "claude prompt")
-        self.assertEqual(c2.last_prompt, "gpt prompt")
+        self.assertEqual(c1.prompts[0], "claude prompt")
+        self.assertEqual(c2.prompts[0], "gpt prompt")
 
 
 if __name__ == "__main__":

@@ -951,3 +951,12 @@
 - 目前進度：Done
 - 下一步：部署後請你用同一檔股票連續測 2~3 次 AI 分析，確認看多/看空/輕鬆總結出現率明顯提升。
 - 備註（可選）：若 provider 本身持續不遵守 JSON 欄位，仍可能偶發備援文案，但已比原本多一輪補呼叫。
+## [2026-03-03 20:04] 實作AI模型技術分析欄位與真實用量統計
+- 完成事項：
+  - 後端新增 provider 回傳結構（含 token usage），並在 AI 路由輸出 `model_tech_metrics`（呼叫次數、耗時、token、電力/碳排公式估算）。
+  - 新增 token 覆蓋率判斷：僅在 provider 完整回傳真實 usage 時才顯示真實 token，否則前端顯示 N/A。
+  - 前端 AI 分析收折區最底部新增「AI模型技術分析」欄位，顯示 5 個指標與公式說明。
+  - 更新相關單元測試並通過：`python -m unittest backend.tests.test_prompt_builder backend.tests.test_ai_gateway_normalizer backend.tests.test_openai_compat_clients backend.tests.test_claude_client backend.tests.test_deepseek_client`；前端 `npm run build` 通過。
+- 目前進度：Done
+- 下一步：前端手動執行一次 AI 分析，確認收折最底部可看到 5 項技術指標，並檢查各 provider 的 token 顯示是否合理。
+- 備註（可選）：本回合依指示先完成實作與驗證，尚未進行 commit + push。

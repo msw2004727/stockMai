@@ -15,8 +15,24 @@ class ClaudeClientTest(unittest.TestCase):
             "",
         )
         client = ClaudeClient(api_key="k-test", model="claude-opus-4-6")
-        result = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("summary", result)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("summary", response.text)
+
+    @patch("backend.modules.ai_gateway.claude_client.ClaudeClient.post_json")
+    def test_generate_extracts_usage(self, mock_post_json):
+        mock_post_json.return_value = (
+            200,
+            {
+                "content": [{"type": "text", "text": '{"summary":"OK","signal":"neutral","confidence":0.6}'}],
+                "usage": {"input_tokens": 130, "output_tokens": 55},
+            },
+            "",
+        )
+        client = ClaudeClient(api_key="k-test", model="claude-opus-4-6")
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertEqual(response.usage.input_tokens, 130)
+        self.assertEqual(response.usage.output_tokens, 55)
+        self.assertEqual(response.usage.total_tokens, 185)
 
     def test_generate_rejects_missing_api_key(self):
         client = ClaudeClient(api_key="", model="claude-opus-4-6")

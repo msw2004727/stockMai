@@ -239,6 +239,42 @@ function buildAnalystNarratives(result) {
 }
 
 const analystNarratives = computed(() => buildAnalystNarratives(props.aiResult));
+const modelTechMetrics = computed(() => props.aiResult?.model_tech_metrics || {});
+
+function fmtInt(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return Number(value).toLocaleString("zh-TW");
+}
+
+function fmtSeconds(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return `${Number(value).toFixed(2)} 秒`;
+}
+
+function callCountText(value) {
+  const parsed = fmtInt(value);
+  if (parsed === "N/A") return parsed;
+  return `${parsed} 次`;
+}
+
+function fmtKwh(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return `${Number(value).toFixed(6)} kWh`;
+}
+
+function fmtKg(value) {
+  if (value === null || value === undefined || Number.isNaN(Number(value))) return "N/A";
+  return `${Number(value).toFixed(6)} kgCO2e`;
+}
+
+function tokenUsageText(metrics) {
+  const usage = metrics?.token_usage || {};
+  if (!usage?.is_complete_real) return "N/A";
+  const total = fmtInt(usage.total_tokens);
+  const input = fmtInt(usage.input_tokens);
+  const output = fmtInt(usage.output_tokens);
+  return `${total}（輸入 ${input} / 輸出 ${output}）`;
+}
 </script>
 
 <template>
@@ -416,6 +452,35 @@ const analystNarratives = computed(() => buildAnalystNarratives(props.aiResult))
 
         <article class="card full-span feedback-reminder-card">
           <p class="feedback-reminder-text">提醒：目前測試版參考資料不多，分析僅供參考。</p>
+        </article>
+
+        <article class="card full-span ai-tech-metrics-card">
+          <p class="label title-chip">AI模型技術分析</p>
+          <div class="ai-tech-grid">
+            <p class="sub ai-tech-row">
+              <span class="ai-tech-key">1. 呼叫AI次數</span>
+              <span class="ai-tech-value">{{ callCountText(modelTechMetrics.ai_call_count) }}</span>
+            </p>
+            <p class="sub ai-tech-row">
+              <span class="ai-tech-key">2. 耗時幾秒</span>
+              <span class="ai-tech-value">{{ fmtSeconds(modelTechMetrics.duration_seconds) }}</span>
+            </p>
+            <p class="sub ai-tech-row">
+              <span class="ai-tech-key">3. 花費Token數量（真實統計）</span>
+              <span class="ai-tech-value">{{ tokenUsageText(modelTechMetrics) }}</span>
+            </p>
+            <p class="sub ai-tech-row">
+              <span class="ai-tech-key">4. 消耗電力（公式預估）</span>
+              <span class="ai-tech-value">{{ fmtKwh(modelTechMetrics?.energy_estimate?.kwh) }}</span>
+            </p>
+            <p class="sub ai-tech-row">
+              <span class="ai-tech-key">5. 碳排放數量（公式預估）</span>
+              <span class="ai-tech-value">{{ fmtKg(modelTechMetrics?.carbon_estimate?.kg_co2e) }}</span>
+            </p>
+            <p class="sub ai-tech-formula">
+              公式：電力 = 總Token / 1000 × AI_ENERGY_KWH_PER_1K_TOKENS；碳排 = 電力 × AI_GRID_KGCO2E_PER_KWH
+            </p>
+          </div>
         </article>
       </div>
     </template>

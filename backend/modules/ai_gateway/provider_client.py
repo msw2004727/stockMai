@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Protocol
 
 
@@ -9,8 +10,21 @@ class ProviderCallError(Exception):
         self.retryable = retryable
 
 
+@dataclass(slots=True)
+class TokenUsage:
+    input_tokens: int | None = None
+    output_tokens: int | None = None
+    total_tokens: int | None = None
+
+
+@dataclass(slots=True)
+class ProviderResponse:
+    text: str
+    usage: TokenUsage | None = None
+
+
 class AIProviderClient(Protocol):
     provider: str
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
-        """Return raw model response text."""
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
+        """Return provider response text + optional official usage."""

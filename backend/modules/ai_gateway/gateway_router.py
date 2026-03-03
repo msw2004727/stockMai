@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 from dataclasses import dataclass, field
+from typing import Callable
 
 from .claude_client import ClaudeClient
 from .consensus import build_weighted_consensus
@@ -11,7 +12,7 @@ from .grok_client import GrokClient
 from .mock_clients import MockAIClient
 from .openai_client import OpenAIClient
 from .prompt_builder import build_narrative_patch_prompt
-from .provider_client import AIProviderClient, ProviderCallError
+from .provider_client import AIProviderClient, ProviderCallError, ProviderResponse, TokenUsage
 from .response_normalizer import normalize_ai_response
 
 
@@ -37,9 +38,16 @@ class GatewayRouter:
     async def run(self, request: GatewayRequest) -> dict:
         results: list[dict] = []
         cost_entries: list[dict] = []
+        usage_records: list[TokenUsage | None] = []
         fallback_used = False
         previous_failure = False
         budget_blocked = False
+        ai_call_count = 0
+
+        def _count_call() -> None:
+            nonlocal ai_call_count
+            ai_call_count += 1
+
         user_id = _normalize_user_id(request.user_id)
         for provider in request.providers:
             client = self.clients.get(provider)
@@ -77,13 +85,14 @@ class GatewayRouter:
                     break
 
             try:
-                raw_text, attempts = await _run_with_retry(
+                primary_response, attempts = await _run_with_retry(
                     client=client,
                     prompt=provider_prompt,
                     symbol=request.symbol,
                     timeout_seconds=request.timeout_seconds,
                     retry_count=request.retry_count,
                     retry_backoff_seconds=request.retry_backoff_seconds,
+                    on_attempt=_count_call,
                 )
             except Exception as exc:
                 previous_failure = True
@@ -100,7 +109,9 @@ class GatewayRouter:
 
             if previous_failure:
                 fallback_used = True
+            raw_text = primary_response.text
             normalized = normalize_ai_response(provider=provider, raw_text=raw_text)
+            usage_records.append(primary_response.usage)
             total_attempts = attempts
             all_prompts = [provider_prompt]
             all_raw_texts = [raw_text]
@@ -114,17 +125,20 @@ class GatewayRouter:
                     missing_fields=missing_narratives,
                 )
                 try:
-                    narrative_text, narrative_attempts = await _run_with_retry(
+                    narrative_response, narrative_attempts = await _run_with_retry(
                         client=client,
                         prompt=narrative_prompt,
                         symbol=request.symbol,
                         timeout_seconds=request.timeout_seconds,
                         retry_count=request.retry_count,
                         retry_backoff_seconds=request.retry_backoff_seconds,
+                        on_attempt=_count_call,
                     )
+                    narrative_text = narrative_response.text
                     total_attempts += narrative_attempts
                     all_prompts.append(narrative_prompt)
                     all_raw_texts.append(narrative_text)
+                    usage_records.append(narrative_response.usage)
                     narrative_normalized = normalize_ai_response(provider=provider, raw_text=narrative_text)
                     normalized = _merge_narrative_fields(normalized, narrative_normalized)
                     narrative_enriched = _has_any_narrative_fields(narrative_normalized)
@@ -168,6 +182,10 @@ class GatewayRouter:
             "consensus": consensus,
             "fallback_used": fallback_used,
             "cost": cost_summary,
+            "model_tech_metrics": {
+                "ai_call_count": ai_call_count,
+                "token_usage": _build_token_usage_metrics(usage_records),
+            },
         }
 
 
@@ -184,18 +202,21 @@ async def _run_with_retry(
     timeout_seconds: int,
     retry_count: int,
     retry_backoff_seconds: float,
-) -> tuple[str, int]:
+    on_attempt: Callable[[], None] | None = None,
+) -> tuple[ProviderResponse, int]:
     max_attempts = max(retry_count + 1, 1)
     last_exc: Exception | None = None
 
     for attempt in range(1, max_attempts + 1):
         try:
-            text = await client.generate(
+            if on_attempt:
+                on_attempt()
+            response = await client.generate(
                 prompt=prompt,
                 symbol=symbol,
                 timeout_seconds=timeout_seconds,
             )
-            return text, attempt
+            return response, attempt
         except Exception as exc:
             last_exc = exc
             retryable = _is_retryable_error(exc)
@@ -286,6 +307,51 @@ def _merge_narrative_fields(base: dict, patch: dict) -> dict:
         if isinstance(patch_value, str) and patch_value.strip():
             merged[key] = patch_value.strip()
     return merged
+
+
+def _build_token_usage_metrics(records: list[TokenUsage | None]) -> dict:
+    if not records:
+        return {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "is_complete_real": False,
+            "coverage": "none",
+        }
+
+    if any(record is None for record in records):
+        return {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "is_complete_real": False,
+            "coverage": "partial",
+        }
+
+    typed_records = [record for record in records if record is not None]
+    if any(record.input_tokens is None or record.output_tokens is None for record in typed_records):
+        return {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "is_complete_real": False,
+            "coverage": "partial",
+        }
+
+    input_tokens = sum(int(record.input_tokens or 0) for record in typed_records)
+    output_tokens = sum(int(record.output_tokens or 0) for record in typed_records)
+    total_tokens = sum(
+        int(record.total_tokens) if record.total_tokens is not None else int(record.input_tokens or 0) + int(record.output_tokens or 0)
+        for record in typed_records
+    )
+
+    return {
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "total_tokens": total_tokens,
+        "is_complete_real": True,
+        "coverage": "full",
+    }
 
 
 def build_default_router(

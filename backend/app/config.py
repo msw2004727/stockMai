@@ -17,6 +17,8 @@ class Settings(BaseSettings):
     ai_timeout_seconds: int = 15
     ai_retry_count: int = 2
     ai_retry_backoff_seconds: float = 0.35
+    ai_energy_kwh_per_1k_tokens: float = 0.0001
+    ai_grid_kgco2e_per_kwh: float = 0.5
     ai_default_providers: str = "claude,gpt5,grok,deepseek"
     ai_provider_weights: str = "claude=1.0,gpt5=1.0,grok=1.0,deepseek=1.0"
     claude_model: str = "claude-opus-4-6"

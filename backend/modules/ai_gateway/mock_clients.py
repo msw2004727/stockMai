@@ -2,12 +2,14 @@ from __future__ import annotations
 
 import json
 
+from .provider_client import ProviderResponse
+
 
 class MockAIClient:
     def __init__(self, provider: str):
         self.provider = provider
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
         payload = {
             "provider": self.provider,
             "symbol": symbol,
@@ -22,7 +24,7 @@ class MockAIClient:
         }
 
         if self.provider == "claude":
-            return f"```json\n{json.dumps(payload)}\n```"
+            return ProviderResponse(text=f"```json\n{json.dumps(payload)}\n```")
         if self.provider == "grok":
-            return f"Analysis draft:\n{json.dumps(payload)}\nEOF"
-        return json.dumps(payload)
+            return ProviderResponse(text=f"Analysis draft:\n{json.dumps(payload)}\nEOF")
+        return ProviderResponse(text=json.dumps(payload))

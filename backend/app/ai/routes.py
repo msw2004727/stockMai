@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from time import perf_counter
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
@@ -118,6 +119,7 @@ async def analyze_stock(
     user: dict = Depends(get_current_user),
     _quota: dict = Depends(enforce_rate_limit("ai_analyze")),
 ) -> dict:
+    started_at = perf_counter()
     settings = get_settings()
     providers = payload.providers or _parse_default_providers(settings.ai_default_providers)
     provider_weights = parse_provider_weights(settings.ai_provider_weights)
@@ -175,6 +177,12 @@ async def analyze_stock(
         deepseek_model=settings.deepseek_model,
     )
     gateway_result = await router.run(request)
+    model_tech_metrics = _build_model_tech_metrics(
+        raw_metrics=gateway_result.get("model_tech_metrics"),
+        duration_seconds=perf_counter() - started_at,
+        energy_kwh_per_1k_tokens=settings.ai_energy_kwh_per_1k_tokens,
+        grid_kgco2e_per_kwh=settings.ai_grid_kgco2e_per_kwh,
+    )
 
     return {
         "symbol": payload.symbol,
@@ -188,5 +196,54 @@ async def analyze_stock(
         "consensus": gateway_result["consensus"],
         "fallback_used": gateway_result["fallback_used"],
         "cost": gateway_result["cost"],
+        "model_tech_metrics": model_tech_metrics,
+    }
+
+
+def _build_model_tech_metrics(
+    raw_metrics: dict | None,
+    duration_seconds: float,
+    energy_kwh_per_1k_tokens: float,
+    grid_kgco2e_per_kwh: float,
+) -> dict:
+    raw_metrics = raw_metrics or {}
+    token_usage = raw_metrics.get("token_usage")
+    if not isinstance(token_usage, dict):
+        token_usage = {
+            "input_tokens": None,
+            "output_tokens": None,
+            "total_tokens": None,
+            "is_complete_real": False,
+            "coverage": "none",
+        }
+
+    total_tokens = token_usage.get("total_tokens")
+    is_complete_real = bool(token_usage.get("is_complete_real"))
+    has_real_total_tokens = is_complete_real and isinstance(total_tokens, int) and total_tokens >= 0
+
+    energy_kwh: float | None = None
+    carbon_kgco2e: float | None = None
+    if has_real_total_tokens:
+        energy_kwh = (float(total_tokens) / 1000.0) * max(float(energy_kwh_per_1k_tokens), 0.0)
+        carbon_kgco2e = energy_kwh * max(float(grid_kgco2e_per_kwh), 0.0)
+
+    return {
+        "ai_call_count": int(raw_metrics.get("ai_call_count", 0) or 0),
+        "duration_seconds": round(max(duration_seconds, 0.0), 3),
+        "token_usage": {
+            "input_tokens": token_usage.get("input_tokens") if has_real_total_tokens else None,
+            "output_tokens": token_usage.get("output_tokens") if has_real_total_tokens else None,
+            "total_tokens": total_tokens if has_real_total_tokens else None,
+            "is_complete_real": has_real_total_tokens,
+            "coverage": token_usage.get("coverage", "none"),
+        },
+        "energy_estimate": {
+            "kwh": round(energy_kwh, 8) if energy_kwh is not None else None,
+            "formula": "total_tokens / 1000 * AI_ENERGY_KWH_PER_1K_TOKENS",
+        },
+        "carbon_estimate": {
+            "kg_co2e": round(carbon_kgco2e, 8) if carbon_kgco2e is not None else None,
+            "formula": "energy_kwh * AI_GRID_KGCO2E_PER_KWH",
+        },
     }
 

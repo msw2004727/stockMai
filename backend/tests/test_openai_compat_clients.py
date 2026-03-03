@@ -24,8 +24,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             "",
         )
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("summary", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("summary", response.text)
         call = mock_post_json.call_args.kwargs
         self.assertTrue(call["url"].endswith("/responses"))
         self.assertEqual(call["payload"]["max_output_tokens"], 500)
@@ -47,8 +47,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             "",
         )
         client = GrokClient(api_key="k-grok", model="grok-4.1-fast")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("bullish", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("bullish", response.text)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_grok_client_fallbacks_when_max_tokens_unsupported(self, mock_post_json):
@@ -78,8 +78,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             ),
         ]
         client = GrokClient(api_key="k-grok", model="grok-4.1-fast")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("ok fallback", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("ok fallback", response.text)
         self.assertEqual(mock_post_json.call_count, 3)
         third_payload = mock_post_json.call_args_list[2].kwargs["payload"]
         self.assertIn("max_completion_tokens", third_payload)
@@ -112,8 +112,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             ),
         ]
         client = GrokClient(api_key="k-grok", model="grok-4.1-fast")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("model fallback", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("model fallback", response.text)
         self.assertEqual(mock_post_json.call_count, 3)
         first_payload = mock_post_json.call_args_list[0].kwargs["payload"]
         second_payload = mock_post_json.call_args_list[1].kwargs["payload"]
@@ -133,8 +133,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             "",
         )
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("output_text", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("output_text", response.text)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_openai_client_supports_output_content_shape(self, mock_post_json):
@@ -157,8 +157,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             "",
         )
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("output content", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("output content", response.text)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_openai_client_supports_reasoning_content_shape(self, mock_post_json):
@@ -177,8 +177,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             "",
         )
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("from reasoning", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("from reasoning", response.text)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_openai_client_falls_back_to_chat_completions_when_responses_empty(self, mock_post_json):
@@ -199,8 +199,8 @@ class OpenAICompatClientsTest(unittest.TestCase):
             ),
         ]
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("from fallback", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("from fallback", response.text)
         self.assertEqual(mock_post_json.call_count, 2)
 
         first_call = mock_post_json.call_args_list[0].kwargs
@@ -209,6 +209,32 @@ class OpenAICompatClientsTest(unittest.TestCase):
         self.assertEqual(first_call["payload"]["input"], "prompt")
         self.assertTrue(second_call["url"].endswith("/chat/completions"))
         self.assertEqual(second_call["payload"]["max_completion_tokens"], 500)
+
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_openai_client_extracts_usage_tokens(self, mock_post_json):
+        mock_post_json.return_value = (
+            200,
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": '{"summary":"ok","signal":"neutral","confidence":0.6}'
+                        }
+                    }
+                ],
+                "usage": {
+                    "prompt_tokens": 120,
+                    "completion_tokens": 45,
+                    "total_tokens": 165,
+                },
+            },
+            "",
+        )
+        client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertEqual(response.usage.input_tokens, 120)
+        self.assertEqual(response.usage.output_tokens, 45)
+        self.assertEqual(response.usage.total_tokens, 165)
 
     def test_openai_client_rejects_missing_key(self):
         client = OpenAIClient(api_key="", model="gpt-5.2")

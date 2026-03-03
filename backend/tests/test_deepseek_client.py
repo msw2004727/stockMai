@@ -23,8 +23,8 @@ class DeepSeekClientTest(unittest.TestCase):
             "",
         )
         client = DeepSeekClient(api_key="k-deepseek", model="deepseek-chat")
-        result = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("summary", result)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("summary", response.text)
 
     def test_generate_rejects_missing_api_key(self):
         client = DeepSeekClient(api_key="", model="deepseek-chat")
@@ -63,8 +63,8 @@ class DeepSeekClientTest(unittest.TestCase):
             ),
         ]
         client = DeepSeekClient(api_key="k-deepseek", model="deepseek-reasoner")
-        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
-        self.assertIn("ok no temp", text)
+        response = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("ok no temp", response.text)
         self.assertEqual(mock_post_json.call_count, 2)
         first_payload = mock_post_json.call_args_list[0].kwargs["payload"]
         second_payload = mock_post_json.call_args_list[1].kwargs["payload"]

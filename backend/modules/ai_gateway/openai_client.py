@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Any
 
 from .base_http_client import AsyncJsonHttpClient
-from .provider_client import ProviderCallError
+from .provider_client import ProviderCallError, ProviderResponse, TokenUsage
 
 
 class OpenAICompatClient(AsyncJsonHttpClient):
@@ -15,7 +15,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         self.model = model.strip()
         self.base_url = base_url.rstrip("/")
 
-    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> str:
+    async def generate(self, prompt: str, symbol: str, timeout_seconds: int) -> ProviderResponse:
         if not self.api_key:
             raise ProviderCallError(f"{self.provider} API key is missing.", retryable=False)
         if not self.model:
@@ -27,7 +27,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         }
 
         if self.provider == "gpt5":
-            text, _ = await self._call_and_extract_text(
+            text, _, usage = await self._call_and_extract_text(
                 endpoint="/responses",
                 payload={
                     "model": self.model,
@@ -39,10 +39,10 @@ class OpenAICompatClient(AsyncJsonHttpClient):
                 timeout_seconds=timeout_seconds,
             )
             if text:
-                return text
+                return ProviderResponse(text=text, usage=usage)
 
             # Fallback to chat/completions for compatibility if responses body is empty.
-            fallback_text, fallback_raw = await self._call_and_extract_text(
+            fallback_text, fallback_raw, fallback_usage = await self._call_and_extract_text(
                 endpoint="/chat/completions",
                 payload={
                     "model": self.model,
@@ -54,7 +54,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
                 timeout_seconds=timeout_seconds,
             )
             if fallback_text:
-                return fallback_text
+                return ProviderResponse(text=fallback_text, usage=fallback_usage)
 
             detail = _build_missing_content_detail(fallback_raw)
             raise ProviderCallError(
@@ -73,7 +73,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         prompt: str,
         headers: dict[str, str],
         timeout_seconds: int,
-    ) -> str:
+    ) -> ProviderResponse:
         last_raw_text = ""
         last_error: ProviderCallError | None = None
 
@@ -83,7 +83,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
             switch_model = False
             for payload in payload_candidates:
                 try:
-                    text, raw_text = await self._call_and_extract_text(
+                    text, raw_text, usage = await self._call_and_extract_text(
                         endpoint="/chat/completions",
                         payload=payload,
                         headers=headers,
@@ -91,7 +91,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
                     )
                     last_raw_text = raw_text
                     if text:
-                        return text
+                        return ProviderResponse(text=text, usage=usage)
                 except ProviderCallError as exc:
                     last_error = exc
                     parsed_error = str(exc)
@@ -119,7 +119,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
         payload: dict[str, Any],
         headers: dict[str, str],
         timeout_seconds: int,
-    ) -> tuple[str, str]:
+    ) -> tuple[str, str, TokenUsage | None]:
         status_code, data, raw_text = await self.post_json(
             url=f"{self.base_url}{endpoint}",
             payload=payload,
@@ -139,7 +139,7 @@ class OpenAICompatClient(AsyncJsonHttpClient):
                 retryable=False,
             )
 
-        return _extract_openai_text(data), raw_text
+        return _extract_openai_text(data), raw_text, _extract_openai_usage(data)
 
 
 class OpenAIClient(OpenAICompatClient):
@@ -194,6 +194,36 @@ def _extract_openai_text(payload: dict[str, Any]) -> str:
         return text
 
     return ""
+
+
+def _extract_openai_usage(payload: dict[str, Any]) -> TokenUsage | None:
+    usage = payload.get("usage")
+    if not isinstance(usage, dict):
+        response = payload.get("response")
+        if isinstance(response, dict):
+            usage = response.get("usage")
+    if not isinstance(usage, dict):
+        return None
+
+    input_tokens = _to_int(usage.get("prompt_tokens"))
+    if input_tokens is None:
+        input_tokens = _to_int(usage.get("input_tokens"))
+
+    output_tokens = _to_int(usage.get("completion_tokens"))
+    if output_tokens is None:
+        output_tokens = _to_int(usage.get("output_tokens"))
+
+    total_tokens = _to_int(usage.get("total_tokens"))
+    if total_tokens is None and input_tokens is not None and output_tokens is not None:
+        total_tokens = input_tokens + output_tokens
+
+    if input_tokens is None and output_tokens is None and total_tokens is None:
+        return None
+    return TokenUsage(
+        input_tokens=input_tokens,
+        output_tokens=output_tokens,
+        total_tokens=total_tokens,
+    )
 
 
 def _build_missing_content_detail(raw_text: str) -> str:
@@ -361,3 +391,13 @@ def _extract_content_text(content: Any) -> str:
                 parts.append(nested_text)
 
     return "\n".join(part for part in parts if part).strip()
+
+
+def _to_int(raw: Any) -> int | None:
+    try:
+        if raw is None:
+            return None
+        value = int(raw)
+        return value if value >= 0 else None
+    except Exception:
+        return None

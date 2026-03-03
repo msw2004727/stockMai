@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from backend.modules.data_pipeline import upsert_price_snapshots
+from backend.modules.data_pipeline.snapshot_storage import SnapshotStorageError
 
 from ..config import get_settings
 from .market_snapshot_provider import fetch_twse_market_snapshots
@@ -29,11 +30,15 @@ def run_market_snapshot(max_symbols: int = 3000) -> dict:
     ordered = sorted(snapshots, key=lambda item: str(item.get("symbol") or ""))
     selected = ordered[:safe_max_symbols]
 
-    inserted = upsert_price_snapshots(
-        database_url=settings.database_url,
-        snapshots=selected,
-        source="twse_openapi_stock_day_all",
-    )
+    try:
+        inserted = upsert_price_snapshots(
+            database_url=settings.database_url,
+            snapshots=selected,
+            source="twse_openapi_stock_day_all",
+        )
+    except SnapshotStorageError as exc:
+        raise MarketSnapshotSyncError(f"市場快照入庫失敗：{exc}") from exc
+
     if inserted <= 0:
         raise MarketSnapshotSyncError("市場快照入庫失敗。")
 

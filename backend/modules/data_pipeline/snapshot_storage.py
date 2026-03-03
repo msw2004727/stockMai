@@ -4,6 +4,10 @@ from datetime import date
 from decimal import Decimal
 
 
+class SnapshotStorageError(Exception):
+    pass
+
+
 def upsert_price_snapshots(
     database_url: str,
     snapshots: list[dict],
@@ -17,8 +21,8 @@ def upsert_price_snapshots(
         with _connect(database_url) as conn:
             with conn.cursor() as cur:
                 _upsert_or_replace(cur, payload)
-    except Exception:
-        return 0
+    except Exception as exc:
+        raise SnapshotStorageError(str(exc)) from exc
 
     return len(payload)
 

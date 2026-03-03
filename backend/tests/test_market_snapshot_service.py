@@ -8,6 +8,7 @@ from backend.app.stocks.market_snapshot_service import (
     MarketSnapshotSyncError,
     run_market_snapshot,
 )
+from backend.modules.data_pipeline.snapshot_storage import SnapshotStorageError
 
 
 class MarketSnapshotServiceTest(unittest.TestCase):
@@ -73,6 +74,43 @@ class MarketSnapshotServiceTest(unittest.TestCase):
     def test_run_market_snapshot_raises_when_no_data(self, _mock_fetch, mock_settings):
         mock_settings.return_value = SimpleNamespace(database_url="postgresql://dummy")
         with self.assertRaises(MarketSnapshotSyncError):
+            run_market_snapshot(max_symbols=3000)
+
+    @patch("backend.app.stocks.market_snapshot_service.get_settings")
+    @patch("backend.app.stocks.market_snapshot_service.fetch_twse_market_snapshots")
+    @patch(
+        "backend.app.stocks.market_snapshot_service.upsert_price_snapshots",
+        side_effect=SnapshotStorageError("permission denied for table stock_daily_prices"),
+    )
+    def test_run_market_snapshot_raises_with_storage_detail(
+        self,
+        _mock_upsert,
+        mock_fetch,
+        mock_settings,
+    ):
+        mock_settings.return_value = SimpleNamespace(database_url="postgresql://dummy")
+        mock_fetch.return_value = {
+            "snapshots": [
+                {
+                    "symbol": "2330",
+                    "name": "2330",
+                    "date": "2026-03-03",
+                    "open": 1000.0,
+                    "high": 1010.0,
+                    "low": 995.0,
+                    "close": 1008.0,
+                    "change": 8.0,
+                    "volume": 1000,
+                }
+            ],
+            "fetched_rows": 1,
+            "parsed_rows": 1,
+            "valid_rows": 1,
+            "invalid_rows": 0,
+            "deduped_rows": 0,
+        }
+
+        with self.assertRaisesRegex(MarketSnapshotSyncError, "permission denied"):
             run_market_snapshot(max_symbols=3000)
 
 

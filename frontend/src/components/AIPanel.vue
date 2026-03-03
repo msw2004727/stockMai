@@ -206,9 +206,9 @@ const sentimentInfo = computed(() => parseSentimentSummary(props.aiResult?.senti
 function buildAnalystNarratives(result) {
   if (!result) {
     return {
-      bullish: "看多分析師：目前資料不足，暫時無法建立完整偏多論述，建議先補齊行情與指標資料後再判讀。",
-      bearish: "看空分析師：目前資料不足，暫時無法建立完整偏空論述，建議先補齊行情與指標資料後再判讀。",
-      summary: "輕鬆總結：先把資料補齊，再來討論多空，會比硬猜方向更有勝率。",
+      bullish: "看多分析師：目前資料不足，無法建立完整偏多論述。若要提高可用性，建議先補齊近 20~60 日價格、成交量與主要指標，再觀察是否出現均線轉強與動能修復訊號。在資料不足時先小部位試單、嚴格停損，會比直接放大倉位更安全。",
+      bearish: "看空分析師：目前資料不足，偏向保守。沒有足夠證據前，不應把短暫反彈視為反轉；若價格落在壓力區且量能不續，回落機率仍高。操作上建議先防守、降低部位與槓桿，等關鍵位站穩後再重新評估，避免在不確定區間反覆受損。",
+      summary: "輕鬆總結：資料不足時，多空都不該太激進。先縮小部位、設好停損，再等市場自己給方向，會比硬猜高低點更穩。",
     };
   }
 
@@ -223,71 +223,33 @@ function buildAnalystNarratives(result) {
   const sentimentLabel = toSignalLabel(result?.sentiment_context?.market_sentiment);
   const sentimentSummary = localize(result?.sentiment_context?.summary, "目前情緒資料有限。");
   const volatilityLevel = localize(result?.sentiment_context?.volatility_level, "未知");
-  const sourceLabel = localize(result?.indicator_context?.history_source, "--");
   const asOfDate = localize(result?.indicator_context?.as_of_date, "--");
 
-  const maBullComment =
+  const maBullText =
     sma5 !== null && sma20 !== null
-      ? sma5 > sma20
-        ? "短均線在長均線之上，代表短線結構仍偏強"
-        : "短均線尚未站穩長均線，但若能快速翻揚仍可能形成回升波"
-      : "均線資料不足，需保留彈性看法";
-
-  const maBearComment =
+      ? sma5 >= sma20
+        ? "短均線不弱於長均線，結構仍有撐"
+        : "短均線暫弱，但未必代表趨勢終結"
+      : "均線資料偏少，先以風控優先";
+  const maBearText =
     sma5 !== null && sma20 !== null
       ? sma5 < sma20
-        ? "短均線落在長均線下方，代表上方壓力仍重"
-        : "即使短均線在上，若無法持續放量也可能只是短暫反彈"
-      : "均線資料不足，需優先防守";
-
-  const rsiBullComment =
-    rsi14 !== null
-      ? rsi14 >= 55
-        ? "動能維持在偏強區，回檔後仍有機會再攻"
-        : "雖未進入強勢區，但也尚未全面轉弱，可觀察轉強訊號"
-      : "RSI 資料不足，先以價格行為為主";
-
-  const rsiBearComment =
-    rsi14 !== null
-      ? rsi14 <= 45
-        ? "動能偏弱，容易出現反彈後再下的節奏"
-        : "即便 RSI 不低，也可能在高檔鈍化後反轉"
-      : "RSI 資料不足，需提高警戒";
-
-  const macdBullComment =
+        ? "短均線在長均線下方，壓力未解"
+        : "即使短均線在上，也可能是假突破"
+      : "均線資料偏少，先採防守假設";
+  const rsiText =
+    rsi14 !== null ? `RSI14 ${fmt(rsi14, 1)}` : "RSI14 資料不足";
+  const macdText =
     macd !== null && macdSignal !== null
-      ? macd >= macdSignal
-        ? "MACD 仍在訊號線之上，偏多趨勢有延續空間"
-        : "MACD 暫時落後訊號線，但只要快速翻正仍可視為洗盤"
-      : "MACD 資料不足，需搭配量價確認";
+      ? `MACD ${fmt(macd, 2)} / Signal ${fmt(macdSignal, 2)}`
+      : "MACD 資料不足";
 
-  const macdBearComment =
-    macd !== null && macdSignal !== null
-      ? macd < macdSignal
-        ? "MACD 低於訊號線，代表反彈動能不足"
-        : "MACD 雖在上方，但若柱體縮短代表多方力道正在流失"
-      : "MACD 資料不足，先採保守假設";
+  const bullish = `看多分析師：截至 ${asOfDate}，共識為「${consensusLabel}」、信心 ${confidenceText}，他認為市場仍有延續上行空間。均線觀察為 ${maBullText}；動能端 ${rsiText}、${macdText}，若沒有同步轉弱，多方節奏通常不會一次結束。情緒目前偏${sentimentLabel}、波動 ${volatilityLevel}，${sentimentSummary} 因此策略上偏向分批布局、回檔承接，但會把停損放在關鍵支撐下方，先控風險再爭取波段。`;
 
-  const bullish = [
-    `看多分析師會先從結構判讀：截至 ${asOfDate}，共識訊號為「${consensusLabel}」，信心 ${confidenceText}。在他看來，只要不是明確偏空，市場就仍存在上攻與輪動機會。`,
-    `均線方面，SMA5 ${fmt(sma5, 2)}、SMA20 ${fmt(sma20, 2)}，${maBullComment}。這通常意味著短線資金並未全面撤退，回檔容易吸引承接買盤。`,
-    `動能方面，RSI14 ${fmt(rsi14, 1)}，${rsiBullComment}；MACD ${fmt(macd, 2)}、Signal ${fmt(macdSignal, 2)}，${macdBullComment}。看多派會把這組訊號解讀為「趨勢雖有波動，但尚未失去主導權」。`,
-    `情緒與波動方面，目前市場情緒偏向${sentimentLabel}、波動等級 ${volatilityLevel}。${sentimentSummary} 看多方會認為只要利空沒有擴大，價格仍可透過整理後再上攻。`,
-    `實務策略上，看多分析師通常不建議一次重壓，而是分批進場、分段驗證。第一筆部位偏試單，若突破關鍵壓力且量能延續，再逐步加碼；若跌破前低或跌破關鍵均線，則紀律停損。`,
-    `他的核心觀點是：偏多不是盲目樂觀，而是在可控風險下，讓數據證明趨勢延續。資料來源（${sourceLabel}）若持續更新，勝率會比單靠情緒追價更穩定。`,
-  ].join("");
-
-  const bearish = [
-    `看空分析師的出發點是「先保本再求勝」。他同樣看到截至 ${asOfDate} 的共識訊號為「${consensusLabel}」，但會提醒：只要信心不是壓倒性，行情就可能在區間裡反覆震盪，追高容易吃虧。`,
-    `均線面上，SMA5 ${fmt(sma5, 2)}、SMA20 ${fmt(sma20, 2)}，${maBearComment}。在看空派眼裡，這代表上方壓力帶仍在，任何反彈都要先假設為「壓力測試」，不是直接認定反轉。`,
-    `動能面上，RSI14 ${fmt(rsi14, 1)}，${rsiBearComment}；MACD ${fmt(macd, 2)}、Signal ${fmt(macdSignal, 2)}，${macdBearComment}。看空派會特別關注「價漲量縮」與「指標背離」，這兩者常是轉弱前兆。`,
-    `情緒面目前偏向${sentimentLabel}、波動等級 ${volatilityLevel}。${sentimentSummary} 看空分析師會解讀為：市場可能過度樂觀或過度敏感，消息面一變，回落速度可能比上漲更快。`,
-    `實務上他傾向先設停利停損再談進場。若價格無法站穩壓力、或回測支撐失敗，就減碼或轉防守；即使做多，也要求部位更小、槓桿更低，避免一次錯判造成大幅回撤。`,
-    `他的核心觀點是：風險管理要先於方向判斷。即便最後行情上漲，只要過程中風險配置不當，報酬也可能被回撤吃掉。`,
-  ].join("");
+  const bearish = `看空分析師：同樣看截至 ${asOfDate} 的資料，他更重視「反彈是否有量能與結構支持」。目前共識「${consensusLabel}」信心 ${confidenceText} 並非壓倒性，代表方向仍可能反覆。均線面 ${maBearText}；動能面 ${rsiText}、${macdText} 若出現背離，回落風險會放大。情緒偏${sentimentLabel}、波動 ${volatilityLevel}，${sentimentSummary} 所以他主張先降槓桿、少追高，跌破支撐就先防守，等趨勢明確再調整部位。`;
 
   const summary =
-    "輕鬆總結：看多派認為結構還有延續空間，看空派提醒反彈不一定等於反轉。兩邊其實都同意一件事：先訂好停損與部位上限，再讓市場證明方向，會比一次重壓更安心。";
+    "輕鬆總結：看多派看的是延續機會，看空派盯的是回落風險。其實兩邊都同意，先把停損、部位上限與進出條件寫好，再跟著市場動作走，比主觀押方向更穩。";
 
   return { bullish, bearish, summary };
 }
@@ -299,69 +261,71 @@ const analystNarratives = computed(() => buildAnalystNarratives(props.aiResult))
   <h2 class="section-title section-title-chip">AI 分析</h2>
   <p class="hint">先在行情頁查詢股價，再執行 AI 分析會更準確。</p>
 
-  <div class="field-box">
-    <p class="field-title title-chip">分析標的</p>
-    <div class="query-row">
-      <input
-        :value="symbol"
-        class="input"
-        type="text"
-        maxlength="20"
-        inputmode="text"
-        placeholder="輸入台股代號或中文名稱"
-        :disabled="aiLoading"
-        @input="onSymbolInput"
-        @keydown.enter.prevent="onRefreshClick"
-      />
-      <button type="button" class="btn" :disabled="aiLoading" @click="onRefreshClick">
-        {{ aiLoading ? "分析中..." : "執行 AI 分析" }}
-      </button>
-      <span v-if="aiCheckedAt" class="checked-at no-wrap">更新時間：{{ aiCheckedAt }}</span>
-    </div>
-    <p v-if="searchLoading" class="sub">正在搜尋代號...</p>
-    <p v-else-if="searchError" class="sub warn-text">{{ searchError }}</p>
-    <ul v-else-if="searchResults.length" class="search-list" role="listbox" aria-label="股票代號建議">
-      <li v-for="item in searchResults" :key="item.symbol" class="search-item-wrap">
-        <button
-          type="button"
-          class="search-item"
-          @mousedown.prevent="onSelectSearchResult(item)"
-          @click="onSelectSearchResult(item)"
-        >
-          <span class="search-symbol">{{ item.symbol }}</span>
-          <span class="search-name">{{ item.name }}</span>
+  <div class="ai-control-grid">
+    <div class="field-box ai-control-target">
+      <p class="field-title title-chip">分析標的</p>
+      <div class="query-row">
+        <input
+          :value="symbol"
+          class="input"
+          type="text"
+          maxlength="20"
+          inputmode="text"
+          placeholder="輸入台股代號或中文名稱"
+          :disabled="aiLoading"
+          @input="onSymbolInput"
+          @keydown.enter.prevent="onRefreshClick"
+        />
+        <button type="button" class="btn" :disabled="aiLoading" @click="onRefreshClick">
+          {{ aiLoading ? "分析中..." : "執行 AI 分析" }}
         </button>
-      </li>
-    </ul>
-  </div>
-
-  <div class="field-box">
-    <p class="field-title title-chip">AI 核心</p>
-    <div class="period-row provider-grid">
-      <button
-        v-for="provider in providerOptions"
-        :key="provider"
-        type="button"
-        class="period-btn"
-        :class="{ active: selectedProvider === provider }"
-        :disabled="aiLoading"
-        @click="emit('change-provider', provider)"
-      >
-        {{ providerLabel(provider) }}
-      </button>
+        <span v-if="aiCheckedAt" class="checked-at no-wrap">更新時間：{{ aiCheckedAt }}</span>
+      </div>
+      <p v-if="searchLoading" class="sub">正在搜尋代號...</p>
+      <p v-else-if="searchError" class="sub warn-text">{{ searchError }}</p>
+      <ul v-else-if="searchResults.length" class="search-list" role="listbox" aria-label="股票代號建議">
+        <li v-for="item in searchResults" :key="item.symbol" class="search-item-wrap">
+          <button
+            type="button"
+            class="search-item"
+            @mousedown.prevent="onSelectSearchResult(item)"
+            @click="onSelectSearchResult(item)"
+          >
+            <span class="search-symbol">{{ item.symbol }}</span>
+            <span class="search-name">{{ item.name }}</span>
+          </button>
+        </li>
+      </ul>
     </div>
-  </div>
 
-  <div class="field-box">
-    <p class="field-title title-chip">你想要 AI 著重的分析重點</p>
-    <textarea
-      :value="userPrompt"
-      class="textarea"
-      rows="3"
-      placeholder="例如：短線壓力支撐、進出場節奏、停損停利建議"
-      :disabled="aiLoading"
-      @input="onPromptInput"
-    ></textarea>
+    <div class="field-box ai-control-provider">
+      <p class="field-title title-chip">AI 核心</p>
+      <div class="period-row provider-grid">
+        <button
+          v-for="provider in providerOptions"
+          :key="provider"
+          type="button"
+          class="period-btn"
+          :class="{ active: selectedProvider === provider }"
+          :disabled="aiLoading"
+          @click="emit('change-provider', provider)"
+        >
+          {{ providerLabel(provider) }}
+        </button>
+      </div>
+    </div>
+
+    <div class="field-box ai-control-prompt">
+      <p class="field-title title-chip">你想要 AI 著重的分析重點</p>
+      <textarea
+        :value="userPrompt"
+        class="textarea"
+        rows="2"
+        placeholder="例如：短線壓力支撐、進出場節奏、停損停利建議"
+        :disabled="aiLoading"
+        @input="onPromptInput"
+      ></textarea>
+    </div>
   </div>
 
   <div class="stack-block">
@@ -421,9 +385,6 @@ const analystNarratives = computed(() => buildAnalystNarratives(props.aiResult))
               {{ line }}
             </li>
           </ul>
-          <p class="sub warn-text" style="margin-top:8px;font-size:0.82rem;">
-            提醒：目前此版本參考資料不多，此分析僅供參考，待後續改版。
-          </p>
         </article>
 
         <article class="card full-span">
@@ -468,6 +429,10 @@ const analystNarratives = computed(() => buildAnalystNarratives(props.aiResult))
           <p class="sub" v-if="item.ok">{{ localize(item.data?.summary) }}</p>
           <p class="sub" v-else>{{ localizeError(item.error) }}</p>
           <p class="sub" v-if="item.ok" style="font-size:0.82rem;">信心：{{ fmt(item.data?.confidence, 2) }}</p>
+        </article>
+
+        <article class="card full-span feedback-reminder-card">
+          <p class="feedback-reminder-text">提醒：目前測試版參考資料不多，分析僅供參考。</p>
         </article>
       </div>
     </template>

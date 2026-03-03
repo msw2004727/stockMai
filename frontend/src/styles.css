@@ -387,6 +387,17 @@ h2 {
   margin-top: 0;
 }
 
+.ai-control-grid {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+
+.ai-control-grid .field-box {
+  margin-top: 0;
+}
+
 .stack-block {
   margin-top: 12px;
 }
@@ -497,13 +508,13 @@ h2 {
 
 .textarea {
   width: 100%;
-  margin-top: 12px;
+  margin-top: 8px;
   border: 1px solid var(--border);
   border-radius: 10px;
   padding: 10px 12px;
   font-size: 0.94rem;
   resize: vertical;
-  min-height: 84px;
+  min-height: 64px;
   font-family: inherit;
   background: var(--bg-card);
   color: var(--ink);
@@ -749,6 +760,29 @@ h2 {
 
   .movers-category-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .ai-control-grid {
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 0.8fr);
+    align-items: start;
+  }
+
+  .ai-control-target {
+    grid-column: 1;
+  }
+
+  .ai-control-provider {
+    grid-column: 2;
+  }
+
+  .ai-control-prompt {
+    grid-column: 1 / -1;
+  }
+
+  .ai-control-prompt .textarea {
+    min-height: 58px;
   }
 }
 
@@ -1153,6 +1187,19 @@ h2 {
 .detail-toggle:hover {
   border-color: var(--brand);
   color: var(--brand);
+}
+
+.feedback-reminder-card {
+  border-style: dashed;
+  background: color-mix(in srgb, var(--brand-soft) 34%, var(--bg-card));
+}
+
+.feedback-reminder-text {
+  margin: 0;
+  text-align: center;
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--muted);
 }
 
 .analyst-field {

@@ -40,6 +40,37 @@ class DeepSeekClientTest(unittest.TestCase):
             asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
         self.assertFalse(ctx.exception.retryable)
 
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_generate_retries_without_temperature_when_model_rejects_it(self, mock_post_json):
+        mock_post_json.side_effect = [
+            (
+                400,
+                {},
+                '{"error":{"message":"Unsupported parameter: temperature is not supported with this model"}}',
+            ),
+            (
+                200,
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"ok no temp","signal":"neutral","confidence":0.6}'
+                            }
+                        }
+                    ]
+                },
+                "",
+            ),
+        ]
+        client = DeepSeekClient(api_key="k-deepseek", model="deepseek-reasoner")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("ok no temp", text)
+        self.assertEqual(mock_post_json.call_count, 2)
+        first_payload = mock_post_json.call_args_list[0].kwargs["payload"]
+        second_payload = mock_post_json.call_args_list[1].kwargs["payload"]
+        self.assertIn("temperature", first_payload)
+        self.assertNotIn("temperature", second_payload)
+
 
 if __name__ == "__main__":
     unittest.main()

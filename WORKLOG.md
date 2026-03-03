@@ -869,3 +869,18 @@
 - 目前進度：Done
 - 下一步：請在 PC 檢查新版控制區與多空文字密度；若要再壓縮成更短摘要可再調。
 - 備註（可選）：本回合未執行 commit + push。
+## [2026-03-03 19:14] Grok/DeepSeek AI 相容性排查與修補
+- 完成事項：
+  - 針對 OpenAI 相容 provider（Grok/DeepSeek）補強 `chat/completions` 參數 fallback：
+    - 依序嘗試 `max_tokens`、無 `temperature`、`max_completion_tokens`，避免模型拒收單一參數時直接失敗。
+  - 補強回應抽取：當 `message.content` 為空時，新增支援 `message.reasoning_content` / `message.reasoning` 取值。
+  - 修正 `ai_gateway` 套件匯入副作用：`__init__.py` 改為 lazy export，避免僅引用子模組時強制載入 `gateway_router`。
+  - 新增/更新測試：
+    - `test_openai_compat_clients`：覆蓋 Grok `max_tokens` 不支援 fallback 與 `reasoning_content` 回應形態。
+    - `test_deepseek_client`：覆蓋 DeepSeek `temperature` 不支援時自動重試。
+  - 驗證：
+    - `python -m unittest backend.tests.test_openai_compat_clients backend.tests.test_deepseek_client` 通過（13 tests）。
+    - `python -m py_compile`（本回合修改檔）通過。
+- 目前進度：Done
+- 下一步：若你要，我可再加一個 `/ai/analyze` 的 provider 健康檢查 API，快速看 Grok/DeepSeek 是否可用與錯誤原因。
+- 備註（可選）：本回合尚未 commit + push。

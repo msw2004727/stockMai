@@ -62,21 +62,43 @@ class OpenAICompatClient(AsyncJsonHttpClient):
                 retryable=True,
             )
 
-        text, raw_text = await self._call_and_extract_text(
-            endpoint="/chat/completions",
-            payload={
-                "model": self.model,
-                "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.2,
-                "max_tokens": 500,
-            },
+        return await self._generate_chat_completion_with_fallback(
+            prompt=prompt,
             headers=headers,
             timeout_seconds=timeout_seconds,
         )
-        if text:
-            return text
 
-        detail = _build_missing_content_detail(raw_text)
+    async def _generate_chat_completion_with_fallback(
+        self,
+        prompt: str,
+        headers: dict[str, str],
+        timeout_seconds: int,
+    ) -> str:
+        payload_candidates = _build_chat_completion_payload_candidates(self.model, prompt)
+        last_raw_text = ""
+        last_error: ProviderCallError | None = None
+
+        for payload in payload_candidates:
+            try:
+                text, raw_text = await self._call_and_extract_text(
+                    endpoint="/chat/completions",
+                    payload=payload,
+                    headers=headers,
+                    timeout_seconds=timeout_seconds,
+                )
+                last_raw_text = raw_text
+                if text:
+                    return text
+            except ProviderCallError as exc:
+                last_error = exc
+                if _is_unsupported_parameter_error(str(exc)):
+                    continue
+                raise
+
+        if last_error and not last_raw_text:
+            raise last_error
+
+        detail = _build_missing_content_detail(last_raw_text)
         raise ProviderCallError(
             f"{self.provider} response missing message content.{detail}",
             retryable=True,
@@ -134,6 +156,12 @@ def _extract_openai_text(payload: dict[str, Any]) -> str:
                 refusal = message.get("refusal")
                 if isinstance(refusal, str) and refusal.strip():
                     return refusal.strip()
+                reasoning_content = _extract_content_text(message.get("reasoning_content"))
+                if reasoning_content:
+                    return reasoning_content
+                reasoning = _extract_content_text(message.get("reasoning"))
+                if reasoning:
+                    return reasoning
 
             choice_text = first_choice.get("text")
             if isinstance(choice_text, str) and choice_text.strip():
@@ -164,6 +192,35 @@ def _build_missing_content_detail(raw_text: str) -> str:
     if not snippet:
         return ""
     return f" raw={snippet}"
+
+
+def _is_unsupported_parameter_error(message: str) -> bool:
+    text = str(message or "").lower()
+    return (
+        "unsupported parameter" in text
+        or "is not supported with this model" in text
+        or "unknown parameter" in text
+    )
+
+
+def _build_chat_completion_payload_candidates(model: str, prompt: str) -> list[dict[str, Any]]:
+    base_messages = [{"role": "user", "content": prompt}]
+    candidates = [
+        {"model": model, "messages": base_messages, "temperature": 0.2, "max_tokens": 500},
+        {"model": model, "messages": base_messages, "max_tokens": 500},
+        {"model": model, "messages": base_messages, "max_completion_tokens": 500},
+        {"model": model, "messages": base_messages, "temperature": 0.2, "max_completion_tokens": 500},
+    ]
+
+    deduped: list[dict[str, Any]] = []
+    signatures: set[tuple[tuple[str, str], ...]] = set()
+    for payload in candidates:
+        signature = tuple(sorted((key, str(value)) for key, value in payload.items()))
+        if signature in signatures:
+            continue
+        signatures.add(signature)
+        deduped.append(payload)
+    return deduped
 
 
 def _extract_output_text(output: Any) -> str:

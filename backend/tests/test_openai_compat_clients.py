@@ -51,6 +51,40 @@ class OpenAICompatClientsTest(unittest.TestCase):
         self.assertIn("bullish", text)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_grok_client_fallbacks_when_max_tokens_unsupported(self, mock_post_json):
+        mock_post_json.side_effect = [
+            (
+                400,
+                {},
+                '{"error":{"message":"Unsupported parameter: max_tokens is not supported with this model"}}',
+            ),
+            (
+                400,
+                {},
+                '{"error":{"message":"Unsupported parameter: max_tokens is not supported with this model"}}',
+            ),
+            (
+                200,
+                {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": '{"summary":"ok fallback","signal":"neutral","confidence":0.6}'
+                            }
+                        }
+                    ]
+                },
+                "",
+            ),
+        ]
+        client = GrokClient(api_key="k-grok", model="grok-4.1-fast")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("ok fallback", text)
+        self.assertEqual(mock_post_json.call_count, 3)
+        third_payload = mock_post_json.call_args_list[2].kwargs["payload"]
+        self.assertIn("max_completion_tokens", third_payload)
+
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_openai_client_supports_output_text_shape(self, mock_post_json):
         mock_post_json.return_value = (
             200,
@@ -87,6 +121,26 @@ class OpenAICompatClientsTest(unittest.TestCase):
         client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
         text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
         self.assertIn("output content", text)
+
+    @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
+    def test_openai_client_supports_reasoning_content_shape(self, mock_post_json):
+        mock_post_json.return_value = (
+            200,
+            {
+                "choices": [
+                    {
+                        "message": {
+                            "content": "",
+                            "reasoning_content": '{"summary":"from reasoning","signal":"neutral","confidence":0.6}',
+                        }
+                    }
+                ]
+            },
+            "",
+        )
+        client = OpenAIClient(api_key="k-openai", model="gpt-5.2")
+        text = asyncio.run(client.generate("prompt", "2330", timeout_seconds=5))
+        self.assertIn("from reasoning", text)
 
     @patch("backend.modules.ai_gateway.openai_client.OpenAICompatClient.post_json")
     def test_openai_client_falls_back_to_chat_completions_when_responses_empty(self, mock_post_json):

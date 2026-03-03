@@ -496,9 +496,6 @@ const tokenUsageInfo = computed(() => parseTokenUsage(modelTechMetrics.value));
                   <span class="ai-tech-chip">{{ fmtKg(modelTechMetrics?.carbon_estimate?.kg_co2e) }}</span>
                 </span>
               </p>
-              <p class="sub ai-tech-formula">
-                公式：電力 = 總Token / 1000 × AI_ENERGY_KWH_PER_1K_TOKENS；碳排 = 電力 × AI_GRID_KGCO2E_PER_KWH
-              </p>
             </div>
           </div>
         </article>

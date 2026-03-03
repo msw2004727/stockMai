@@ -773,3 +773,18 @@
 - 目前進度：Blocked
 - 下一步：修正 `market_snapshot_parser` 欄位映射與測試覆蓋，重新部署後重跑 cloud smoke 與四階段驗收。
 - 備註（可選）：本回合以驗收與根因定位為主，尚未進行程式修補。
+## [2026-03-03 16:59] 快照管線修復完成並通過四階段雲端驗收
+- 完成事項：
+  - 修正 `market_snapshot_parser`：支援 TWSE `OpeningPrice/HighestPrice/LowestPrice/ClosingPrice` 與 `1150302`（民國無斜線）日期格式，並補齊 parser 測試。
+  - 修正入庫相容性：`stock_daily_prices` 寫入改為 upsert 失敗時 `rollback -> replace`，避免 transaction aborted。
+  - 新增可觀測錯誤訊息：快照入庫失敗時可回傳具體 DB 錯誤，定位出雲端缺少 `stock_daily_prices`。
+  - 補上自動建表：在 snapshot/storage/movers/pipeline status 路徑加入 `ensure_stock_daily_prices_table`，雲端無表時可自動建立。
+  - 修正 pipeline status 判讀：改為以「預期交易日（含之前）」評估覆蓋率，避免被當日零星即時寫入誤判。
+  - 雲端驗收結果：
+    - `POST /stocks/pipeline/snapshot?max_symbols=3000` 成功（`inserted_rows=1224`）。
+    - `GET /stocks/movers?limit=6` 成功（`as_of_date=2026-03-02`、`coverage_ratio=1.1312`）。
+    - `GET /stocks/pipeline/status` 成功（`status=ok`、`latest_trade_date=2026-03-02`）。
+    - `scripts/cloud-smoke.ps1` 全流程通過（PASSED）。
+- 目前進度：Done
+- 下一步：明日 08:30 觀察排程自動執行後的 `pipeline/status` 與 `movers` 覆蓋率是否持續穩定。
+- 備註（可選）：本回合共提交多筆修補 commit，已全部 push 到 `origin/main`。

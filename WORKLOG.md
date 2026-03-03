@@ -719,3 +719,14 @@
 - 目前進度：Done
 - 下一步：第2階段要補「全市場完整覆蓋」資料管線（每日批次入庫），讓排行不再受目前快取樣本限制。
 - 備註（可選）：本機缺 `fastapi` 套件，無法執行 backend integration unittest 匯入鏈路。
+## [2026-03-03 15:42] 第1階段提交推送並啟動第2階段市場批次同步
+- 完成事項：
+  - 已完成第1階段 `commit + push`（`5f2e22a`）：上線 `/stocks/movers` 與行情頁三分類快速查詢。
+  - 第2階段新增市場批次同步骨架：`POST /stocks/pipeline/snapshot`（可帶 `max_symbols`），由服務觸發 TWSE `STOCK_DAY_ALL` 全市場日資料抓取並入庫 `stock_daily_prices`。
+  - 新增模組：`market_snapshot_parser/provider/service` 與 `snapshot_storage`，採分層設計（route/service/provider/storage）。
+  - 新增測試：`test_market_snapshot_parser.py`、`test_market_snapshot_service.py`，以及 integration 測試案例（movers + snapshot endpoint）。
+  - 為提升測試可執行性，將 `backend.app.stocks` 與 `backend.modules.data_pipeline` 改為延遲載入，避免不必要依賴在 import 階段中斷。
+  - 驗證：backend `py_compile` 通過；`python -m unittest backend.tests.test_market_snapshot_parser backend.tests.test_market_snapshot_service` 通過；frontend `npm run build` 通過。
+- 目前進度：In Progress
+- 下一步：第2階段補上「雲端排程接入」與「資料覆蓋率指標」（每日自動執行、回報同步筆數/市場覆蓋）。
+- 備註（可選）：本機缺 `fastapi`，無法跑 `test_api_integration` 匯入鏈路。

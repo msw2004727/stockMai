@@ -205,6 +205,51 @@ class ApiIntegrationTest(unittest.TestCase):
                     self.assertIn("categories", payload)
                     self.assertIn("top_volume", payload["categories"])
 
+    def test_stocks_pipeline_snapshot_requires_token(self):
+        status, payload = self._request_json(
+            "POST",
+            "/stocks/pipeline/snapshot",
+            query="max_symbols=3000",
+        )
+        self.assertEqual(status, 401)
+        self.assertEqual(payload["detail"], "Missing bearer token")
+        self.assertEqual(payload["error_code"], "auth_missing_bearer_token")
+
+    def test_stocks_pipeline_snapshot_success_with_token(self):
+        fake_redis = _FakeRedis()
+        fake_result = {
+            "ok": True,
+            "triggered_at": "2026-03-03T12:00:00+00:00",
+            "trade_date": "2026-03-03",
+            "source": "twse_openapi_stock_day_all",
+            "fetched_rows": 1000,
+            "selected_rows": 1000,
+            "inserted_rows": 998,
+            "max_symbols": 3000,
+            "note": "done",
+        }
+        with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):
+            with patch("backend.app.auth.get_redis_client", return_value=fake_redis):
+                with patch("backend.app.stocks.routes.run_market_snapshot", return_value=fake_result):
+                    token_status, token_payload = self._request_json(
+                        "POST",
+                        "/auth/token",
+                        payload={"user_id": "pipeline-user", "expires_minutes": 30},
+                    )
+                    self.assertEqual(token_status, 200)
+                    token = token_payload["access_token"]
+
+                    status, payload = self._request_json(
+                        "POST",
+                        "/stocks/pipeline/snapshot",
+                        query="max_symbols=3000",
+                        headers={"authorization": f"Bearer {token}"},
+                    )
+                    self.assertEqual(status, 200)
+                    self.assertTrue(payload["ok"])
+                    self.assertEqual(payload["source"], "twse_openapi_stock_day_all")
+                    self.assertEqual(payload["inserted_rows"], 998)
+
     def test_stocks_quote_invalid_symbol_returns_422_with_error_code(self):
         fake_redis = _FakeRedis()
         with patch("backend.app.auth.get_settings", return_value=_settings(api_daily_limit=5)):

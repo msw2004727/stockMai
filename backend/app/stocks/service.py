@@ -26,7 +26,7 @@ from .quote_runtime import (
     load_short_quote_cache,
     save_short_quote_cache,
 )
-from .market_clock import infer_market_state, parse_holiday_dates
+from .market_clock import TRADING_CLOSE, TRADING_OPEN, current_taipei_now, infer_market_state, parse_holiday_dates
 
 
 class SymbolNotFoundError(Exception):
@@ -203,6 +203,25 @@ def _load_postgres_quote_fallback(symbol: str, twse_holidays_raw: str) -> dict |
     return _with_freshness(with_meta, max_age_days=5)
 
 
+def _is_taipei_trading_session_now(twse_holidays_raw: str) -> bool:
+    now = current_taipei_now()
+    today = now.date()
+    if today.weekday() >= 5:
+        return False
+
+    holiday_dates = parse_holiday_dates(twse_holidays_raw)
+    if today in holiday_dates:
+        return False
+
+    return TRADING_OPEN <= now.time() <= TRADING_CLOSE
+
+
+def _should_persist_and_cache_quote(payload: dict, twse_holidays_raw: str) -> bool:
+    if bool(payload.get("is_realtime", False)):
+        return True
+    return not _is_taipei_trading_session_now(twse_holidays_raw)
+
+
 def get_quote(symbol: str) -> dict:
     settings = get_settings()
     short_cache = load_short_quote_cache(settings.redis_url, symbol=symbol)
@@ -243,27 +262,32 @@ def get_quote(symbol: str) -> dict:
             with_meta["provider_used"] = with_meta.get("source", "unknown")
             with_meta["fetch_latency_ms"] = fetch_latency_ms
             with_meta["cache_hit"] = False
-            _persist_series_to_postgres(
-                symbol=symbol,
-                series=[
-                    {
-                        "date": with_meta["as_of_date"],
-                        "open": with_meta["open"],
-                        "high": with_meta["high"],
-                        "low": with_meta["low"],
-                        "close": with_meta["close"],
-                        "change": with_meta["change"],
-                        "volume": with_meta["volume"],
-                    }
-                ],
-                source=with_meta.get("source", "unknown"),
-            )
-            save_short_quote_cache(
-                redis_url=settings.redis_url,
-                symbol=symbol,
-                payload=with_meta,
-                ttl_seconds=settings.quote_short_cache_ttl_seconds,
-            )
+            if _should_persist_and_cache_quote(with_meta, settings.twse_holidays):
+                _persist_series_to_postgres(
+                    symbol=symbol,
+                    series=[
+                        {
+                            "date": with_meta["as_of_date"],
+                            "open": with_meta["open"],
+                            "high": with_meta["high"],
+                            "low": with_meta["low"],
+                            "close": with_meta["close"],
+                            "change": with_meta["change"],
+                            "volume": with_meta["volume"],
+                        }
+                    ],
+                    source=with_meta.get("source", "unknown"),
+                )
+                save_short_quote_cache(
+                    redis_url=settings.redis_url,
+                    symbol=symbol,
+                    payload=with_meta,
+                    ttl_seconds=settings.quote_short_cache_ttl_seconds,
+                )
+            else:
+                existing_note = str(with_meta.get("note") or "").strip()
+                skip_note = "intraday non-realtime quote skipped cache/persist"
+                with_meta["note"] = f"{existing_note}; {skip_note}" if existing_note else skip_note
             return _with_freshness(with_meta, max_age_days=5)
     except QuoteProviderUnavailableError:
         if postgres_fallback:

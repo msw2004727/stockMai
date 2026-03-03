@@ -86,12 +86,18 @@ def _parse_twse_realtime_payload(payload: dict, symbol: str) -> dict | None:
     if not row:
         return None
 
-    close = _to_float(row.get("z"))
+    last_trade = _to_float(row.get("z"))
+    bid = _first_level_price(row.get("b"))
+    ask = _first_level_price(row.get("a"))
     prev_close = _to_float(row.get("y"))
+    close, price_source = _resolve_realtime_close(
+        last_trade=last_trade,
+        bid=bid,
+        ask=ask,
+        prev_close=prev_close,
+    )
     if close is None:
-        if prev_close is None:
-            return None
-        close = prev_close
+        return None
 
     open_price = _to_float(row.get("o"))
     high = _to_float(row.get("h"))
@@ -115,11 +121,11 @@ def _parse_twse_realtime_payload(payload: dict, symbol: str) -> dict | None:
         "volume": int(volume),
         "source": "twse_realtime",
         "source_priority": "realtime_primary",
-        "is_realtime": True,
+        "is_realtime": bool(price_source != "prev_close"),
         "market_state": _infer_market_state(row.get("t"), close, prev_close),
         "delay_seconds": 0,
         "is_fallback": False,
-        "note": "",
+        "note": _build_realtime_note(price_source),
     }
 
 
@@ -190,6 +196,52 @@ def _infer_market_state(raw_time: object, close: float, prev_close: float | None
     if prev_close is not None and close != prev_close:
         return "post_close"
     return "unknown"
+
+
+def _resolve_realtime_close(
+    *,
+    last_trade: float | None,
+    bid: float | None,
+    ask: float | None,
+    prev_close: float | None,
+) -> tuple[float | None, str]:
+    if last_trade is not None:
+        return last_trade, "last_trade"
+
+    if bid is not None and ask is not None:
+        if ask >= bid:
+            return round((bid + ask) / 2, 6), "book_mid"
+        return bid, "book_bid"
+
+    if bid is not None:
+        return bid, "book_bid"
+    if ask is not None:
+        return ask, "book_ask"
+
+    if prev_close is not None:
+        return prev_close, "prev_close"
+
+    return None, "none"
+
+
+def _first_level_price(raw: object) -> float | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+
+    for part in text.split("_"):
+        parsed = _to_float(part)
+        if parsed is not None:
+            return parsed
+    return None
+
+
+def _build_realtime_note(price_source: str) -> str:
+    if price_source in {"last_trade", "none"}:
+        return ""
+    if price_source == "prev_close":
+        return "twse_realtime missing trade/book, fallback to prev_close"
+    return f"twse_realtime price inferred from {price_source}"
 
 
 def _to_float(raw: object) -> float | None:

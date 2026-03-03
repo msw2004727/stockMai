@@ -14,7 +14,7 @@ class QuoteProviderTest(unittest.TestCase):
             "msgArray": [
                 {
                     "c": "2330",
-                    "n": "台積電",
+                    "n": "TSMC",
                     "z": "1010",
                     "o": "1001",
                     "h": "1015",
@@ -36,6 +36,57 @@ class QuoteProviderTest(unittest.TestCase):
         self.assertEqual(result["change"], 10.0)
         self.assertEqual(result["as_of_date"], "2026-03-02")
         self.assertEqual(result["quote_time"], "2026-03-02 13:25:01")
+
+    def test_parse_twse_realtime_payload_uses_order_book_when_last_trade_missing(self):
+        payload = {
+            "msgArray": [
+                {
+                    "c": "3231",
+                    "n": "Wistron",
+                    "z": "-",
+                    "o": "132.0",
+                    "h": "133.0",
+                    "l": "130.5",
+                    "y": "135.0",
+                    "v": "8200",
+                    "d": "20260303",
+                    "t": "12:58:31",
+                    "b": "131.5_131.0_130.5",
+                    "a": "132.0_132.5_133.0",
+                }
+            ]
+        }
+        result = _parse_twse_realtime_payload(payload=payload, symbol="3231")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["symbol"], "3231")
+        self.assertEqual(result["close"], 131.75)
+        self.assertTrue(result["is_realtime"])
+        self.assertIn("book_mid", result["note"])
+
+    def test_parse_twse_realtime_payload_marks_prev_close_fallback_as_non_realtime(self):
+        payload = {
+            "msgArray": [
+                {
+                    "c": "3231",
+                    "n": "Wistron",
+                    "z": "-",
+                    "o": "-",
+                    "h": "-",
+                    "l": "-",
+                    "y": "135.0",
+                    "v": "-",
+                    "d": "20260303",
+                    "t": "12:59:01",
+                    "b": "-",
+                    "a": "-",
+                }
+            ]
+        }
+        result = _parse_twse_realtime_payload(payload=payload, symbol="3231")
+        self.assertIsNotNone(result)
+        self.assertEqual(result["close"], 135.0)
+        self.assertFalse(result["is_realtime"])
+        self.assertIn("prev_close", result["note"])
 
     @patch("backend.app.stocks.quote_provider._fetch_twse_daily_quote")
     @patch("backend.app.stocks.quote_provider._fetch_finmind_daily_quote")

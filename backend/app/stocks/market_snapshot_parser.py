@@ -5,15 +5,15 @@ from datetime import date
 
 _SYMBOL_RE = re.compile(r"^\d{4,6}$")
 
-SYMBOL_KEYS = ("Code", "code", "symbol", "證券代號", "股票代號", "公司代號")
+SYMBOL_KEYS = ("Code", "code", "Symbol", "symbol", "證券代號", "股票代號", "公司代號")
 NAME_KEYS = ("Name", "name", "證券名稱", "股票名稱", "公司名稱")
-DATE_KEYS = ("Date", "date", "交易日期", "資料日期")
-OPEN_KEYS = ("Open", "open", "開盤價")
-HIGH_KEYS = ("High", "high", "最高價")
-LOW_KEYS = ("Low", "low", "最低價")
-CLOSE_KEYS = ("Close", "close", "收盤價")
-CHANGE_KEYS = ("Change", "change", "漲跌價差", "漲跌")
-VOLUME_KEYS = ("TradeVolume", "trade_volume", "volume", "成交股數", "成交量")
+DATE_KEYS = ("Date", "date", "trade_date", "交易日期", "資料日期")
+OPEN_KEYS = ("OpeningPrice", "Open", "open", "opening_price", "開盤價")
+HIGH_KEYS = ("HighestPrice", "High", "high", "highest_price", "最高價")
+LOW_KEYS = ("LowestPrice", "Low", "low", "lowest_price", "最低價")
+CLOSE_KEYS = ("ClosingPrice", "Close", "close", "closing_price", "收盤價")
+CHANGE_KEYS = ("Change", "change", "spread", "漲跌價差", "漲跌")
+VOLUME_KEYS = ("TradeVolume", "Volume", "trade_volume", "volume", "成交股數", "成交量")
 
 
 def parse_snapshot_row(row: object, fallback_date: date) -> dict | None:
@@ -84,6 +84,8 @@ def _parse_date(raw: str) -> str:
         return text
     if re.fullmatch(r"\d{8}", text):
         return f"{text[0:4]}-{text[4:6]}-{text[6:8]}"
+    if re.fullmatch(r"\d{7}", text):
+        return f"{int(text[0:3]) + 1911:04d}-{int(text[3:5]):02d}-{int(text[5:7]):02d}"
     if re.fullmatch(r"\d{3}/\d{2}/\d{2}", text):
         year_roc, month, day = text.split("/")
         return f"{int(year_roc) + 1911:04d}-{int(month):02d}-{int(day):02d}"

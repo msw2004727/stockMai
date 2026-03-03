@@ -10,7 +10,7 @@ class MarketSnapshotParserTest(unittest.TestCase):
     def test_parse_snapshot_row_supports_iso_date(self):
         row = {
             "Code": "2330",
-            "Name": "台積電",
+            "Name": "TSMC",
             "Date": "2026-03-03",
             "Open": "1000.0",
             "High": "1012.0",
@@ -27,17 +27,38 @@ class MarketSnapshotParserTest(unittest.TestCase):
         self.assertEqual(parsed["close"], 1008.0)
         self.assertEqual(parsed["volume"], 12345678)
 
-    def test_parse_snapshot_row_supports_roc_date(self):
+    def test_parse_snapshot_row_supports_twse_openapi_fields(self):
         row = {
-            "證券代號": "2317",
-            "證券名稱": "鴻海",
-            "交易日期": "115/03/03",
-            "開盤價": "150",
-            "最高價": "152",
-            "最低價": "149",
-            "收盤價": "151",
-            "漲跌價差": "1",
-            "成交股數": "2,345,678",
+            "Code": "0050",
+            "Name": "ETF 50",
+            "Date": "1150302",
+            "OpeningPrice": "79.50",
+            "HighestPrice": "80.80",
+            "LowestPrice": "79.15",
+            "ClosingPrice": "80.35",
+            "Change": "-0.8000",
+            "TradeVolume": "224651381",
+        }
+        parsed = parse_snapshot_row(row, fallback_date=date(2026, 3, 3))
+        self.assertIsNotNone(parsed)
+        assert parsed is not None
+        self.assertEqual(parsed["symbol"], "0050")
+        self.assertEqual(parsed["date"], "2026-03-02")
+        self.assertEqual(parsed["open"], 79.5)
+        self.assertEqual(parsed["close"], 80.35)
+        self.assertEqual(parsed["volume"], 224651381)
+
+    def test_parse_snapshot_row_supports_roc_date_with_slashes(self):
+        row = {
+            "Code": "2317",
+            "Name": "Hon Hai",
+            "Date": "115/03/03",
+            "OpeningPrice": "150",
+            "HighestPrice": "152",
+            "LowestPrice": "149",
+            "ClosingPrice": "151",
+            "Change": "1",
+            "TradeVolume": "2,345,678",
         }
         parsed = parse_snapshot_row(row, fallback_date=date(2026, 3, 3))
         self.assertIsNotNone(parsed)

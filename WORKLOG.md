@@ -1099,3 +1099,13 @@
 - 目前進度：Done
 - 下一步：若要進入下一階段，建議做「使用者可調整排序偏好」（偏好新鮮度/偏好基本面/偏好籌碼）。
 - 備註（可選）：本機環境仍缺 `pydantic_settings`，未執行完整 backend unittest。
+## [2026-03-04 12:42] 修正 intel 端點 503 與前端重複請求噪音
+- 完成事項：
+  - 確認 503 根因：`FINMIND_TOKEN` 未配置時，`/stocks/intel/*` 直接回 503，前端自動刷新會持續觸發錯誤請求。
+  - 後端 `intel_service` 改為降級模式：無 token 不再丟 503，改回 200 並以每個資料塊 `availability=restricted` 呈現，且新增 `token_configured` 旗標。
+  - 前端 `useQuoteHistory` 調整：自動靜默刷新（每 5 秒）不再重抓 intel（除非首次或切換標的），降低重複請求與噪音。
+  - 更新 `test_stock_intel_service`：新增「無 token 回傳 restricted payload」情境，並補 `token_configured` 斷言。
+  - 驗證：`frontend npm run build`、`py_compile` 通過。
+- 目前進度：Done
+- 下一步：部署後觀察 console/network，確認 2485 不再出現 `/stocks/intel/*` 的 503 連發。
+- 備註（可選）：本機環境仍缺 `pydantic_settings`，未執行完整 backend unittest。

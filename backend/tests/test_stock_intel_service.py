@@ -11,11 +11,28 @@ from backend.app.stocks.intel_service import (
 
 
 class StockIntelServiceTest(unittest.TestCase):
+    @patch("backend.app.stocks.intel_service.fetch_overview_blocks")
+    @patch("backend.app.stocks.intel_service.build_finmind_client")
     @patch("backend.app.stocks.intel_service.get_settings")
-    def test_overview_requires_finmind_token(self, mock_get_settings):
+    def test_overview_without_token_returns_restricted_payload(
+        self,
+        mock_get_settings,
+        _mock_build_client,
+        mock_fetch_overview,
+    ):
         mock_get_settings.return_value = SimpleNamespace(finmind_token="")
-        with self.assertRaises(StockIntelUnavailableError):
-            get_stock_intel_overview("2330")
+        mock_fetch_overview.return_value = {
+            "company_profile": {"status": "restricted", "dataset": "TaiwanStockInfo", "data_as_of": "", "rows": [], "message": "token missing", "status_code": 401},
+            "valuation": {"status": "restricted", "dataset": "TaiwanStockPER", "data_as_of": "", "rows": [], "message": "token missing", "status_code": 401},
+            "institutional_flow": {"status": "restricted", "dataset": "TaiwanStockInstitutionalInvestorsBuySell", "data_as_of": "", "rows": [], "message": "token missing", "status_code": 401},
+            "margin_short": {"status": "restricted", "dataset": "TaiwanStockMarginPurchaseShortSale", "data_as_of": "", "rows": [], "message": "token missing", "status_code": 401},
+            "foreign_holding": {"status": "restricted", "dataset": "TaiwanStockShareholding", "data_as_of": "", "rows": [], "message": "token missing", "status_code": 401},
+            "monthly_revenue": {"status": "restricted", "dataset": "TaiwanStockMonthRevenue", "data_as_of": "", "rows": [], "message": "token missing", "status_code": 401},
+        }
+        result = get_stock_intel_overview("2330")
+        self.assertEqual(result["symbol"], "2330")
+        self.assertFalse(result["token_configured"])
+        self.assertEqual(result["institutional_flow"]["availability"]["status"], "restricted")
 
     @patch("backend.app.stocks.intel_service.get_quote")
     @patch("backend.app.stocks.intel_service.fetch_overview_blocks")
@@ -84,6 +101,7 @@ class StockIntelServiceTest(unittest.TestCase):
         result = get_stock_intel_overview("2330")
         self.assertEqual(result["symbol"], "2330")
         self.assertEqual(result["source"], "finmind")
+        self.assertTrue(result["token_configured"])
         self.assertEqual(result["quote_summary"]["availability"]["status"], "ok")
         self.assertEqual(result["company_profile"]["availability"]["status"], "ok")
         self.assertEqual(result["valuation"]["summary"]["latest_per"], 21.5)
@@ -178,6 +196,7 @@ class StockIntelServiceTest(unittest.TestCase):
         }
         result = get_stock_intel_deep("2330")
         self.assertEqual(result["symbol"], "2330")
+        self.assertTrue(result["token_configured"])
         self.assertEqual(result["price_performance"]["availability"]["status"], "ok")
         self.assertIn("freshness", result["price_performance"])
         self.assertEqual(result["broker_branches"]["availability"]["status"], "restricted")
@@ -221,6 +240,7 @@ class StockIntelServiceTest(unittest.TestCase):
         }
         result = get_stock_intel_status("2330")
         self.assertEqual(result["symbol"], "2330")
+        self.assertTrue(result["token_configured"])
         self.assertIn("datasets", result)
         self.assertIn("freshness", result["datasets"]["valuation"])
         self.assertEqual(result["datasets"]["broker_branches"]["status"], "restricted")

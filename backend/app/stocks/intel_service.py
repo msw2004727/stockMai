@@ -35,10 +35,7 @@ DEEP_BLOCK_KEYS = (
 
 
 def get_stock_intel_overview(symbol: str) -> dict:
-    settings = get_settings()
-    token = str(settings.finmind_token or "").strip()
-    if not token:
-        raise StockIntelUnavailableError("FINMIND_TOKEN is not configured.")
+    token = _get_finmind_token()
 
     fetched_at = now_iso()
     client = build_finmind_client(token)
@@ -53,6 +50,7 @@ def get_stock_intel_overview(symbol: str) -> dict:
     return {
         "symbol": symbol,
         "source": "finmind",
+        "token_configured": bool(token),
         "fetched_at": fetched_at,
         "quote_summary": quote_summary,
         "company_profile": block_views["company_profile"],
@@ -66,10 +64,7 @@ def get_stock_intel_overview(symbol: str) -> dict:
 
 
 def get_stock_intel_deep(symbol: str) -> dict:
-    settings = get_settings()
-    token = str(settings.finmind_token or "").strip()
-    if not token:
-        raise StockIntelUnavailableError("FINMIND_TOKEN is not configured.")
+    token = _get_finmind_token()
 
     fetched_at = now_iso()
     client = build_finmind_client(token)
@@ -83,6 +78,7 @@ def get_stock_intel_deep(symbol: str) -> dict:
     return {
         "symbol": symbol,
         "source": "finmind",
+        "token_configured": bool(token),
         "fetched_at": fetched_at,
         "price_performance": block_views["price_performance"],
         "shareholding_distribution": block_views["shareholding_distribution"],
@@ -94,10 +90,7 @@ def get_stock_intel_deep(symbol: str) -> dict:
 
 
 def get_stock_intel_status(symbol: str) -> dict:
-    settings = get_settings()
-    token = str(settings.finmind_token or "").strip()
-    if not token:
-        raise StockIntelUnavailableError("FINMIND_TOKEN is not configured.")
+    token = _get_finmind_token()
 
     fetched_at = now_iso()
     client = build_finmind_client(token)
@@ -108,6 +101,7 @@ def get_stock_intel_status(symbol: str) -> dict:
     return {
         "symbol": symbol,
         "source": "finmind",
+        "token_configured": bool(token),
         "fetched_at": fetched_at,
         "datasets": build_status_view(all_blocks, fetched_at=fetched_at),
     }
@@ -125,6 +119,11 @@ def _safe_quote(symbol: str) -> dict:
         "availability": {"status": "ok", "message": ""},
         "data": payload,
     }
+
+
+def _get_finmind_token() -> str:
+    settings = get_settings()
+    return str(settings.finmind_token or "").strip()
 
 
 def _mapped_or_default(mapped_blocks: dict[str, dict], key: str, *, fetched_at: str) -> dict:

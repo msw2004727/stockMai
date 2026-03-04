@@ -212,7 +212,14 @@ export function useQuoteHistory(initialSymbol = "") {
         }
       }
 
-      await refreshIntel(resolvedSymbol, controller.signal, { silent });
+      const shouldFetchIntel =
+        !silent ||
+        !intelOverview.value ||
+        String(intelOverview.value?.symbol || "").trim() !== resolvedSymbol;
+
+      if (shouldFetchIntel) {
+        await refreshIntel(resolvedSymbol, controller.signal, { silent });
+      }
       quoteCheckedAt.value = formatTimeLabel(new Date());
     } catch (error) {
       if (!silent && error.name !== "AbortError") {

@@ -1071,3 +1071,12 @@
 - 目前進度：In Progress
 - 下一步：在具備 backend 依賴的環境（含 `pydantic_settings`）執行 `python -m unittest backend.tests.test_stock_intel_service` 與 API 手動驗收（成功/失敗各一）。
 - 備註（可選）：本機執行後端測試時缺少 `pydantic_settings` 套件，無法完成該測試檔完整執行。
+## [2026-03-04 12:27] Phase 2：補齊公司基本面與績效面板
+- 完成事項：
+  - 後端 FinMind 情報擴充：新增 `company_profile`（公司基本資料）、`valuation`（PER/PBR/殖利率）、`price_performance`（1M/3M/1Y 報酬與 52 週高低）。
+  - 更新 `intel_constants/intel_mapper/intel_service`，並加上缺塊 fallback，避免上游少資料時 API 因缺 key 失敗。
+  - 前端 `StockIntelPanel` 新增「公司基本資料」「估值指標」「股價績效」三區塊，與原籌碼/財報共同呈現。
+  - 更新 `backend/tests/test_stock_intel_service.py` 測試樣本以覆蓋新欄位；`frontend npm run build` 與 `py_compile` 通過。
+- 目前進度：Done
+- 下一步：Phase 3 建議做「資料新鮮度標記與更新頻率提示優化」（例如依資料集顯示日/週/月更新節奏與延遲風險）。
+- 備註（可選）：本機環境仍缺 `pydantic_settings`，故未能完整跑 `unittest`（僅完成語法與前端建置驗證）。

@@ -9,6 +9,8 @@ def now_iso() -> str:
 
 def map_overview_block(block_key: str, raw_block: dict, fetched_at: str) -> dict:
     mapper = {
+        "company_profile": _map_company_profile,
+        "valuation": _map_valuation,
         "institutional_flow": _map_institutional_flow,
         "margin_short": _map_margin_short,
         "foreign_holding": _map_foreign_holding,
@@ -19,6 +21,7 @@ def map_overview_block(block_key: str, raw_block: dict, fetched_at: str) -> dict
 
 def map_deep_block(block_key: str, raw_block: dict, fetched_at: str) -> dict:
     mapper = {
+        "price_performance": _map_price_performance,
         "shareholding_distribution": _map_shareholding_distribution,
         "securities_lending": _map_securities_lending,
         "broker_branches": _map_broker_branches,
@@ -59,6 +62,117 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
             "fetched_at": fetched_at,
         }
     return out
+
+
+def _map_company_profile(raw_block: dict, *, fetched_at: str) -> dict:
+    rows = list(raw_block.get("rows") or [])
+    latest_row = _pick_latest_row(rows)
+    summary = {
+        "stock_id": _pick_text(latest_row, ("stock_id", "data_id", "stock_no", "symbol")),
+        "stock_name": _pick_text(latest_row, ("stock_name", "name", "company_short_name")),
+        "company_name": _pick_text(latest_row, ("company_name", "company_full_name")),
+        "industry": _pick_text(latest_row, ("industry_category", "industry", "industry_name")),
+        "market": _pick_text(latest_row, ("market_category", "market", "market_type")),
+        "listing_type": _pick_text(latest_row, ("type", "listing_type", "exchange")),
+        "chairman": _pick_text(latest_row, ("chairman", "chairman_name")),
+        "address": _pick_text(latest_row, ("address", "company_address")),
+        "capital": _round_or_none(_pick_number(latest_row, ("capital", "capital_stock", "paidin_capital"))),
+    }
+    return _base_block(
+        raw_block,
+        fetched_at=fetched_at,
+        data_as_of=_row_date(latest_row) or str(raw_block.get("data_as_of") or "") or fetched_at[:10],
+        summary=summary,
+        rows=[],
+    )
+
+
+def _map_valuation(raw_block: dict, *, fetched_at: str) -> dict:
+    rows = list(raw_block.get("rows") or [])
+    normalized = []
+    for row in rows:
+        day = _row_date(row)
+        if not day:
+            continue
+        normalized.append(
+            {
+                "date": day,
+                "per": _round_or_none(_pick_number(row, ("PER", "per", "price_earning_ratio"))),
+                "pbr": _round_or_none(_pick_number(row, ("PBR", "pbr", "price_book_ratio"))),
+                "dividend_yield_pct": _round_or_none(
+                    _pick_number(row, ("dividend_yield", "DividendYield", "yield", "cash_dividend_yield"))
+                ),
+            }
+        )
+    normalized.sort(key=lambda item: item["date"])
+    latest = normalized[-1] if normalized else {}
+    return _base_block(
+        raw_block,
+        fetched_at=fetched_at,
+        data_as_of=str(latest.get("date") or raw_block.get("data_as_of") or ""),
+        summary={
+            "latest_per": latest.get("per"),
+            "latest_pbr": latest.get("pbr"),
+            "latest_dividend_yield_pct": latest.get("dividend_yield_pct"),
+        },
+        rows=normalized[-30:],
+    )
+
+
+def _map_price_performance(raw_block: dict, *, fetched_at: str) -> dict:
+    rows = list(raw_block.get("rows") or [])
+    normalized = []
+    for row in rows:
+        day = _row_date(row)
+        if not day:
+            continue
+        close = _pick_number(row, ("close", "Close", "closing_price"))
+        high = _pick_number(row, ("max", "high", "High"))
+        low = _pick_number(row, ("min", "low", "Low"))
+        if close is None:
+            continue
+        normalized.append(
+            {
+                "date": day,
+                "close": float(close),
+                "high": float(high if high is not None else close),
+                "low": float(low if low is not None else close),
+            }
+        )
+
+    normalized.sort(key=lambda item: item["date"])
+    latest = normalized[-1] if normalized else {}
+    latest_close = latest.get("close")
+    close_1m_ago = _close_n_sessions_ago(normalized, 21)
+    close_3m_ago = _close_n_sessions_ago(normalized, 63)
+    close_1y_ago = _close_n_sessions_ago(normalized, 252)
+    one_year_scope = normalized[-252:] if len(normalized) >= 252 else normalized
+    high_52w = max((row["high"] for row in one_year_scope), default=None)
+    low_52w = min((row["low"] for row in one_year_scope), default=None)
+
+    view_rows = []
+    for row in normalized[-90:]:
+        view_rows.append(
+            {
+                "date": row["date"],
+                "close": _round_or_none(row["close"]),
+            }
+        )
+
+    return _base_block(
+        raw_block,
+        fetched_at=fetched_at,
+        data_as_of=str(latest.get("date") or raw_block.get("data_as_of") or ""),
+        summary={
+            "latest_close": _round_or_none(latest_close),
+            "return_1m_pct": _calc_return_pct(latest_close, close_1m_ago),
+            "return_3m_pct": _calc_return_pct(latest_close, close_3m_ago),
+            "return_1y_pct": _calc_return_pct(latest_close, close_1y_ago),
+            "high_52w": _round_or_none(high_52w),
+            "low_52w": _round_or_none(low_52w),
+        },
+        rows=view_rows,
+    )
 
 
 def _map_institutional_flow(raw_block: dict, *, fetched_at: str) -> dict:
@@ -387,6 +501,26 @@ def _pick_largest_numeric(row: dict) -> float | None:
         return None
     numbers.sort(key=abs, reverse=True)
     return numbers[0]
+
+
+def _close_n_sessions_ago(rows: list[dict], sessions: int) -> float | None:
+    if not rows:
+        return None
+    index = len(rows) - 1 - int(sessions)
+    if index < 0:
+        return None
+    value = rows[index].get("close")
+    return float(value) if isinstance(value, (int, float)) else _to_float(value)
+
+
+def _calc_return_pct(current: float | None, base: float | None) -> float | None:
+    if current is None or base is None:
+        return None
+    if not isinstance(current, (int, float)) or not isinstance(base, (int, float)):
+        return None
+    if base == 0:
+        return None
+    return round(((float(current) - float(base)) / float(base)) * 100, 4)
 
 
 def _to_float(raw: object) -> float | None:

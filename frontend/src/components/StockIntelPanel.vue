@@ -40,6 +40,13 @@ function fmtPct(value) {
   return `${parsed.toFixed(2)}%`;
 }
 
+function fmtSignedPct(value) {
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return "--";
+  const sign = parsed > 0 ? "+" : "";
+  return `${sign}${parsed.toFixed(2)}%`;
+}
+
 function hasRows(rows) {
   return Array.isArray(rows) && rows.length > 0;
 }
@@ -55,6 +62,23 @@ function hasRows(rows) {
       <p v-if="intelOverviewError" class="sub warn-text">{{ intelOverviewError }}</p>
 
       <div v-if="intelOverview" class="intel-grid">
+        <article class="card">
+          <p class="label">公司基本資料</p>
+          <p class="sub">代號：{{ intelOverview.company_profile?.summary?.stock_id || "--" }}</p>
+          <p class="sub">簡稱：{{ intelOverview.company_profile?.summary?.stock_name || "--" }}</p>
+          <p class="sub">產業：{{ intelOverview.company_profile?.summary?.industry || "--" }}</p>
+          <p class="sub">市場：{{ intelOverview.company_profile?.summary?.market || "--" }}</p>
+          <p class="sub">類型：{{ intelOverview.company_profile?.summary?.listing_type || "--" }}</p>
+        </article>
+
+        <article class="card">
+          <p class="label">估值指標</p>
+          <p class="sub">資料日：{{ intelOverview.valuation?.data_as_of || "--" }}</p>
+          <p class="sub">本益比 (PER)：{{ fmtNumber(intelOverview.valuation?.summary?.latest_per, 2) }}</p>
+          <p class="sub">股價淨值比 (PBR)：{{ fmtNumber(intelOverview.valuation?.summary?.latest_pbr, 2) }}</p>
+          <p class="sub">殖利率：{{ fmtPct(intelOverview.valuation?.summary?.latest_dividend_yield_pct) }}</p>
+        </article>
+
         <article class="card">
           <p class="label">三大法人</p>
           <p class="sub">資料日：{{ intelOverview.institutional_flow?.data_as_of || "--" }}</p>
@@ -119,6 +143,16 @@ function hasRows(rows) {
       <p v-if="intelDeepError" class="sub warn-text">{{ intelDeepError }}</p>
 
       <div v-if="intelDeep" class="intel-grid">
+        <article class="card">
+          <p class="label">股價績效</p>
+          <p class="sub">資料日：{{ intelDeep.price_performance?.data_as_of || "--" }}</p>
+          <p class="sub">近 1 月：{{ fmtSignedPct(intelDeep.price_performance?.summary?.return_1m_pct) }}</p>
+          <p class="sub">近 3 月：{{ fmtSignedPct(intelDeep.price_performance?.summary?.return_3m_pct) }}</p>
+          <p class="sub">近 1 年：{{ fmtSignedPct(intelDeep.price_performance?.summary?.return_1y_pct) }}</p>
+          <p class="sub">52 週高點：{{ fmtNumber(intelDeep.price_performance?.summary?.high_52w, 2) }}</p>
+          <p class="sub">52 週低點：{{ fmtNumber(intelDeep.price_performance?.summary?.low_52w, 2) }}</p>
+        </article>
+
         <article class="card">
           <p class="label">股權分散</p>
           <p class="sub">資料日：{{ intelDeep.shareholding_distribution?.data_as_of || "--" }}</p>

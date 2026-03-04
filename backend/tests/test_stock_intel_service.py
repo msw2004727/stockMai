@@ -31,6 +31,22 @@ class StockIntelServiceTest(unittest.TestCase):
         mock_get_settings.return_value = SimpleNamespace(finmind_token="token")
         mock_get_quote.return_value = {"symbol": "2330", "source": "twse_realtime", "close": 1000.0}
         mock_fetch_overview.return_value = {
+            "company_profile": {
+                "status": "ok",
+                "dataset": "TaiwanStockInfo",
+                "data_as_of": "",
+                "rows": [{"stock_id": "2330", "stock_name": "台積電", "industry_category": "半導體"}],
+                "message": "",
+                "status_code": 200,
+            },
+            "valuation": {
+                "status": "ok",
+                "dataset": "TaiwanStockPER",
+                "data_as_of": "2026-03-03",
+                "rows": [{"date": "2026-03-03", "PER": 21.5, "PBR": 5.8, "dividend_yield": 1.8}],
+                "message": "",
+                "status_code": 200,
+            },
             "institutional_flow": {
                 "status": "ok",
                 "dataset": "TaiwanStockInstitutionalInvestorsBuySell",
@@ -69,6 +85,8 @@ class StockIntelServiceTest(unittest.TestCase):
         self.assertEqual(result["symbol"], "2330")
         self.assertEqual(result["source"], "finmind")
         self.assertEqual(result["quote_summary"]["availability"]["status"], "ok")
+        self.assertEqual(result["company_profile"]["availability"]["status"], "ok")
+        self.assertEqual(result["valuation"]["summary"]["latest_per"], 21.5)
         self.assertEqual(result["institutional_flow"]["availability"]["status"], "ok")
         self.assertIn("datasets", result)
         self.assertIn("institutional_flow", result["datasets"])
@@ -86,6 +104,8 @@ class StockIntelServiceTest(unittest.TestCase):
     ):
         mock_get_settings.return_value = SimpleNamespace(finmind_token="token")
         mock_fetch_overview.return_value = {
+            "company_profile": {"status": "empty", "dataset": "", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
+            "valuation": {"status": "empty", "dataset": "", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
             "institutional_flow": {"status": "empty", "dataset": "", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
             "margin_short": {"status": "empty", "dataset": "", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
             "foreign_holding": {"status": "empty", "dataset": "", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
@@ -100,6 +120,19 @@ class StockIntelServiceTest(unittest.TestCase):
     def test_get_stock_intel_deep_success(self, mock_get_settings, _mock_build_client, mock_fetch_deep):
         mock_get_settings.return_value = SimpleNamespace(finmind_token="token")
         mock_fetch_deep.return_value = {
+            "price_performance": {
+                "status": "ok",
+                "dataset": "TaiwanStockPrice",
+                "data_as_of": "2026-03-03",
+                "rows": [
+                    {"date": "2025-03-03", "close": 900},
+                    {"date": "2025-12-01", "close": 950},
+                    {"date": "2026-02-01", "close": 980},
+                    {"date": "2026-03-03", "close": 1000},
+                ],
+                "message": "",
+                "status_code": 200,
+            },
             "shareholding_distribution": {
                 "status": "ok",
                 "dataset": "TaiwanStockHoldingSharesPer",
@@ -144,6 +177,7 @@ class StockIntelServiceTest(unittest.TestCase):
         }
         result = get_stock_intel_deep("2330")
         self.assertEqual(result["symbol"], "2330")
+        self.assertEqual(result["price_performance"]["availability"]["status"], "ok")
         self.assertEqual(result["broker_branches"]["availability"]["status"], "restricted")
         self.assertEqual(result["financial_statements"]["availability"]["status"], "ok")
         self.assertEqual(len(result["financial_statements"]["sections"]), 1)
@@ -161,12 +195,15 @@ class StockIntelServiceTest(unittest.TestCase):
     ):
         mock_get_settings.return_value = SimpleNamespace(finmind_token="token")
         mock_fetch_overview.return_value = {
+            "company_profile": {"status": "ok", "dataset": "AA", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
+            "valuation": {"status": "ok", "dataset": "AB", "data_as_of": "2026-03-03", "rows": [], "message": "", "status_code": 200},
             "institutional_flow": {"status": "ok", "dataset": "A", "data_as_of": "2026-03-03", "rows": [], "message": "", "status_code": 200},
             "margin_short": {"status": "empty", "dataset": "B", "data_as_of": "", "rows": [], "message": "", "status_code": 200},
             "foreign_holding": {"status": "ok", "dataset": "C", "data_as_of": "2026-03-03", "rows": [], "message": "", "status_code": 200},
             "monthly_revenue": {"status": "error", "dataset": "D", "data_as_of": "", "rows": [], "message": "down", "status_code": 503},
         }
         mock_fetch_deep.return_value = {
+            "price_performance": {"status": "ok", "dataset": "EA", "data_as_of": "2026-03-03", "rows": [], "message": "", "status_code": 200},
             "shareholding_distribution": {"status": "ok", "dataset": "E", "data_as_of": "2026-03-03", "rows": [], "message": "", "status_code": 200},
             "securities_lending": {"status": "ok", "dataset": "F", "data_as_of": "2026-03-03", "rows": [], "message": "", "status_code": 200},
             "broker_branches": {"status": "restricted", "dataset": "G", "data_as_of": "", "rows": [], "message": "no perm", "status_code": 403},

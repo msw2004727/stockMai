@@ -91,13 +91,10 @@ const loadingMessage = computed(() => {
   if (aiLoading.value || strategyLoading.value) {
     return "提醒：沒有人能準確預測股價走勢，即使是最頂級的分析師也不行，建議任何投資決策前，多參考專業券商的研究報告、諮詢合格的財務顧問，並且量力而為！";
   }
-  if (quoteLoading.value) {
-    return "您所查詢的股價行情正在資料庫查詢中，請稍後~";
-  }
   return "";
 });
 
-const showLoadingOverlay = computed(() => Boolean(loadingMessage.value));
+const showLoadingOverlay = computed(() => Boolean(aiLoading.value || strategyLoading.value || quoteLoading.value));
 const loadingMarqueeText = computed(() => {
   if (aiLoading.value || strategyLoading.value) {
     return "AI努力分析中";
@@ -250,7 +247,7 @@ onMounted(() => {
             </div>
           </div>
         </div>
-        <p class="loading-text">{{ loadingMessage }}</p>
+        <p v-if="loadingMessage" class="loading-text">{{ loadingMessage }}</p>
       </div>
     </div>
   </transition>

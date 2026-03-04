@@ -642,7 +642,7 @@ h2 {
   width: max-content;
   min-width: 200%;
   white-space: nowrap;
-  animation: loading-marquee 9s linear infinite;
+  animation: loading-marquee 13.5s linear infinite;
   will-change: transform;
 }
 
@@ -656,7 +656,7 @@ h2 {
 
 .loading-marquee-group span {
   flex: 0 0 auto;
-  font-size: 0.82rem;
+  font-size: 1.23rem;
   font-weight: 800;
   color: var(--brand);
 }
@@ -1928,6 +1928,12 @@ h2 {
   font-size: 0.8rem;
   text-align: left;
   white-space: nowrap;
+}
+
+.intel-table td.issue-detail-cell {
+  white-space: normal;
+  min-width: 320px;
+  line-height: 1.4;
 }
 
 .intel-table th {

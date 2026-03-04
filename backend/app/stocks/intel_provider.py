@@ -90,6 +90,7 @@ def _fetch_financial_sections(client: FinMindClient, symbol: str) -> dict:
                     "status": str(result.get("status") or "empty"),
                     "message": str(result.get("message") or ""),
                 },
+                "status_code": int(result.get("status_code") or 0),
                 "data_as_of": str(result.get("data_as_of") or ""),
                 "rows": section_rows,
             }
@@ -216,14 +217,26 @@ def _fetch_first_available(
 
 
 def _merge_preferred_block(official_block: dict, finmind_block: dict) -> dict:
-    if _is_ok_status(finmind_block):
-        return _with_source_priority(finmind_block, "finmind_fallback")
+    official = _with_source_priority(official_block, "official_primary")
+    finmind = _with_source_priority(finmind_block, "finmind_fallback")
 
-    official_score = _status_score(str(official_block.get("status") or "error"))
-    finmind_score = _status_score(str(finmind_block.get("status") or "error"))
-    if official_score <= finmind_score:
-        return _with_source_priority(official_block, "official_primary")
-    return _with_source_priority(finmind_block, "finmind_fallback")
+    if _is_ok_status(finmind):
+        out = dict(finmind)
+        out["attempts"] = _combine_attempts(official, finmind)
+        return out
+
+    official_score = _status_score(str(official.get("status") or "error"))
+    finmind_score = _status_score(str(finmind.get("status") or "error"))
+    base = official if official_score <= finmind_score else finmind
+
+    out = dict(base)
+    out["status"] = _resolve_failure_status(
+        str(official.get("status") or ""),
+        str(finmind.get("status") or ""),
+    )
+    out["message"] = _build_combined_failure_message(official, finmind)
+    out["attempts"] = _combine_attempts(official, finmind)
+    return out
 
 
 def _normalize_block(block: dict | None, *, key: str, default_source: str) -> dict:
@@ -239,6 +252,10 @@ def _normalize_block(block: dict | None, *, key: str, default_source: str) -> di
     out["source"] = str(out.get("source") or default_source)
     out["data_as_of"] = str(out.get("data_as_of") or "")
     out["rows"] = list(out.get("rows") or [])
+    attempts = list(out.get("attempts") or [])
+    out["attempts"] = [attempt for attempt in attempts if isinstance(attempt, dict)]
+    if not out["attempts"]:
+        out["attempts"] = [_attempt_of_block(out, source_priority=str(out.get("source_priority") or ""))]
     if key == "financial_statements":
         out["sections"] = list(out.get("sections") or [])
     return out
@@ -247,6 +264,16 @@ def _normalize_block(block: dict | None, *, key: str, default_source: str) -> di
 def _with_source_priority(block: dict, source_priority: str) -> dict:
     out = dict(block)
     out["source_priority"] = source_priority
+    attempts = []
+    for attempt in list(out.get("attempts") or []):
+        if not isinstance(attempt, dict):
+            continue
+        attempt_out = dict(attempt)
+        attempt_out["source_priority"] = str(attempt_out.get("source_priority") or source_priority)
+        attempts.append(attempt_out)
+    if not attempts:
+        attempts = [_attempt_of_block(out, source_priority=source_priority)]
+    out["attempts"] = attempts
     return out
 
 
@@ -265,6 +292,87 @@ def _status_score(status: str) -> int:
     if normalized == "restricted":
         return 3
     return 4
+
+
+def _resolve_failure_status(official_status: str, finmind_status: str) -> str:
+    statuses = {str(official_status or "").lower(), str(finmind_status or "").lower()}
+    statuses.discard("")
+    if "restricted" in statuses:
+        return "restricted"
+    if "error" in statuses:
+        return "error"
+    if "empty" in statuses:
+        return "empty"
+    return "error"
+
+
+def _build_combined_failure_message(official: dict, finmind: dict) -> str:
+    official_msg = str(official.get("message") or "").strip()
+    finmind_msg = str(finmind.get("message") or "").strip()
+    official_status = str(official.get("status") or "error")
+    finmind_status = str(finmind.get("status") or "error")
+    official_src = str(official.get("source") or "official")
+    finmind_src = str(finmind.get("source") or "finmind")
+
+    parts = []
+    if official_msg:
+        parts.append(f"{official_src}({official_status}): {official_msg}")
+    else:
+        parts.append(f"{official_src}({official_status})")
+
+    if finmind_msg:
+        parts.append(f"{finmind_src}({finmind_status}): {finmind_msg}")
+    else:
+        parts.append(f"{finmind_src}({finmind_status})")
+
+    return " | ".join(parts)
+
+
+def _attempt_of_block(block: dict, *, source_priority: str) -> dict:
+    return {
+        "source": str(block.get("source") or "unknown"),
+        "source_priority": str(source_priority or block.get("source_priority") or ""),
+        "dataset": str(block.get("dataset") or ""),
+        "status": str(block.get("status") or "error"),
+        "status_code": int(block.get("status_code") or 0),
+        "message": str(block.get("message") or ""),
+    }
+
+
+def _combine_attempts(official: dict, finmind: dict) -> list[dict]:
+    attempts: list[dict] = []
+    for block in (official, finmind):
+        for attempt in list(block.get("attempts") or []):
+            if not isinstance(attempt, dict):
+                continue
+            normalized = {
+                "source": str(attempt.get("source") or block.get("source") or "unknown"),
+                "source_priority": str(attempt.get("source_priority") or block.get("source_priority") or ""),
+                "dataset": str(attempt.get("dataset") or block.get("dataset") or ""),
+                "status": str(attempt.get("status") or block.get("status") or "error"),
+                "status_code": int(attempt.get("status_code") or block.get("status_code") or 0),
+                "message": str(attempt.get("message") or ""),
+            }
+            attempts.append(normalized)
+
+    unique: list[dict] = []
+    seen: set[str] = set()
+    for attempt in attempts:
+        key = "|".join(
+            [
+                str(attempt.get("source") or ""),
+                str(attempt.get("source_priority") or ""),
+                str(attempt.get("dataset") or ""),
+                str(attempt.get("status") or ""),
+                str(attempt.get("status_code") or 0),
+                str(attempt.get("message") or ""),
+            ]
+        )
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(attempt)
+    return unique
 
 
 def _infer_data_as_of(rows: list[dict]) -> str:

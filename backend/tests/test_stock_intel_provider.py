@@ -110,9 +110,12 @@ class StockIntelProviderTest(unittest.TestCase):
         mock_finmind_fetch.side_effect = lambda *, block_key, **_kwargs: _restricted_finmind_block(block_key)
 
         result = fetch_overview_blocks(client=MagicMock(), symbol="2330")
-        self.assertEqual(result["valuation"]["status"], "error")
+        self.assertEqual(result["valuation"]["status"], "restricted")
         self.assertEqual(result["valuation"]["source"], "official_source")
         self.assertEqual(result["valuation"]["source_priority"], "official_primary")
+        self.assertEqual(len(result["valuation"]["attempts"]), 2)
+        self.assertIn("official_source(error)", result["valuation"]["message"])
+        self.assertIn("finmind(restricted)", result["valuation"]["message"])
 
     @patch("backend.app.stocks.intel_provider._fetch_financial_sections")
     @patch("backend.app.stocks.intel_provider._fetch_first_available")
@@ -154,9 +157,10 @@ class StockIntelProviderTest(unittest.TestCase):
         }
 
         result = fetch_deep_blocks(client=MagicMock(), symbol="2330")
-        self.assertEqual(result["financial_statements"]["status"], "error")
+        self.assertEqual(result["financial_statements"]["status"], "restricted")
         self.assertEqual(result["financial_statements"]["source"], "official_free_api")
         self.assertEqual(result["financial_statements"]["source_priority"], "official_primary")
+        self.assertEqual(len(result["financial_statements"]["attempts"]), 2)
 
 
 if __name__ == "__main__":

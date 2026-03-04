@@ -118,6 +118,49 @@ function investorLabel(rawInvestor) {
   return raw;
 }
 
+function sourceLabel(rawSource) {
+  const source = String(rawSource || "").toLowerCase();
+  if (!source) return "--";
+  if (source.includes("finmind")) return "FinMind";
+  if (source.includes("twse")) return "TWSE";
+  if (source.includes("tpex")) return "TPEx";
+  if (source.includes("tdcc")) return "TDCC";
+  if (source.includes("official")) return "Official";
+  return String(rawSource || "--");
+}
+
+function diagnosisLabel(dataset) {
+  const label = String(dataset?.diagnosis?.label || "").trim();
+  return label || "--";
+}
+
+function attemptSummary(dataset) {
+  const attempts = Array.isArray(dataset?.attempts) ? dataset.attempts : [];
+  if (attempts.length <= 1) return "";
+  return attempts
+    .map((attempt) => {
+      const source = sourceLabel(attempt?.source);
+      const state = statusText(attempt?.status);
+      return `${source}:${state}`;
+    })
+    .join(" / ");
+}
+
+function issueDetail(dataset) {
+  const detail = String(dataset?.diagnosis?.detail || dataset?.message || "").trim();
+  const attempts = attemptSummary(dataset);
+  if (detail && attempts) {
+    return `${detail} | ${attempts}`;
+  }
+  if (detail) {
+    return detail;
+  }
+  if (attempts) {
+    return attempts;
+  }
+  return "--";
+}
+
 function statusRank(status) {
   const value = String(status || "").toLowerCase();
   if (value === "ok") return 0;
@@ -510,7 +553,8 @@ const shouldOpenStatus = computed(() => {
               <th>更新節奏</th>
               <th>新鮮度</th>
               <th>資料日</th>
-              <th>訊息</th>
+              <th>判讀</th>
+              <th>細節</th>
             </tr>
           </thead>
           <tbody>
@@ -520,7 +564,8 @@ const shouldOpenStatus = computed(() => {
               <td>{{ entry.value?.freshness?.cadence_label || "--" }}</td>
               <td :class="freshnessClass(entry.value?.freshness)">{{ freshnessLabel(entry.value?.freshness) }}</td>
               <td>{{ entry.value?.data_as_of || "--" }}</td>
-              <td>{{ entry.value?.message || "--" }}</td>
+              <td>{{ diagnosisLabel(entry.value) }}</td>
+              <td class="issue-detail-cell">{{ issueDetail(entry.value) }}</td>
             </tr>
           </tbody>
         </table>

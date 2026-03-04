@@ -44,17 +44,30 @@ def map_deep_block(block_key: str, raw_block: dict, fetched_at: str) -> dict:
 def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for key, block in blocks.items():
+        block_status = str(block.get("status") or "empty")
+        block_message = str(block.get("message") or "")
+        block_code = _to_int(block.get("status_code")) or 0
+        block_attempts = _normalize_attempts(block.get("attempts"))
+        block_diagnosis = _build_dataset_diagnosis(
+            status=block_status,
+            message=block_message,
+            status_code=block_code,
+            attempts=block_attempts,
+        )
         block_freshness = build_freshness_meta(key, str(block.get("data_as_of") or ""))
         if key == "financial_statements":
             out[key] = {
-                "status": str(block.get("status") or "empty"),
-                "message": str(block.get("message") or ""),
+                "status": block_status,
+                "message": block_message,
                 "dataset": str(block.get("dataset") or ""),
                 "source": str(block.get("source") or "unknown"),
                 "source_priority": str(block.get("source_priority") or ""),
+                "status_code": block_code,
                 "data_as_of": str(block.get("data_as_of") or ""),
                 "fetched_at": fetched_at,
                 "freshness": block_freshness,
+                "attempts": block_attempts,
+                "diagnosis": block_diagnosis,
                 "sections": [
                     {
                         "kind": str(section.get("kind") or ""),
@@ -62,10 +75,17 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
                         "message": str((section.get("availability") or {}).get("message") or ""),
                         "dataset": str(section.get("dataset") or ""),
                         "source": str(section.get("source") or block.get("source") or "unknown"),
+                        "status_code": _to_int(section.get("status_code")) or 0,
                         "data_as_of": str(section.get("data_as_of") or ""),
                         "freshness": build_freshness_meta(
                             "financial_statements",
                             str(section.get("data_as_of") or ""),
+                        ),
+                        "diagnosis": _build_dataset_diagnosis(
+                            status=str((section.get("availability") or {}).get("status") or "empty"),
+                            message=str((section.get("availability") or {}).get("message") or ""),
+                            status_code=_to_int(section.get("status_code")) or 0,
+                            attempts=[],
                         ),
                     }
                     for section in (block.get("sections") or [])
@@ -75,15 +95,107 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
             continue
 
         out[key] = {
-            "status": str(block.get("status") or "empty"),
-            "message": str(block.get("message") or ""),
+            "status": block_status,
+            "message": block_message,
             "dataset": str(block.get("dataset") or ""),
             "source": str(block.get("source") or "unknown"),
             "source_priority": str(block.get("source_priority") or ""),
+            "status_code": block_code,
             "data_as_of": str(block.get("data_as_of") or ""),
             "fetched_at": fetched_at,
             "freshness": block_freshness,
+            "attempts": block_attempts,
+            "diagnosis": block_diagnosis,
         }
+    return out
+
+
+def _build_dataset_diagnosis(
+    *,
+    status: str,
+    message: str,
+    status_code: int,
+    attempts: list[dict],
+) -> dict:
+    normalized_status = str(status or "").lower()
+    normalized_message = str(message or "").strip()
+    lower_message = normalized_message.lower()
+
+    attempt_statuses = {str(attempt.get("status") or "").lower() for attempt in attempts}
+    attempt_messages = " ".join(str(attempt.get("message") or "") for attempt in attempts).lower()
+
+    if normalized_status == "ok":
+        return {
+            "code": "ok",
+            "label": "可用",
+            "detail": "資料可正常使用。",
+        }
+
+    if normalized_status == "restricted" or "restricted" in attempt_statuses:
+        return {
+            "code": "permission_required",
+            "label": "權限限制",
+            "detail": normalized_message or "資料來源需要額外授權或 token。",
+        }
+
+    if normalized_status == "empty":
+        return {
+            "code": "no_data",
+            "label": "無資料",
+            "detail": normalized_message or "資料來源回傳成功，但目前沒有可用資料。",
+        }
+
+    unsupported_keywords = ("not available yet", "unsupported", "not implemented", "adapter is not available")
+    timeout_keywords = ("timeout", "timed out", "temporarily", "unavailable", "failed", "connection")
+
+    if status_code == 501 or any(keyword in lower_message for keyword in unsupported_keywords):
+        return {
+            "code": "unsupported_dataset",
+            "label": "來源未實作",
+            "detail": normalized_message or "此資料集目前未接入官方免費來源。",
+        }
+
+    if status_code in {401, 402, 403}:
+        return {
+            "code": "permission_required",
+            "label": "權限限制",
+            "detail": normalized_message or "資料來源需要授權。",
+        }
+
+    if any(keyword in lower_message for keyword in timeout_keywords) or any(
+        keyword in attempt_messages for keyword in timeout_keywords
+    ):
+        return {
+            "code": "upstream_unavailable",
+            "label": "來源連線失敗",
+            "detail": normalized_message or "上游資料來源暫時不可用，請稍後再試。",
+        }
+
+    return {
+        "code": "upstream_error",
+        "label": "來源錯誤",
+        "detail": normalized_message or "上游資料來源回傳錯誤。",
+    }
+
+
+def _normalize_attempts(raw_attempts: object) -> list[dict]:
+    if not isinstance(raw_attempts, list):
+        return []
+
+    out: list[dict] = []
+    for attempt in raw_attempts:
+        if not isinstance(attempt, dict):
+            continue
+        out.append(
+            {
+                "source": str(attempt.get("source") or "unknown"),
+                "source_priority": str(attempt.get("source_priority") or ""),
+                "dataset": str(attempt.get("dataset") or ""),
+                "status": str(attempt.get("status") or "error"),
+                "status_code": _to_int(attempt.get("status_code")) or 0,
+                "message": str(attempt.get("message") or ""),
+            }
+        )
     return out
 
 
@@ -636,6 +748,16 @@ def _to_float(raw: object) -> float | None:
         return None
     try:
         return float(text)
+    except Exception:
+        return None
+
+
+def _to_int(raw: object) -> int | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+    try:
+        return int(float(text))
     except Exception:
         return None
 

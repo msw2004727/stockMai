@@ -1853,3 +1853,127 @@ h2 {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 }
+
+/* Stock intel panel */
+.stock-intel-card {
+  padding: 16px;
+}
+
+.stock-intel-section {
+  display: grid;
+  gap: 10px;
+}
+
+.intel-block {
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-card) 92%, var(--bg-b));
+  overflow: hidden;
+}
+
+.intel-summary {
+  cursor: pointer;
+  padding: 10px 12px;
+  font-size: 0.88rem;
+  font-weight: 800;
+  color: var(--ink);
+  list-style: none;
+  border-bottom: 1px solid transparent;
+}
+
+.intel-block[open] .intel-summary {
+  border-bottom-color: var(--border);
+  background: color-mix(in srgb, var(--brand-soft) 28%, var(--bg-card));
+}
+
+.stock-intel-section .sub,
+.stock-intel-section .intel-grid {
+  margin: 8px 12px 12px;
+}
+
+.intel-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 10px;
+}
+
+.intel-table-wrap {
+  margin-top: 6px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  overflow-x: auto;
+  background: var(--bg-card);
+}
+
+.intel-table {
+  width: 100%;
+  border-collapse: collapse;
+  min-width: 420px;
+}
+
+.intel-table th,
+.intel-table td {
+  padding: 7px 8px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.8rem;
+  text-align: left;
+  white-space: nowrap;
+}
+
+.intel-table th {
+  color: var(--muted);
+  font-weight: 700;
+  background: color-mix(in srgb, var(--bg-b) 84%, var(--bg-card));
+}
+
+.intel-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+.financial-sections {
+  display: grid;
+  gap: 8px;
+}
+
+.financial-section-card {
+  border: 1px dashed color-mix(in srgb, var(--brand) 24%, var(--border));
+  border-radius: 10px;
+  padding: 6px;
+  background: color-mix(in srgb, var(--bg-card) 92%, var(--brand-soft));
+}
+
+.financial-section-card > summary {
+  cursor: pointer;
+  padding: 6px 8px;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+@media (min-width: 900px) {
+  .intel-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .intel-grid .full-span {
+    grid-column: 1 / -1;
+  }
+
+  .stock-intel-card {
+    padding: 18px;
+  }
+}
+
+@media (min-width: 1280px) {
+  .stock-intel-section {
+    gap: 12px;
+  }
+
+  .intel-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .intel-grid .full-span {
+    grid-column: 1 / -1;
+  }
+}

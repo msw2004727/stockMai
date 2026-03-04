@@ -1054,3 +1054,20 @@
 - 目前進度：Done
 - 下一步：請在平板與桌機實機檢查三頁（行情/AI/設定）在 768、1024、1200+ 寬度下的按鈕間距與欄位對齊是否符合預期。
 - 備註（可選）：本回合僅改版面與樣式，不變更 API 與商業邏輯。
+## [2026-03-04 11:45] 確認指定插件安裝與使用狀態
+- 完成事項：
+  - 檢查 `backend/requirements.txt` 與全專案引用，核對 `twstock`、`TA-Lib`、`TW Stocker`、`LLM`、`vectorbt`。
+  - 以 Python import 掃描本機環境：`twstock/talib/vectorbt/twstocker/tw_stocker` 皆為 `MISSING`。
+  - 確認專案內有 LLM 多供應商路由（Claude/GPT5/Grok/DeepSeek），且技術指標模組具 `talib` 可選路徑與 `python` fallback。
+- 目前進度：Done
+- 下一步：若要啟用你列的工具，建議先建立後端虛擬環境並分批安裝（先 `TA-Lib`、`vectorbt`，再評估 `twstock/TW Stocker` 是否取代現有資料源）。
+- 備註（可選）：本回合無程式邏輯變更，屬安裝/引用盤點與確認結果。
+## [2026-03-04 12:19] 完成 FinMind 全量資料接入與行情頁資料面板串接
+- 完成事項：
+  - 後端新增 FinMind 資料客戶端與股票情報模組：`intel_constants/provider/mapper/service`，並新增三個 API：`/stocks/intel/overview`、`/stocks/intel/deep`、`/stocks/intel/status`。
+  - 前端新增 API 呼叫與狀態管理：`useQuoteHistory` 在查詢股票後同步抓取 overview/deep/status，並把錯誤與 loading 狀態分離。
+  - 行情頁新增 `StockIntelPanel` 並整合到 `QuotePanel`；補齊 `styles.css`，手機維持單欄，平板/桌機改多欄避免卡片擁擠。
+  - 新增 `backend/tests/test_stock_intel_service.py`；前端 `npm run build` 通過；後端語法檢查 `py_compile` 通過。
+- 目前進度：In Progress
+- 下一步：在具備 backend 依賴的環境（含 `pydantic_settings`）執行 `python -m unittest backend.tests.test_stock_intel_service` 與 API 手動驗收（成功/失敗各一）。
+- 備註（可選）：本機執行後端測試時缺少 `pydantic_settings` 套件，無法完成該測試檔完整執行。

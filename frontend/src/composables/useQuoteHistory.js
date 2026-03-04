@@ -3,6 +3,9 @@ import { onBeforeUnmount, onMounted, ref } from "vue";
 import {
   getStockHistory,
   getStockIndicators,
+  getStockIntelDeep,
+  getStockIntelOverview,
+  getStockIntelStatus,
   getStockMarketMovers,
   getStockQuote,
   getStockSymbolSearch,
@@ -29,6 +32,17 @@ export function useQuoteHistory(initialSymbol = "") {
   const marketMoversLoading = ref(false);
   const marketMoversError = ref("");
 
+  const intelOverview = ref(null);
+  const intelOverviewLoading = ref(false);
+  const intelOverviewError = ref("");
+
+  const intelDeep = ref(null);
+  const intelDeepLoading = ref(false);
+  const intelDeepError = ref("");
+
+  const intelStatus = ref(null);
+  const intelStatusError = ref("");
+
   const selectedDays = ref(5);
   const dayOptions = [5, 20, 90, 180];
 
@@ -43,6 +57,15 @@ export function useQuoteHistory(initialSymbol = "") {
     if (quoteLoading.value) return false;
     if (typeof document !== "undefined" && document.visibilityState !== "visible") return false;
     return true;
+  }
+
+  function clearIntelState() {
+    intelOverview.value = null;
+    intelDeep.value = null;
+    intelStatus.value = null;
+    intelOverviewError.value = "";
+    intelDeepError.value = "";
+    intelStatusError.value = "";
   }
 
   async function refreshMarketMovers() {
@@ -62,9 +85,50 @@ export function useQuoteHistory(initialSymbol = "") {
         return;
       }
       marketMovers.value = null;
-      marketMoversError.value = error.message || "市場排行載入失敗";
+      marketMoversError.value = error.message || "市場排行資料載入失敗";
     } finally {
       marketMoversLoading.value = false;
+    }
+  }
+
+  async function refreshIntel(symbolValue, signal, { silent }) {
+    intelOverviewLoading.value = true;
+    intelDeepLoading.value = true;
+    intelOverviewError.value = "";
+    intelDeepError.value = "";
+    intelStatusError.value = "";
+
+    const tasks = await Promise.allSettled([
+      getStockIntelOverview(symbolValue, signal),
+      getStockIntelDeep(symbolValue, signal),
+      getStockIntelStatus(symbolValue, signal),
+    ]);
+
+    if (tasks[0].status === "fulfilled") {
+      intelOverview.value = tasks[0].value;
+    } else {
+      intelOverview.value = null;
+      if (!silent && tasks[0].reason?.name !== "AbortError") {
+        intelOverviewError.value = tasks[0].reason?.message || "行情擴充資料載入失敗";
+      }
+    }
+
+    if (tasks[1].status === "fulfilled") {
+      intelDeep.value = tasks[1].value;
+    } else {
+      intelDeep.value = null;
+      if (!silent && tasks[1].reason?.name !== "AbortError") {
+        intelDeepError.value = tasks[1].reason?.message || "深度資料載入失敗";
+      }
+    }
+
+    if (tasks[2].status === "fulfilled") {
+      intelStatus.value = tasks[2].value;
+    } else {
+      intelStatus.value = null;
+      if (!silent && tasks[2].reason?.name !== "AbortError") {
+        intelStatusError.value = tasks[2].reason?.message || "資料可用性檢查失敗";
+      }
     }
   }
 
@@ -92,17 +156,18 @@ export function useQuoteHistory(initialSymbol = "") {
         quote.value = null;
         history.value = null;
         indicators.value = null;
+        clearIntelState();
         quoteCheckedAt.value = "";
-        quoteError.value = "請先輸入股票代號";
+        quoteError.value = "請先輸入股票代號或名稱。";
       }
       return;
     }
 
     if (!silent) {
-      // 新查詢先清掉舊資料，避免畫面保留上一檔股票資訊。
       quote.value = null;
       history.value = null;
       indicators.value = null;
+      clearIntelState();
       quoteCheckedAt.value = "";
       quoteLoading.value = true;
     } else {
@@ -115,7 +180,7 @@ export function useQuoteHistory(initialSymbol = "") {
         const searchPayload = await getStockSymbolSearch(resolvedSymbol, 1, controller.signal);
         const bestMatch = Array.isArray(searchPayload?.results) ? searchPayload.results[0] : null;
         if (!bestMatch?.symbol || !SYMBOL_PATTERN.test(String(bestMatch.symbol))) {
-          throw new Error("查無相關股票，請輸入更完整的中文名稱或代號");
+          throw new Error("找不到對應的股票代號，請輸入更完整名稱或直接輸入代號。");
         }
         resolvedSymbol = String(bestMatch.symbol);
         symbol.value = resolvedSymbol;
@@ -132,7 +197,7 @@ export function useQuoteHistory(initialSymbol = "") {
       } catch (error) {
         if (!silent && error.name !== "AbortError") {
           history.value = null;
-          historyError.value = error.message || "股價歷史查詢失敗";
+          historyError.value = error.message || "歷史資料載入失敗";
         }
       }
 
@@ -143,19 +208,23 @@ export function useQuoteHistory(initialSymbol = "") {
       } catch (error) {
         if (!silent && error.name !== "AbortError") {
           indicators.value = null;
-          indicatorsError.value = error.message || "技術指標查詢失敗";
+          indicatorsError.value = error.message || "技術指標載入失敗";
         }
       }
 
+      await refreshIntel(resolvedSymbol, controller.signal, { silent });
       quoteCheckedAt.value = formatTimeLabel(new Date());
     } catch (error) {
       if (!silent && error.name !== "AbortError") {
-        quoteError.value = error.message || "股票報價查詢失敗";
+        quoteError.value = error.message || "股價查詢失敗";
         quote.value = null;
         history.value = null;
         indicators.value = null;
+        clearIntelState();
       }
     } finally {
+      intelOverviewLoading.value = false;
+      intelDeepLoading.value = false;
       if (silent) {
         silentRefreshing = false;
       } else {
@@ -223,6 +292,14 @@ export function useQuoteHistory(initialSymbol = "") {
     marketMovers,
     marketMoversLoading,
     marketMoversError,
+    intelOverview,
+    intelOverviewLoading,
+    intelOverviewError,
+    intelDeep,
+    intelDeepLoading,
+    intelDeepError,
+    intelStatus,
+    intelStatusError,
     selectedDays,
     dayOptions,
     refreshQuote,

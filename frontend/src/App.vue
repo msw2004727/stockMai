@@ -28,6 +28,14 @@ const {
   marketMovers,
   marketMoversLoading,
   marketMoversError,
+  intelOverview,
+  intelOverviewLoading,
+  intelOverviewError,
+  intelDeep,
+  intelDeepLoading,
+  intelDeepError,
+  intelStatus,
+  intelStatusError,
   selectedDays,
   dayOptions,
   refreshQuote,
@@ -170,6 +178,14 @@ onMounted(() => {
       :market-movers="marketMovers"
       :market-movers-loading="marketMoversLoading"
       :market-movers-error="marketMoversError"
+      :intel-overview="intelOverview"
+      :intel-overview-loading="intelOverviewLoading"
+      :intel-overview-error="intelOverviewError"
+      :intel-deep="intelDeep"
+      :intel-deep-loading="intelDeepLoading"
+      :intel-deep-error="intelDeepError"
+      :intel-status="intelStatus"
+      :intel-status-error="intelStatusError"
       :selected-days="selectedDays"
       :day-options="dayOptions"
       @update:symbol="updateSymbol"

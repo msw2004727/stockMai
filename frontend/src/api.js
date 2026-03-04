@@ -245,3 +245,39 @@ export async function getStockMarketMovers(limit = 6, signal) {
   return response.json();
 }
 
+export async function getStockIntelOverview(symbol, signal) {
+  const quoteSymbol = (symbol || "").trim();
+  const response = await fetchProtected(
+    `/stocks/intel/overview?symbol=${encodeURIComponent(quoteSymbol)}`,
+    { signal, cache: "no-store" },
+  );
+  if (!response.ok) {
+    throwApiError("行情擴充資料", response.status, quoteSymbol);
+  }
+  return response.json();
+}
+
+export async function getStockIntelDeep(symbol, signal) {
+  const quoteSymbol = (symbol || "").trim();
+  const response = await fetchProtected(
+    `/stocks/intel/deep?symbol=${encodeURIComponent(quoteSymbol)}`,
+    { signal, cache: "no-store" },
+  );
+  if (!response.ok) {
+    throwApiError("深度行情資料", response.status, quoteSymbol);
+  }
+  return response.json();
+}
+
+export async function getStockIntelStatus(symbol, signal) {
+  const quoteSymbol = (symbol || "").trim();
+  const response = await fetchProtected(
+    `/stocks/intel/status?symbol=${encodeURIComponent(quoteSymbol)}`,
+    { signal, cache: "no-store" },
+  );
+  if (!response.ok) {
+    throwApiError("資料可用性檢查", response.status, quoteSymbol);
+  }
+  return response.json();
+}
+

@@ -1,5 +1,6 @@
 ﻿<script setup>
 import KLineChart from "./KLineChart.vue";
+import StockIntelPanel from "./StockIntelPanel.vue";
 import { useStockSymbolSearch } from "../composables/useStockSymbolSearch";
 
 defineProps({
@@ -15,6 +16,14 @@ defineProps({
   marketMovers: { type: Object, default: null },
   marketMoversLoading: { type: Boolean, default: false },
   marketMoversError: { type: String, default: "" },
+  intelOverview: { type: Object, default: null },
+  intelOverviewLoading: { type: Boolean, default: false },
+  intelOverviewError: { type: String, default: "" },
+  intelDeep: { type: Object, default: null },
+  intelDeepLoading: { type: Boolean, default: false },
+  intelDeepError: { type: String, default: "" },
+  intelStatus: { type: Object, default: null },
+  intelStatusError: { type: String, default: "" },
   selectedDays: { type: Number, default: 5 },
   dayOptions: { type: Array, default: () => [5, 20, 90, 180] },
 });
@@ -444,6 +453,19 @@ function macdDirectionClass(indicatorPayload) {
       <KLineChart v-if="history?.ohlc?.length" :ohlc="history.ohlc" />
       <p v-else class="sub">暫無 K 線資料</p>
       <p v-if="historyError" class="sub warn-text">{{ historyError }}</p>
+    </article>
+
+    <article class="card full-span stock-intel-card">
+      <StockIntelPanel
+        :intel-overview="intelOverview"
+        :intel-overview-loading="intelOverviewLoading"
+        :intel-overview-error="intelOverviewError"
+        :intel-deep="intelDeep"
+        :intel-deep-loading="intelDeepLoading"
+        :intel-deep-error="intelDeepError"
+        :intel-status="intelStatus"
+        :intel-status-error="intelStatusError"
+      />
     </article>
   </div>
 </template>

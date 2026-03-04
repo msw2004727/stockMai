@@ -4,6 +4,12 @@ from ..auth import enforce_rate_limit
 from .market_snapshot_service import MarketSnapshotSyncError, run_market_snapshot
 from .movers_service import MarketMoversUnavailableError, get_market_movers
 from .pipeline_status_service import PipelineStatusUnavailableError, get_pipeline_status
+from .intel_service import (
+    StockIntelUnavailableError,
+    get_stock_intel_deep,
+    get_stock_intel_overview,
+    get_stock_intel_status,
+)
 from .resolve_service import resolve_stock_query
 from .service import (
     DataUnavailableError,
@@ -117,4 +123,37 @@ def get_snapshot_pipeline_status(
     try:
         return get_pipeline_status()
     except PipelineStatusUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/intel/overview")
+def get_stock_intel_overview_route(
+    symbol: str = Query(..., pattern=r"^\d{4,6}$"),
+    _quota: dict = Depends(enforce_rate_limit("stocks_intel_overview")),
+) -> dict:
+    try:
+        return get_stock_intel_overview(symbol=symbol)
+    except StockIntelUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/intel/deep")
+def get_stock_intel_deep_route(
+    symbol: str = Query(..., pattern=r"^\d{4,6}$"),
+    _quota: dict = Depends(enforce_rate_limit("stocks_intel_deep")),
+) -> dict:
+    try:
+        return get_stock_intel_deep(symbol=symbol)
+    except StockIntelUnavailableError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+
+@router.get("/intel/status")
+def get_stock_intel_status_route(
+    symbol: str = Query(..., pattern=r"^\d{4,6}$"),
+    _quota: dict = Depends(enforce_rate_limit("stocks_intel_status")),
+) -> dict:
+    try:
+        return get_stock_intel_status(symbol=symbol)
+    except StockIntelUnavailableError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc

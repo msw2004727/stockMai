@@ -33,6 +33,8 @@ DEEP_BLOCK_KEYS = (
     "financial_statements",
 )
 
+SOURCE_POLICY = "official_twse_tpex_tdcc_first_then_finmind"
+
 
 def get_stock_intel_overview(symbol: str) -> dict:
     token = _get_finmind_token()
@@ -49,7 +51,8 @@ def get_stock_intel_overview(symbol: str) -> dict:
     }
     return {
         "symbol": symbol,
-        "source": "finmind",
+        "source": SOURCE_POLICY,
+        "source_policy": SOURCE_POLICY,
         "token_configured": bool(token),
         "fetched_at": fetched_at,
         "quote_summary": quote_summary,
@@ -77,7 +80,8 @@ def get_stock_intel_deep(symbol: str) -> dict:
 
     return {
         "symbol": symbol,
-        "source": "finmind",
+        "source": SOURCE_POLICY,
+        "source_policy": SOURCE_POLICY,
         "token_configured": bool(token),
         "fetched_at": fetched_at,
         "price_performance": block_views["price_performance"],
@@ -100,7 +104,8 @@ def get_stock_intel_status(symbol: str) -> dict:
 
     return {
         "symbol": symbol,
-        "source": "finmind",
+        "source": SOURCE_POLICY,
+        "source_policy": SOURCE_POLICY,
         "token_configured": bool(token),
         "fetched_at": fetched_at,
         "datasets": build_status_view(all_blocks, fetched_at=fetched_at),
@@ -131,7 +136,8 @@ def _mapped_or_default(mapped_blocks: dict[str, dict], key: str, *, fetched_at: 
     if isinstance(block, dict):
         return block
     fallback = {
-        "source": "finmind",
+        "source": "official_or_finmind",
+        "source_priority": "",
         "dataset": "",
         "availability": {"status": "empty", "message": "Dataset missing in response."},
         "status_code": 200,

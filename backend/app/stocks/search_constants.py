@@ -3,7 +3,12 @@ OPEN_DATA_SOURCES = [
         "market": "twse",
         "source": "twse_openapi",
         "url": "https://openapi.twse.com.tw/v1/opendata/t187ap03_L",
-    }
+    },
+    {
+        "market": "tpex",
+        "source": "tpex_openapi",
+        "url": "https://www.tpex.org.tw/openapi/v1/mopsfin_t187ap03_O",
+    },
 ]
 
 SEARCH_CACHE_TTL_SECONDS = 6 * 60 * 60

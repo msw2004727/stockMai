@@ -1,4 +1,4 @@
-﻿## [2026-03-02 11:35] 專案初始化
+## [2026-03-02 11:35] 專案初始化
 - 完成 FastAPI /health、.env.example、docker-compose（PostgreSQL + Redis）。
 - 前後端本機可啟動，基本 smoke 測試通過。
 
@@ -1109,3 +1109,22 @@
 - 目前進度：Done
 - 下一步：部署後觀察 console/network，確認 2485 不再出現 `/stocks/intel/*` 的 503 連發。
 - 備註（可選）：本機環境仍缺 `pydantic_settings`，未執行完整 backend unittest。
+## [2026-03-04 13:29] 改為官方 TWSE/TPEx/TDCC 優先，FinMind 補充回退
+- 完成事項：
+  - 新增官方資料來源模組：`intel_official_overview/deep/support/provider`，先嘗試官方免費來源（TWSE/TDCC 與 TPEx 股票清單），再由 FinMind 回補。
+  - `intel_provider` 改為區塊級來源合併策略：`official_primary -> finmind_fallback`，並加入 `source/source_priority`，避免無 token 時被 `restricted` 訊息主導。
+  - `intel_service` 輸出改為 `source_policy=official_twse_tpex_tdcc_first_then_finmind`，維持既有欄位相容。
+  - `intel_mapper` 與 status view 補上來源欄位（含 financial sections），前端可追蹤每塊資料來源。
+  - `search_constants` 新增 TPEx 官方股票清單來源。
+  - 新增 `backend/tests/test_stock_intel_provider.py` 覆蓋官方優先/FinMind 回退合併規則；既有 `test_stock_intel_service.py` 同步調整 source 斷言。
+  - 驗證：`py_compile` 通過、`python -m unittest backend.tests.test_stock_intel_provider` 通過、`frontend npm run build` 通過。
+- 目前進度：Done
+- 下一步：部署到 Render 後實測 `/stocks/intel/overview|deep|status?symbol=2330`，確認 `datasets[*].source/source_priority` 與資料回退符合預期。
+- 備註（可選）：本機仍缺 `pydantic_settings`，`backend.tests.test_stock_intel_service` 無法在本機完整執行。
+## [2026-03-04 13:41] 完成官方優先策略提交與推送
+- 完成事項：
+  - 將官方 TWSE/TPEx/TDCC 優先、FinMind 回退的後端調整與測試納入版本控制。
+  - 完成 Git commit 並推送到遠端 `main`。
+- 目前進度：Done
+- 下一步：在雲端 Render 環境驗證 `/stocks/intel/overview|deep|status` 的 `source/source_priority` 是否符合預期。
+- 備註（可選）：本機 `test_stock_intel_service` 仍受 `pydantic_settings` 缺失影響，需在完整依賴環境驗證。

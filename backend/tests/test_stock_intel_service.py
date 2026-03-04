@@ -3,7 +3,6 @@ from types import SimpleNamespace
 from unittest.mock import patch
 
 from backend.app.stocks.intel_service import (
-    StockIntelUnavailableError,
     get_stock_intel_deep,
     get_stock_intel_overview,
     get_stock_intel_status,
@@ -100,7 +99,7 @@ class StockIntelServiceTest(unittest.TestCase):
 
         result = get_stock_intel_overview("2330")
         self.assertEqual(result["symbol"], "2330")
-        self.assertEqual(result["source"], "finmind")
+        self.assertEqual(result["source"], "official_twse_tpex_tdcc_first_then_finmind")
         self.assertTrue(result["token_configured"])
         self.assertEqual(result["quote_summary"]["availability"]["status"], "ok")
         self.assertEqual(result["company_profile"]["availability"]["status"], "ok")

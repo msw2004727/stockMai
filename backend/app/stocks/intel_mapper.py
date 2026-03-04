@@ -50,6 +50,8 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
                 "status": str(block.get("status") or "empty"),
                 "message": str(block.get("message") or ""),
                 "dataset": str(block.get("dataset") or ""),
+                "source": str(block.get("source") or "unknown"),
+                "source_priority": str(block.get("source_priority") or ""),
                 "data_as_of": str(block.get("data_as_of") or ""),
                 "fetched_at": fetched_at,
                 "freshness": block_freshness,
@@ -59,6 +61,7 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
                         "status": str((section.get("availability") or {}).get("status") or "empty"),
                         "message": str((section.get("availability") or {}).get("message") or ""),
                         "dataset": str(section.get("dataset") or ""),
+                        "source": str(section.get("source") or block.get("source") or "unknown"),
                         "data_as_of": str(section.get("data_as_of") or ""),
                         "freshness": build_freshness_meta(
                             "financial_statements",
@@ -75,6 +78,8 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
             "status": str(block.get("status") or "empty"),
             "message": str(block.get("message") or ""),
             "dataset": str(block.get("dataset") or ""),
+            "source": str(block.get("source") or "unknown"),
+            "source_priority": str(block.get("source_priority") or ""),
             "data_as_of": str(block.get("data_as_of") or ""),
             "fetched_at": fetched_at,
             "freshness": block_freshness,
@@ -474,6 +479,7 @@ def _map_financial_statements(raw_block: dict, *, fetched_at: str) -> dict:
             {
                 "kind": str(section.get("kind") or ""),
                 "dataset": str(section.get("dataset") or ""),
+                "source": str(section.get("source") or raw_block.get("source") or "unknown"),
                 "availability": dict(section.get("availability") or {}),
                 "data_as_of": latest_date or str(section.get("data_as_of") or ""),
                 "rows": normalized_rows[:30],
@@ -503,7 +509,8 @@ def _map_passthrough_rows(raw_block: dict, *, fetched_at: str) -> dict:
 
 def _base_block(raw_block: dict, *, fetched_at: str, data_as_of: str, summary: dict, rows: list[dict]) -> dict:
     return {
-        "source": "finmind",
+        "source": str(raw_block.get("source") or "finmind"),
+        "source_priority": str(raw_block.get("source_priority") or ""),
         "dataset": str(raw_block.get("dataset") or ""),
         "availability": {
             "status": str(raw_block.get("status") or "empty"),

@@ -2,6 +2,17 @@ from __future__ import annotations
 
 from datetime import date, datetime, timezone
 
+from .intel_constants import FRESHNESS_POLICY
+
+
+DEFAULT_FRESHNESS_POLICY = {
+    "cadence": "unknown",
+    "cadence_label": "未知",
+    "expected_interval_days": 7,
+    "watch_after_days": 30,
+    "stale_after_days": 90,
+}
+
 
 def now_iso() -> str:
     return datetime.now(timezone.utc).isoformat()
@@ -33,6 +44,7 @@ def map_deep_block(block_key: str, raw_block: dict, fetched_at: str) -> dict:
 def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dict]:
     out: dict[str, dict] = {}
     for key, block in blocks.items():
+        block_freshness = build_freshness_meta(key, str(block.get("data_as_of") or ""))
         if key == "financial_statements":
             out[key] = {
                 "status": str(block.get("status") or "empty"),
@@ -40,6 +52,7 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
                 "dataset": str(block.get("dataset") or ""),
                 "data_as_of": str(block.get("data_as_of") or ""),
                 "fetched_at": fetched_at,
+                "freshness": block_freshness,
                 "sections": [
                     {
                         "kind": str(section.get("kind") or ""),
@@ -47,6 +60,10 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
                         "message": str((section.get("availability") or {}).get("message") or ""),
                         "dataset": str(section.get("dataset") or ""),
                         "data_as_of": str(section.get("data_as_of") or ""),
+                        "freshness": build_freshness_meta(
+                            "financial_statements",
+                            str(section.get("data_as_of") or ""),
+                        ),
                     }
                     for section in (block.get("sections") or [])
                     if isinstance(section, dict)
@@ -60,8 +77,72 @@ def build_status_view(blocks: dict[str, dict], fetched_at: str) -> dict[str, dic
             "dataset": str(block.get("dataset") or ""),
             "data_as_of": str(block.get("data_as_of") or ""),
             "fetched_at": fetched_at,
+            "freshness": block_freshness,
         }
     return out
+
+
+def apply_block_freshness(block: dict, block_key: str) -> dict:
+    out = dict(block or {})
+    freshness = build_freshness_meta(block_key, str(out.get("data_as_of") or ""))
+    out["freshness"] = freshness
+    level = str(freshness.get("level") or "unknown")
+    out["is_delayed"] = level in {"watch", "stale", "unknown"}
+
+    if block_key == "financial_statements":
+        sections = []
+        for section in out.get("sections") or []:
+            if not isinstance(section, dict):
+                continue
+            section_out = dict(section)
+            section_out["freshness"] = build_freshness_meta(
+                "financial_statements",
+                str(section_out.get("data_as_of") or ""),
+            )
+            sections.append(section_out)
+        out["sections"] = sections
+    return out
+
+
+def build_freshness_meta(block_key: str, data_as_of: str) -> dict:
+    policy = dict(DEFAULT_FRESHNESS_POLICY)
+    policy.update(dict(FRESHNESS_POLICY.get(block_key) or {}))
+
+    parsed = _parse_data_as_of(data_as_of)
+    if parsed is None:
+        return {
+            "cadence": str(policy["cadence"]),
+            "cadence_label": str(policy["cadence_label"]),
+            "staleness_days": None,
+            "level": "unknown",
+            "message": "資料日期不足，無法判斷新鮮度。",
+        }
+
+    staleness_days = max((date.today() - parsed).days, 0)
+    expected = int(policy["expected_interval_days"])
+    watch_after = int(policy["watch_after_days"])
+    stale_after = int(policy["stale_after_days"])
+
+    if staleness_days <= expected:
+        level = "fresh"
+        message = "資料新鮮。"
+    elif staleness_days <= watch_after:
+        level = "watch"
+        message = f"資料延遲約 {staleness_days} 天，請留意。"
+    elif staleness_days <= stale_after:
+        level = "stale"
+        message = f"資料延遲約 {staleness_days} 天，建議審慎參考。"
+    else:
+        level = "stale"
+        message = f"資料已明顯過舊（{staleness_days} 天）。"
+
+    return {
+        "cadence": str(policy["cadence"]),
+        "cadence_label": str(policy["cadence_label"]),
+        "staleness_days": staleness_days,
+        "level": level,
+        "message": message,
+    }
 
 
 def _map_company_profile(raw_block: dict, *, fetched_at: str) -> dict:
@@ -521,6 +602,25 @@ def _calc_return_pct(current: float | None, base: float | None) -> float | None:
     if base == 0:
         return None
     return round(((float(current) - float(base)) / float(base)) * 100, 4)
+
+
+def _parse_data_as_of(raw: str) -> date | None:
+    text = str(raw or "").strip()
+    if not text:
+        return None
+
+    normalized = text.replace("/", "-")
+    try:
+        if len(normalized) >= 10:
+            return date.fromisoformat(normalized[:10])
+        if len(normalized) == 7:
+            year, month = normalized.split("-")
+            return date(int(year), int(month), 1)
+        if len(normalized) == 6 and normalized.isdigit():
+            return date(int(normalized[:4]), int(normalized[4:6]), 1)
+    except Exception:
+        return None
+    return None
 
 
 def _to_float(raw: object) -> float | None:

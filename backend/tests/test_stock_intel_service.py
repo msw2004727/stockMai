@@ -87,6 +87,7 @@ class StockIntelServiceTest(unittest.TestCase):
         self.assertEqual(result["quote_summary"]["availability"]["status"], "ok")
         self.assertEqual(result["company_profile"]["availability"]["status"], "ok")
         self.assertEqual(result["valuation"]["summary"]["latest_per"], 21.5)
+        self.assertEqual(result["valuation"]["freshness"]["cadence_label"], "日更")
         self.assertEqual(result["institutional_flow"]["availability"]["status"], "ok")
         self.assertIn("datasets", result)
         self.assertIn("institutional_flow", result["datasets"])
@@ -178,6 +179,7 @@ class StockIntelServiceTest(unittest.TestCase):
         result = get_stock_intel_deep("2330")
         self.assertEqual(result["symbol"], "2330")
         self.assertEqual(result["price_performance"]["availability"]["status"], "ok")
+        self.assertIn("freshness", result["price_performance"])
         self.assertEqual(result["broker_branches"]["availability"]["status"], "restricted")
         self.assertEqual(result["financial_statements"]["availability"]["status"], "ok")
         self.assertEqual(len(result["financial_statements"]["sections"]), 1)
@@ -220,6 +222,7 @@ class StockIntelServiceTest(unittest.TestCase):
         result = get_stock_intel_status("2330")
         self.assertEqual(result["symbol"], "2330")
         self.assertIn("datasets", result)
+        self.assertIn("freshness", result["datasets"]["valuation"])
         self.assertEqual(result["datasets"]["broker_branches"]["status"], "restricted")
 
 

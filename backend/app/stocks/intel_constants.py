@@ -70,3 +70,83 @@ LOOKBACK_DAYS = {
     "broker_branches": 14,
     "financial": 1200,
 }
+
+FRESHNESS_POLICY = {
+    "company_profile": {
+        "cadence": "irregular",
+        "cadence_label": "不定期",
+        "expected_interval_days": 120,
+        "watch_after_days": 365,
+        "stale_after_days": 730,
+    },
+    "valuation": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 2,
+        "watch_after_days": 5,
+        "stale_after_days": 10,
+    },
+    "institutional_flow": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 2,
+        "watch_after_days": 5,
+        "stale_after_days": 10,
+    },
+    "margin_short": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 2,
+        "watch_after_days": 5,
+        "stale_after_days": 10,
+    },
+    "foreign_holding": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 3,
+        "watch_after_days": 7,
+        "stale_after_days": 14,
+    },
+    "monthly_revenue": {
+        "cadence": "monthly",
+        "cadence_label": "月更",
+        "expected_interval_days": 45,
+        "watch_after_days": 75,
+        "stale_after_days": 120,
+    },
+    "price_performance": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 2,
+        "watch_after_days": 5,
+        "stale_after_days": 10,
+    },
+    "shareholding_distribution": {
+        "cadence": "weekly",
+        "cadence_label": "週更",
+        "expected_interval_days": 14,
+        "watch_after_days": 30,
+        "stale_after_days": 60,
+    },
+    "securities_lending": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 3,
+        "watch_after_days": 7,
+        "stale_after_days": 14,
+    },
+    "broker_branches": {
+        "cadence": "daily",
+        "cadence_label": "日更",
+        "expected_interval_days": 2,
+        "watch_after_days": 5,
+        "stale_after_days": 10,
+    },
+    "financial_statements": {
+        "cadence": "quarterly",
+        "cadence_label": "季更",
+        "expected_interval_days": 120,
+        "watch_after_days": 200,
+        "stale_after_days": 320,
+    },
+}

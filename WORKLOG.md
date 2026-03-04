@@ -1080,3 +1080,13 @@
 - 目前進度：Done
 - 下一步：Phase 3 建議做「資料新鮮度標記與更新頻率提示優化」（例如依資料集顯示日/週/月更新節奏與延遲風險）。
 - 備註（可選）：本機環境仍缺 `pydantic_settings`，故未能完整跑 `unittest`（僅完成語法與前端建置驗證）。
+## [2026-03-04 12:31] Phase 3：資料新鮮度與更新節奏提示
+- 完成事項：
+  - 後端新增 `FRESHNESS_POLICY`（日更/週更/月更/季更/不定期）與新鮮度判斷邏輯，回傳每個資料區塊的 `freshness`（節奏、延遲天數、等級、訊息）。
+  - `intel_service` 現在會為 overview/deep 全部區塊附加 freshness；`/stocks/intel/status` 的 datasets 也同步帶 freshness。
+  - 前端 `StockIntelPanel` 加入「更新節奏 + 新鮮度」顯示，並新增新鮮度色彩標示（新鮮/稍延遲/過舊/未知）。
+  - 狀態總表新增欄位：`更新節奏`、`新鮮度`，可快速判讀資料風險。
+  - 驗證：`frontend npm run build` 通過、`py_compile` 通過。
+- 目前進度：Done
+- 下一步：Phase 4 可做「依新鮮度自動排序與預設展開重點區塊」（例如先顯示最新且可用資料，再把過舊資料收折）。
+- 備註（可選）：本機環境缺 `pydantic_settings`，本回合仍無法完整跑 `backend unittest`。

@@ -1,6 +1,12 @@
 from __future__ import annotations
 
-from .intel_mapper import build_status_view, map_deep_block, map_overview_block, now_iso
+from .intel_mapper import (
+    apply_block_freshness,
+    build_status_view,
+    map_deep_block,
+    map_overview_block,
+    now_iso,
+)
 from .intel_provider import build_finmind_client, fetch_deep_blocks, fetch_overview_blocks
 from .service import get_quote
 from ..config import get_settings
@@ -40,7 +46,10 @@ def get_stock_intel_overview(symbol: str) -> dict:
     mapped_blocks = {key: map_overview_block(key, block, fetched_at=fetched_at) for key, block in raw_blocks.items()}
 
     quote_summary = _safe_quote(symbol)
-    block_views = {key: _mapped_or_default(mapped_blocks, key, fetched_at=fetched_at) for key in OVERVIEW_BLOCK_KEYS}
+    block_views = {
+        key: apply_block_freshness(_mapped_or_default(mapped_blocks, key, fetched_at=fetched_at), key)
+        for key in OVERVIEW_BLOCK_KEYS
+    }
     return {
         "symbol": symbol,
         "source": "finmind",
@@ -66,7 +75,10 @@ def get_stock_intel_deep(symbol: str) -> dict:
     client = build_finmind_client(token)
     raw_blocks = fetch_deep_blocks(client=client, symbol=symbol)
     mapped_blocks = {key: map_deep_block(key, block, fetched_at=fetched_at) for key, block in raw_blocks.items()}
-    block_views = {key: _mapped_or_default(mapped_blocks, key, fetched_at=fetched_at) for key in DEEP_BLOCK_KEYS}
+    block_views = {
+        key: apply_block_freshness(_mapped_or_default(mapped_blocks, key, fetched_at=fetched_at), key)
+        for key in DEEP_BLOCK_KEYS
+    }
 
     return {
         "symbol": symbol,

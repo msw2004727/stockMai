@@ -47,6 +47,31 @@ function fmtSignedPct(value) {
   return `${sign}${parsed.toFixed(2)}%`;
 }
 
+function freshnessLabel(freshness) {
+  const level = String(freshness?.level || "").toLowerCase();
+  if (level === "fresh") return "新鮮";
+  if (level === "watch") return "稍延遲";
+  if (level === "stale") return "過舊";
+  return "未知";
+}
+
+function freshnessClass(freshness) {
+  const level = String(freshness?.level || "").toLowerCase();
+  if (level === "fresh") return "freshness-ok";
+  if (level === "watch") return "freshness-watch";
+  if (level === "stale") return "freshness-stale";
+  return "freshness-unknown";
+}
+
+function freshnessHint(block) {
+  const cadence = String(block?.freshness?.cadence_label || "--");
+  const days = Number(block?.freshness?.staleness_days);
+  if (Number.isFinite(days)) {
+    return `${cadence}・延遲 ${days} 天`;
+  }
+  return `${cadence}・延遲未知`;
+}
+
 function hasRows(rows) {
   return Array.isArray(rows) && rows.length > 0;
 }
@@ -69,6 +94,13 @@ function hasRows(rows) {
           <p class="sub">產業：{{ intelOverview.company_profile?.summary?.industry || "--" }}</p>
           <p class="sub">市場：{{ intelOverview.company_profile?.summary?.market || "--" }}</p>
           <p class="sub">類型：{{ intelOverview.company_profile?.summary?.listing_type || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelOverview.company_profile) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelOverview.company_profile?.freshness)">
+              {{ freshnessLabel(intelOverview.company_profile?.freshness) }}
+            </span>
+          </p>
         </article>
 
         <article class="card">
@@ -77,11 +109,25 @@ function hasRows(rows) {
           <p class="sub">本益比 (PER)：{{ fmtNumber(intelOverview.valuation?.summary?.latest_per, 2) }}</p>
           <p class="sub">股價淨值比 (PBR)：{{ fmtNumber(intelOverview.valuation?.summary?.latest_pbr, 2) }}</p>
           <p class="sub">殖利率：{{ fmtPct(intelOverview.valuation?.summary?.latest_dividend_yield_pct) }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelOverview.valuation) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelOverview.valuation?.freshness)">
+              {{ freshnessLabel(intelOverview.valuation?.freshness) }}
+            </span>
+          </p>
         </article>
 
         <article class="card">
           <p class="label">三大法人</p>
           <p class="sub">資料日：{{ intelOverview.institutional_flow?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelOverview.institutional_flow) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelOverview.institutional_flow?.freshness)">
+              {{ freshnessLabel(intelOverview.institutional_flow?.freshness) }}
+            </span>
+          </p>
           <p class="sub">
             狀態：
             <span :class="statusClass(intelOverview.institutional_flow?.availability?.status)">
@@ -114,6 +160,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">融資融券</p>
           <p class="sub">資料日：{{ intelOverview.margin_short?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelOverview.margin_short) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelOverview.margin_short?.freshness)">
+              {{ freshnessLabel(intelOverview.margin_short?.freshness) }}
+            </span>
+          </p>
           <p class="sub">融資餘額：{{ fmtNumber(intelOverview.margin_short?.summary?.margin_purchase_balance) }}</p>
           <p class="sub">融券餘額：{{ fmtNumber(intelOverview.margin_short?.summary?.short_sale_balance) }}</p>
           <p class="sub">融資增減：{{ fmtNumber(intelOverview.margin_short?.summary?.margin_purchase_change) }}</p>
@@ -123,6 +176,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">外資持股</p>
           <p class="sub">資料日：{{ intelOverview.foreign_holding?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelOverview.foreign_holding) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelOverview.foreign_holding?.freshness)">
+              {{ freshnessLabel(intelOverview.foreign_holding?.freshness) }}
+            </span>
+          </p>
           <p class="sub">持股比率：{{ fmtPct(intelOverview.foreign_holding?.summary?.holding_ratio_pct) }}</p>
           <p class="sub">持股股數：{{ fmtNumber(intelOverview.foreign_holding?.summary?.holding_shares) }}</p>
         </article>
@@ -130,6 +190,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">月營收</p>
           <p class="sub">最新月份：{{ intelOverview.monthly_revenue?.summary?.latest_month || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelOverview.monthly_revenue) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelOverview.monthly_revenue?.freshness)">
+              {{ freshnessLabel(intelOverview.monthly_revenue?.freshness) }}
+            </span>
+          </p>
           <p class="sub">當月營收：{{ fmtNumber(intelOverview.monthly_revenue?.summary?.latest_revenue) }}</p>
           <p class="sub">MoM：{{ fmtPct(intelOverview.monthly_revenue?.summary?.latest_mom_pct) }}</p>
           <p class="sub">YoY：{{ fmtPct(intelOverview.monthly_revenue?.summary?.latest_yoy_pct) }}</p>
@@ -146,6 +213,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">股價績效</p>
           <p class="sub">資料日：{{ intelDeep.price_performance?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelDeep.price_performance) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelDeep.price_performance?.freshness)">
+              {{ freshnessLabel(intelDeep.price_performance?.freshness) }}
+            </span>
+          </p>
           <p class="sub">近 1 月：{{ fmtSignedPct(intelDeep.price_performance?.summary?.return_1m_pct) }}</p>
           <p class="sub">近 3 月：{{ fmtSignedPct(intelDeep.price_performance?.summary?.return_3m_pct) }}</p>
           <p class="sub">近 1 年：{{ fmtSignedPct(intelDeep.price_performance?.summary?.return_1y_pct) }}</p>
@@ -156,6 +230,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">股權分散</p>
           <p class="sub">資料日：{{ intelDeep.shareholding_distribution?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelDeep.shareholding_distribution) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelDeep.shareholding_distribution?.freshness)">
+              {{ freshnessLabel(intelDeep.shareholding_distribution?.freshness) }}
+            </span>
+          </p>
           <div v-if="hasRows(intelDeep.shareholding_distribution?.rows)" class="intel-table-wrap">
             <table class="intel-table">
               <thead>
@@ -180,6 +261,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">借券</p>
           <p class="sub">資料日：{{ intelDeep.securities_lending?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelDeep.securities_lending) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelDeep.securities_lending?.freshness)">
+              {{ freshnessLabel(intelDeep.securities_lending?.freshness) }}
+            </span>
+          </p>
           <p class="sub">借券餘額：{{ fmtNumber(intelDeep.securities_lending?.summary?.lending_balance) }}</p>
           <p class="sub">借券賣出：{{ fmtNumber(intelDeep.securities_lending?.summary?.lending_sell) }}</p>
           <p class="sub">借券還券：{{ fmtNumber(intelDeep.securities_lending?.summary?.lending_return) }}</p>
@@ -188,6 +276,13 @@ function hasRows(rows) {
         <article class="card">
           <p class="label">券商分點</p>
           <p class="sub">資料日：{{ intelDeep.broker_branches?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelDeep.broker_branches) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelDeep.broker_branches?.freshness)">
+              {{ freshnessLabel(intelDeep.broker_branches?.freshness) }}
+            </span>
+          </p>
           <p class="sub">
             狀態：
             <span :class="statusClass(intelDeep.broker_branches?.availability?.status)">
@@ -220,6 +315,13 @@ function hasRows(rows) {
         <article class="card full-span">
           <p class="label">財報摘要</p>
           <p class="sub">資料日：{{ intelDeep.financial_statements?.data_as_of || "--" }}</p>
+          <p class="sub">更新：{{ freshnessHint(intelDeep.financial_statements) }}</p>
+          <p class="sub">
+            新鮮度：
+            <span :class="freshnessClass(intelDeep.financial_statements?.freshness)">
+              {{ freshnessLabel(intelDeep.financial_statements?.freshness) }}
+            </span>
+          </p>
           <div v-if="hasRows(intelDeep.financial_statements?.sections)" class="financial-sections">
             <details
               v-for="section in intelDeep.financial_statements.sections"
@@ -261,6 +363,8 @@ function hasRows(rows) {
             <tr>
               <th>資料集</th>
               <th>狀態</th>
+              <th>更新節奏</th>
+              <th>新鮮度</th>
               <th>資料日</th>
               <th>訊息</th>
             </tr>
@@ -269,6 +373,8 @@ function hasRows(rows) {
             <tr v-for="(value, key) in intelStatus.datasets" :key="key">
               <td>{{ key }}</td>
               <td :class="statusClass(value?.status)">{{ statusText(value?.status) }}</td>
+              <td>{{ value?.freshness?.cadence_label || "--" }}</td>
+              <td :class="freshnessClass(value?.freshness)">{{ freshnessLabel(value?.freshness) }}</td>
               <td>{{ value?.data_as_of || "--" }}</td>
               <td>{{ value?.message || "--" }}</td>
             </tr>

@@ -92,13 +92,22 @@ const loadingMessage = computed(() => {
     return "提醒：沒有人能準確預測股價走勢，即使是最頂級的分析師也不行，建議任何投資決策前，多參考專業券商的研究報告、諮詢合格的財務顧問，並且量力而為！";
   }
   if (quoteLoading.value) {
-    return "行情查詢中，請稍候...";
+    return "您所查詢的股價行情正在資料庫查詢中，請稍後~";
   }
   return "";
 });
 
 const showLoadingOverlay = computed(() => Boolean(loadingMessage.value));
-const showAiLoadingMarquee = computed(() => Boolean(aiLoading.value || strategyLoading.value));
+const loadingMarqueeText = computed(() => {
+  if (aiLoading.value || strategyLoading.value) {
+    return "AI努力分析中";
+  }
+  if (quoteLoading.value) {
+    return "您所查詢的股價行情正在資料庫查詢中，請稍後~";
+  }
+  return "";
+});
+const showLoadingMarquee = computed(() => Boolean(loadingMarqueeText.value));
 
 function updateSymbol(value) {
   symbol.value = value;
@@ -227,17 +236,17 @@ onMounted(() => {
     <div v-if="showLoadingOverlay" class="loading-overlay" role="status" aria-live="polite" aria-busy="true">
       <div class="loading-modal">
         <span class="loading-spinner" aria-hidden="true"></span>
-        <div v-if="showAiLoadingMarquee" class="loading-marquee" aria-hidden="true">
+        <div v-if="showLoadingMarquee" class="loading-marquee" aria-hidden="true">
           <div class="loading-marquee-track">
             <div class="loading-marquee-group">
-              <span>AI努力分析中</span>
-              <span>AI努力分析中</span>
-              <span>AI努力分析中</span>
+              <span>{{ loadingMarqueeText }}</span>
+              <span>{{ loadingMarqueeText }}</span>
+              <span>{{ loadingMarqueeText }}</span>
             </div>
             <div class="loading-marquee-group" aria-hidden="true">
-              <span>AI努力分析中</span>
-              <span>AI努力分析中</span>
-              <span>AI努力分析中</span>
+              <span>{{ loadingMarqueeText }}</span>
+              <span>{{ loadingMarqueeText }}</span>
+              <span>{{ loadingMarqueeText }}</span>
             </div>
           </div>
         </div>

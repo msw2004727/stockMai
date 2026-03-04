@@ -1905,10 +1905,20 @@ h2 {
   background: var(--bg-card);
 }
 
+.intel-table-wrap-mobile-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-x: contain;
+}
+
 .intel-table {
   width: 100%;
   border-collapse: collapse;
   min-width: 420px;
+}
+
+.intel-table-institutional {
+  min-width: 560px;
 }
 
 .intel-table th,
@@ -1981,6 +1991,12 @@ h2 {
 
   .stock-intel-card {
     padding: 18px;
+  }
+}
+
+@media (min-width: 768px) {
+  .intel-table-institutional {
+    min-width: 420px;
   }
 }
 

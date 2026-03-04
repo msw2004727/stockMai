@@ -89,6 +89,35 @@ function hasRows(rows) {
   return Array.isArray(rows) && rows.length > 0;
 }
 
+function investorLabel(rawInvestor) {
+  const raw = String(rawInvestor || "").trim();
+  if (!raw) return "--";
+
+  const normalized = raw.toLowerCase().replace(/\s+/g, "_");
+  if (
+    normalized.includes("foreign") ||
+    normalized.includes("foreign_investor") ||
+    raw.includes("外資")
+  ) {
+    return "外資";
+  }
+  if (
+    normalized.includes("investment_trust") ||
+    normalized === "trust" ||
+    raw.includes("投信")
+  ) {
+    return "投信";
+  }
+  if (
+    normalized.includes("dealer") ||
+    raw.includes("自營")
+  ) {
+    return "自營商";
+  }
+
+  return raw;
+}
+
 function statusRank(status) {
   const value = String(status || "").toLowerCase();
   if (value === "ok") return 0;
@@ -246,8 +275,11 @@ const shouldOpenStatus = computed(() => {
               {{ statusText(intelOverview.institutional_flow?.availability?.status) }}
             </span>
           </p>
-          <div v-if="hasRows(intelOverview.institutional_flow?.rows)" class="intel-table-wrap">
-            <table class="intel-table">
+          <div
+            v-if="hasRows(intelOverview.institutional_flow?.rows)"
+            class="intel-table-wrap intel-table-wrap-mobile-scroll"
+          >
+            <table class="intel-table intel-table-institutional">
               <thead>
                 <tr>
                   <th>法人</th>
@@ -258,7 +290,7 @@ const shouldOpenStatus = computed(() => {
               </thead>
               <tbody>
                 <tr v-for="row in intelOverview.institutional_flow.rows.slice(0, 8)" :key="`${row.investor}-${row.net}`">
-                  <td>{{ row.investor || "--" }}</td>
+                  <td>{{ investorLabel(row.investor) }}</td>
                   <td>{{ fmtNumber(row.buy) }}</td>
                   <td>{{ fmtNumber(row.sell) }}</td>
                   <td>{{ fmtNumber(row.net) }}</td>

@@ -1,5 +1,7 @@
 <script setup>
-defineProps({
+import { computed, toRefs } from "vue";
+
+const props = defineProps({
   intelOverview: { type: Object, default: null },
   intelOverviewLoading: { type: Boolean, default: false },
   intelOverviewError: { type: String, default: "" },
@@ -9,6 +11,17 @@ defineProps({
   intelStatus: { type: Object, default: null },
   intelStatusError: { type: String, default: "" },
 });
+
+const {
+  intelOverview,
+  intelOverviewLoading,
+  intelOverviewError,
+  intelDeep,
+  intelDeepLoading,
+  intelDeepError,
+  intelStatus,
+  intelStatusError,
+} = toRefs(props);
 
 function statusText(status) {
   const value = String(status || "").toLowerCase();
@@ -75,19 +88,118 @@ function freshnessHint(block) {
 function hasRows(rows) {
   return Array.isArray(rows) && rows.length > 0;
 }
+
+function statusRank(status) {
+  const value = String(status || "").toLowerCase();
+  if (value === "ok") return 0;
+  if (value === "restricted") return 1;
+  if (value === "empty") return 2;
+  if (value === "error") return 3;
+  return 4;
+}
+
+function freshnessRank(freshness) {
+  const level = String(freshness?.level || "").toLowerCase();
+  if (level === "fresh") return 0;
+  if (level === "watch") return 1;
+  if (level === "stale") return 2;
+  return 3;
+}
+
+function blockPriority(block) {
+  if (!block || typeof block !== "object") return 999;
+  const s = statusRank(block?.availability?.status ?? block?.status);
+  const f = freshnessRank(block?.freshness);
+  return f * 10 + s;
+}
+
+function cardOrder(block, base = 0) {
+  return blockPriority(block) * 10 + Number(base || 0);
+}
+
+function sectionBestPriority(blocks) {
+  if (!Array.isArray(blocks) || blocks.length === 0) return 999;
+  let minRank = 999;
+  for (const block of blocks) {
+    const rank = blockPriority(block);
+    if (rank < minRank) {
+      minRank = rank;
+    }
+  }
+  return minRank;
+}
+
+const overviewBlocks = computed(() => [
+  intelOverview.value?.company_profile,
+  intelOverview.value?.valuation,
+  intelOverview.value?.institutional_flow,
+  intelOverview.value?.margin_short,
+  intelOverview.value?.foreign_holding,
+  intelOverview.value?.monthly_revenue,
+].filter((item) => item && typeof item === "object"));
+
+const deepBlocks = computed(() => [
+  intelDeep.value?.price_performance,
+  intelDeep.value?.shareholding_distribution,
+  intelDeep.value?.securities_lending,
+  intelDeep.value?.broker_branches,
+  intelDeep.value?.financial_statements,
+].filter((item) => item && typeof item === "object"));
+
+const overviewBestPriority = computed(() => sectionBestPriority(overviewBlocks.value));
+const deepBestPriority = computed(() => sectionBestPriority(deepBlocks.value));
+
+const shouldOpenOverview = computed(() => {
+  if (!intelOverview.value) return true;
+  if (!intelDeep.value) return true;
+  return overviewBestPriority.value <= deepBestPriority.value;
+});
+
+const shouldOpenDeep = computed(() => {
+  if (!intelDeep.value) return false;
+  return deepBestPriority.value < overviewBestPriority.value;
+});
+
+const sortedStatusRows = computed(() => {
+  const datasets = intelStatus.value?.datasets;
+  if (!datasets || typeof datasets !== "object") return [];
+  return Object.entries(datasets)
+    .map(([key, value]) => ({ key, value: value && typeof value === "object" ? value : {} }))
+    .sort((a, b) => {
+      const rankA = blockPriority(a.value);
+      const rankB = blockPriority(b.value);
+      if (rankA !== rankB) return rankA - rankB;
+      const staleA = Number(a.value?.freshness?.staleness_days);
+      const staleB = Number(b.value?.freshness?.staleness_days);
+      if (Number.isFinite(staleA) && Number.isFinite(staleB) && staleA !== staleB) {
+        return staleA - staleB;
+      }
+      return String(a.key).localeCompare(String(b.key), "zh-Hant");
+    });
+});
+
+const shouldOpenStatus = computed(() => {
+  const rows = sortedStatusRows.value;
+  if (!rows.length) return false;
+  return rows.some((entry) => {
+    const currentStatus = String(entry.value?.status || "").toLowerCase();
+    const currentFresh = String(entry.value?.freshness?.level || "").toLowerCase();
+    return currentStatus !== "ok" || currentFresh === "watch" || currentFresh === "stale" || currentFresh === "unknown";
+  });
+});
 </script>
 
 <template>
   <section class="stock-intel-section">
     <h3 class="section-title">市場資訊擴充</h3>
 
-    <details class="intel-block" open>
+    <details class="intel-block" :open="shouldOpenOverview">
       <summary class="intel-summary">籌碼與營收（即時拉取）</summary>
       <p v-if="intelOverviewLoading" class="sub">正在載入籌碼與營收資料...</p>
       <p v-if="intelOverviewError" class="sub warn-text">{{ intelOverviewError }}</p>
 
       <div v-if="intelOverview" class="intel-grid">
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelOverview.company_profile, 1) }">
           <p class="label">公司基本資料</p>
           <p class="sub">代號：{{ intelOverview.company_profile?.summary?.stock_id || "--" }}</p>
           <p class="sub">簡稱：{{ intelOverview.company_profile?.summary?.stock_name || "--" }}</p>
@@ -103,7 +215,7 @@ function hasRows(rows) {
           </p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelOverview.valuation, 2) }">
           <p class="label">估值指標</p>
           <p class="sub">資料日：{{ intelOverview.valuation?.data_as_of || "--" }}</p>
           <p class="sub">本益比 (PER)：{{ fmtNumber(intelOverview.valuation?.summary?.latest_per, 2) }}</p>
@@ -118,7 +230,7 @@ function hasRows(rows) {
           </p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelOverview.institutional_flow, 3) }">
           <p class="label">三大法人</p>
           <p class="sub">資料日：{{ intelOverview.institutional_flow?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelOverview.institutional_flow) }}</p>
@@ -157,7 +269,7 @@ function hasRows(rows) {
           <p v-else class="sub">暫無三大法人資料。</p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelOverview.margin_short, 4) }">
           <p class="label">融資融券</p>
           <p class="sub">資料日：{{ intelOverview.margin_short?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelOverview.margin_short) }}</p>
@@ -173,7 +285,7 @@ function hasRows(rows) {
           <p class="sub">融券增減：{{ fmtNumber(intelOverview.margin_short?.summary?.short_sale_change) }}</p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelOverview.foreign_holding, 5) }">
           <p class="label">外資持股</p>
           <p class="sub">資料日：{{ intelOverview.foreign_holding?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelOverview.foreign_holding) }}</p>
@@ -187,7 +299,7 @@ function hasRows(rows) {
           <p class="sub">持股股數：{{ fmtNumber(intelOverview.foreign_holding?.summary?.holding_shares) }}</p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelOverview.monthly_revenue, 6) }">
           <p class="label">月營收</p>
           <p class="sub">最新月份：{{ intelOverview.monthly_revenue?.summary?.latest_month || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelOverview.monthly_revenue) }}</p>
@@ -204,13 +316,13 @@ function hasRows(rows) {
       </div>
     </details>
 
-    <details class="intel-block">
+    <details class="intel-block" :open="shouldOpenDeep">
       <summary class="intel-summary">深度籌碼與財報</summary>
       <p v-if="intelDeepLoading" class="sub">正在載入深度資料...</p>
       <p v-if="intelDeepError" class="sub warn-text">{{ intelDeepError }}</p>
 
       <div v-if="intelDeep" class="intel-grid">
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelDeep.price_performance, 1) }">
           <p class="label">股價績效</p>
           <p class="sub">資料日：{{ intelDeep.price_performance?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelDeep.price_performance) }}</p>
@@ -227,7 +339,7 @@ function hasRows(rows) {
           <p class="sub">52 週低點：{{ fmtNumber(intelDeep.price_performance?.summary?.low_52w, 2) }}</p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelDeep.shareholding_distribution, 2) }">
           <p class="label">股權分散</p>
           <p class="sub">資料日：{{ intelDeep.shareholding_distribution?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelDeep.shareholding_distribution) }}</p>
@@ -258,7 +370,7 @@ function hasRows(rows) {
           <p v-else class="sub">暫無股權分散資料。</p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelDeep.securities_lending, 3) }">
           <p class="label">借券</p>
           <p class="sub">資料日：{{ intelDeep.securities_lending?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelDeep.securities_lending) }}</p>
@@ -273,7 +385,7 @@ function hasRows(rows) {
           <p class="sub">借券還券：{{ fmtNumber(intelDeep.securities_lending?.summary?.lending_return) }}</p>
         </article>
 
-        <article class="card">
+        <article class="card" :style="{ order: cardOrder(intelDeep.broker_branches, 4) }">
           <p class="label">券商分點</p>
           <p class="sub">資料日：{{ intelDeep.broker_branches?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelDeep.broker_branches) }}</p>
@@ -312,7 +424,7 @@ function hasRows(rows) {
           <p v-else class="sub">暫無券商分點資料，可能需要更高權限。</p>
         </article>
 
-        <article class="card full-span">
+        <article class="card full-span" :style="{ order: cardOrder(intelDeep.financial_statements, 5) }">
           <p class="label">財報摘要</p>
           <p class="sub">資料日：{{ intelDeep.financial_statements?.data_as_of || "--" }}</p>
           <p class="sub">更新：{{ freshnessHint(intelDeep.financial_statements) }}</p>
@@ -353,7 +465,7 @@ function hasRows(rows) {
       </div>
     </details>
 
-    <details class="intel-block">
+    <details class="intel-block" :open="shouldOpenStatus">
       <summary class="intel-summary">資料可用性與來源</summary>
       <p v-if="intelStatusError" class="sub warn-text">{{ intelStatusError }}</p>
       <p v-if="intelStatus?.fetched_at" class="sub">抓取時間：{{ intelStatus.fetched_at }}</p>
@@ -370,13 +482,13 @@ function hasRows(rows) {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="(value, key) in intelStatus.datasets" :key="key">
-              <td>{{ key }}</td>
-              <td :class="statusClass(value?.status)">{{ statusText(value?.status) }}</td>
-              <td>{{ value?.freshness?.cadence_label || "--" }}</td>
-              <td :class="freshnessClass(value?.freshness)">{{ freshnessLabel(value?.freshness) }}</td>
-              <td>{{ value?.data_as_of || "--" }}</td>
-              <td>{{ value?.message || "--" }}</td>
+            <tr v-for="entry in sortedStatusRows" :key="entry.key">
+              <td>{{ entry.key }}</td>
+              <td :class="statusClass(entry.value?.status)">{{ statusText(entry.value?.status) }}</td>
+              <td>{{ entry.value?.freshness?.cadence_label || "--" }}</td>
+              <td :class="freshnessClass(entry.value?.freshness)">{{ freshnessLabel(entry.value?.freshness) }}</td>
+              <td>{{ entry.value?.data_as_of || "--" }}</td>
+              <td>{{ entry.value?.message || "--" }}</td>
             </tr>
           </tbody>
         </table>

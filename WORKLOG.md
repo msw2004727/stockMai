@@ -1019,3 +1019,38 @@
 - 目前進度：Done
 - 下一步：在雲端手動驗收 4 種輸入（正確中文、錯字中文、多候選代號前綴、純代號）確認解析彈窗與最終 AI 分析目標一致。
 - 備註（可選）：本機缺少 `fastapi`，因此 `backend.tests.test_api_integration` 在本環境無法載入執行；程式碼已補齊對應測試案例。
+## [2026-03-04 11:15] 盤點資料庫位置與資料流程
+- 完成事項：
+  - 盤點資料庫部署位置：Render 雲端 Postgres/Redis、本機 `docker-compose` Postgres/Redis。
+  - 追蹤後端資料讀寫路徑：`quote/history/snapshot/pipeline/movers/ai cost/rate limit`。
+  - 整理主要情境流程：即時報價、歷史資料、快取 fallback、snapshot 排程與健康檢查。
+- 目前進度：Done
+- 下一步：若要進一步確認目前實際連線目標，檢查部署平台 `DATABASE_URL`/`REDIS_URL`，並用 `/health` + `/stocks/pipeline/status` 交叉驗證。
+- 備註（可選）：本回合無程式邏輯變更，屬架構與流程確認。
+## [2026-03-04 11:21] 盤點未使用套件與精簡建議
+- 完成事項：
+  - 比對 `backend/requirements.txt`、`frontend/package.json` 與程式實際 import/啟動腳本使用點。
+  - 確認目前沒有「完全未使用」套件；前端依賴皆有使用。
+  - 標記低使用套件：`sqlalchemy`、`alembic` 僅用於 migration；`httpx` 為 AI HTTP optional 路徑。
+- 目前進度：Done
+- 下一步：若要瘦身映像檔，先拆分 runtime 與 migration 依賴，再在 CI 加入未使用依賴檢查工具。
+- 備註（可選）：本回合無程式變更，屬依賴盤點與建議。
+## [2026-03-04 11:27] PC/平板版面優化建議（不實作）
+- 完成事項：
+  - 盤點現況：版面主容器 `view-container` 固定 `max-width: 768px`，且底部 `tab-bar` 在寬螢幕仍固定顯示，導致桌面空間利用不足與控制區擁擠。
+  - 找出高風險區塊：`query-row`、`period-row/provider-grid`、`movers-shortcut-grid`、`detail-stack` 在平板寬度下容易擠壓或視覺跑位。
+  - 提出分斷點策略：手機維持現狀，新增平板/桌機專屬布局規則（欄位分區、按鈕群組拆列、卡片高度與對齊一致化）。
+- 目前進度：Done
+- 下一步：待使用者確認建議方向後，再進入只改 CSS 與少量結構 class 的實作階段（不改手機版規則）。
+- 備註（可選）：本回合僅提供設計建議，未修改功能與互動流程。
+## [2026-03-04 11:35] 實作PC/平板專屬版型並維持手機版不變
+- 完成事項：
+  - 移除 AI 頁多餘 `grid quote-grid` 包裝，修正平板/桌機單欄被擠壓問題。
+  - 新增桌機/平板斷點樣式：上方 tab 導航、容器加寬、查詢列三欄化、provider 按鈕分欄、detail 卡片雙欄化。
+  - 市場頁新增 `market-data-grid` 排版，桌機下將技術指標與 K 線分欄，避免欄位互擠。
+  - 設定頁新增 `settings-view-container`，平板/桌機改雙欄卡片排列，減少空白與跑位。
+  - 調整 movers 在平板/桌機欄數策略（分類卡與卡內股票按鈕分開控欄）。
+  - 驗證：`frontend npm run build` 通過。
+- 目前進度：Done
+- 下一步：請在平板與桌機實機檢查三頁（行情/AI/設定）在 768、1024、1200+ 寬度下的按鈕間距與欄位對齊是否符合預期。
+- 備註（可選）：本回合僅改版面與樣式，不變更 API 與商業邏輯。

@@ -346,7 +346,7 @@ function macdDirectionClass(indicatorPayload) {
 
   <div v-if="quoteError" class="card error">{{ quoteError }}</div>
 
-  <div v-else-if="quote" class="grid quote-grid">
+  <div v-else-if="quote" class="grid quote-grid market-data-grid">
     <article class="card hero-quote-card full-span">
       <div class="quote-title-row">
         <span class="quote-symbol">{{ quote.symbol }}</span>
@@ -405,7 +405,7 @@ function macdDirectionClass(indicatorPayload) {
       </div>
     </article>
 
-    <article class="card full-span">
+    <article class="card indicator-card">
       <p class="label">技術指標</p>
       <template v-if="indicators?.latest">
         <div class="indicator-row">
@@ -439,7 +439,7 @@ function macdDirectionClass(indicatorPayload) {
       <p v-if="indicatorsError" class="sub warn-text">{{ indicatorsError }}</p>
     </article>
 
-    <article class="card full-span">
+    <article class="card kline-card">
       <p class="label">最近 {{ history?.days || selectedDays }} 天 K 線</p>
       <KLineChart v-if="history?.ohlc?.length" :ohlc="history.ohlc" />
       <p v-else class="sub">暫無 K 線資料</p>

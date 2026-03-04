@@ -15,7 +15,7 @@ const emit = defineEmits(["refresh-health"]);
 </script>
 
 <template>
-  <div class="view-container">
+  <div class="view-container settings-view-container">
     <!-- System Status -->
     <div class="panel">
       <h2 class="section-title">系統狀態</h2>

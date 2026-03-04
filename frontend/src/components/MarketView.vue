@@ -22,7 +22,7 @@ const emit = defineEmits(["update:symbol", "refresh", "change-day"]);
 </script>
 
 <template>
-  <div class="view-container">
+  <div class="view-container market-view-container">
     <div class="panel">
       <QuotePanel
         :symbol="symbol"
